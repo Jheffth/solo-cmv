@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solo CMV</title>
+<link rel="icon" href="/assets/logos/josefina-logo.jpg">
+<link rel="stylesheet" href="/css/main.css">
+<link rel="stylesheet" href="/css/lancador.css">
+<link rel="stylesheet" href="/css/metas.css">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/relatorios.css">
+<script>
+  // Captura falhas reais de carregamento de script/CSS ou erros de JS e
+  // mostra num aviso próprio (separado da mensagem de "login inválido"),
+  // para nunca disputar espaço com ela nem parecer que a tela travou.
+  // Ignora falhas inofensivas (mapa de depuração .map, ícone da aba).
+  window.__soloCmvErros = [];
+  function _soloCmvIgnoravel(url) {
+    return !url || url.indexOf('.map') !== -1 || url.indexOf('/assets/logos/') !== -1;
+  }
+  function _soloCmvMostrarErros() {
+    var el = document.getElementById('erro-tecnico');
+    if (el && window.__soloCmvErros.length) {
+      el.hidden = false;
+      el.textContent = 'Aviso técnico (não impede o login): ' + window.__soloCmvErros.join(' | ');
+    }
+  }
+  window.addEventListener('error', function (ev) {
+    var alvo = ev.target;
+    if (alvo && alvo.tagName && alvo !== window) {
+      var url = alvo.src || alvo.href || '';
+      if (_soloCmvIgnoravel(url)) return;
+      window.__soloCmvErros.push('falha ao carregar ' + alvo.tagName + ' (' + url + ')');
+    } else if (ev.message) {
+      window.__soloCmvErros.push(ev.message + (ev.filename ? (' — ' + ev.filename + ':' + ev.lineno) : ''));
+    } else {
+      return;
+    }
+    _soloCmvMostrarErros();
+  }, true);
+  document.addEventListener('DOMContentLoaded', _soloCmvMostrarErros);
+</script>
+<!-- Chart.js embutido no projeto (não depende de internet/CDN externo) -->
+<script src="/js/vendor/chart.umd.js"></script>
+</head>
+<body>
+
+  <!-- ===================== TELA DE LOGIN ===================== -->
+  <div id="tela-login" class="login-screen">
+    <div class="login-card">
+      <img class="login-logo" src="/assets/logos/josefina-logo.jpg" alt="Josefina">
+      <h1>Solo CMV</h1>
+      <p class="login-subtitulo">Controle de estoque, compras e CMV</p>
+      <form id="form-login">
+        <div class="form-group">
+          <label for="input-login">Usuário</label>
+          <input id="input-login" type="text" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label for="input-senha">Senha</label>
+          <input id="input-senha" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-login">Entrar</button>
+        <p id="login-erro" class="login-erro" hidden></p>
+      </form>
+      <p id="erro-tecnico" class="erro-tecnico" hidden></p>
+    </div>
+  </div>
+
+  <!-- ===================== APP (pós-login) ===================== -->
+  <div id="app" class="app-shell" hidden>
+    <div class="menu-overlay" id="menu-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <img src="/assets/logos/josefina-logo.jpg" alt="Solo CMV">
+        <span>Solo CMV</span>
+      </div>
+      <nav id="menu-lateral"></nav>
+    </aside>
+
+    <div class="area-principal">
+      <header class="topbar">
+        <button class="btn-menu" id="btn-menu" type="button" aria-label="Abrir menu"></button>
+        <div class="topbar-titulo" id="titulo-pagina">Painel</div>
+        <div class="topbar-usuario">
+          <select id="seletor-unidade" title="Unidade"></select>
+          <span class="badge-role" id="badge-papel"></span>
+          <span id="nome-usuario"></span>
+          <button id="btn-logout" class="btn-icone" title="Sair"></button>
+        </div>
+      </header>
+      <main id="conteudo" class="conteudo"></main>
+    </div>
+  </div>
+
+  <script src="/js/icons.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/pages/dashboard.js"></script>
+  <script src="/js/pages/produtos.js"></script>
+  <script src="/js/pages/categorias.js"></script>
+  <script src="/js/pages/fornecedores.js"></script>
+  <script src="/js/pages/cadastros.js"></script>
+  <script src="/js/pages/estoque.js"></script>
+  <script src="/js/pages/requisicoes.js"></script>
+  <script src="/js/pages/unidades.js"></script>
+  <script src="/js/pages/movimentos.js"></script>
+  <script src="/js/pages/inventario.js"></script>
+  <script src="/js/pages/vendas.js"></script>
+  <script src="/js/pages/usuarios.js"></script>
+  <script src="/js/pages/cmv.js"></script>
+  <script src="/js/pages/metas.js"></script>
+  <script src="/js/pages/relatorios.js"></script>
+  <script src="/js/pages/nfe.js"></script>
+  <script src="/js/lancador.js"></script>
+  <script src="/js/abrir-inventario.js"></script>
+  <script src="/js/abrir-requisicao.js"></script>
+  <script src="/js/router.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

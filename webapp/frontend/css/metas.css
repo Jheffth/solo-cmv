@@ -1,0 +1,229 @@
+/* ============================================================
+   METAS — grade de meta × realizado e o diálogo de definição.
+
+   Fica em arquivo próprio para não engordar o main.css, que já é
+   o CSS de toda a aplicação.
+   ============================================================ */
+
+/* ---------- Grade meta × realizado ---------- */
+.meta-tabela {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+}
+
+.meta-cabecalho,
+.meta-linha {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) 104px minmax(120px, 1.6fr) 130px;
+  gap: .8rem;
+  align-items: center;
+}
+.meta-tabela.com-acao .meta-linha { grid-template-columns: minmax(140px, 1.1fr) 104px minmax(120px, 1.6fr) 130px 110px; }
+.meta-tabela.com-acao .meta-cabecalho { display: none; }
+
+.meta-cabecalho {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--muted);
+  padding: 0 0 .45rem;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: .3rem;
+}
+.meta-cabecalho span:nth-child(2) { text-align: center; }
+.meta-cabecalho span:nth-child(4) { text-align: right; }
+
+.meta-linha {
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.meta-linha:last-child { border-bottom: none; }
+
+.meta-nome {
+  font-size: .9rem;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: .12rem;
+  min-width: 0;
+}
+
+/* A procedência da meta em letra miúda: sem isso ninguém sabe se o número
+   foi decidido ou é reflexo de outro. */
+.meta-origem { font-size: .7rem; color: var(--muted); }
+.meta-origem.herdada { font-style: italic; }
+
+/* O valor é um botão: clicar nele é definir. Parece texto até o hover,
+   para a tabela não virar um campo de futebol de botões. */
+.meta-valor {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--navy);
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: .25rem .4rem;
+  cursor: pointer;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.meta-valor:hover:not(:disabled) { border-color: var(--gold); background: #FDF9F0; }
+.meta-valor:disabled { cursor: default; border-bottom-style: solid; border-bottom-color: transparent; }
+.meta-valor.herdado { color: var(--muted); font-weight: 500; }
+.meta-valor.grande { font-size: 1.7rem; padding: .1rem .5rem; }
+
+/* Barra: preenchimento é o realizado, o traço vertical é a meta */
+.meta-barra {
+  position: relative;
+  height: 9px;
+  background: var(--bg);
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+.meta-barra.vazia { opacity: .45; }
+.meta-barra .preenchimento {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  border-radius: 4px;
+  transition: width .25s ease;
+}
+.meta-barra .preenchimento.bom { background: #1C7A3C; }
+.meta-barra .preenchimento.ruim { background: var(--red); }
+.meta-barra .marca-meta {
+  position: absolute; top: -4px; bottom: -4px;
+  width: 2px;
+  background: var(--navy);
+  border-radius: 1px;
+}
+
+.meta-realizado {
+  font-size: .84rem;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.meta-realizado strong { color: var(--navy); }
+
+.meta-selo { display: inline-flex; vertical-align: -3px; margin-left: .15rem; }
+.meta-selo svg { width: 14px; height: 14px; }
+.meta-selo.bom { color: #1C7A3C; }
+.meta-selo.ruim { color: var(--red); }
+
+.btn-acao.usar-realizado { font-size: .72rem; padding: .25rem .5rem; white-space: nowrap; }
+
+/* Cartões de Perdas e Faturamento */
+.meta-destaque { display: flex; flex-direction: column; align-items: flex-start; gap: .1rem; }
+.meta-legenda { font-size: .76rem; color: var(--muted); }
+.meta-destaque .meta-realizado { text-align: left; margin-top: .35rem; }
+
+/* ---------- Diálogo de definição ---------- */
+.modal-fundo {
+  position: fixed; inset: 0; z-index: 1400;
+  background: rgba(15, 28, 42, .45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-caixa {
+  background: var(--card);
+  border-radius: var(--radius);
+  width: 460px; max-width: 100%;
+  max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 18px 50px rgba(15, 28, 42, .3);
+}
+.modal-caixa.larga { width: 760px; }
+.modal-cabecalho {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .9rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+.modal-cabecalho h3 { margin: 0; font-size: 1rem; flex: 1; }
+.modal-corpo { padding: 1.1rem; overflow-y: auto; }
+.modal-corpo label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: .25rem; }
+.modal-corpo input { width: 100%; }
+.modal-rodape {
+  display: flex; justify-content: flex-end; gap: .5rem;
+  padding: .8rem 1.1rem;
+  border-top: 1px solid var(--border);
+}
+.modal-mensagem {
+  margin-top: .7rem; padding: .55rem .7rem; border-radius: 8px;
+  background: #FBEBEB; color: #9B2C2C; font-size: .82rem;
+}
+
+/* ---------- Distribuição automática ---------- */
+.card-header #meta-distribuir { display: inline-flex; align-items: center; gap: .4rem; }
+.card-header #meta-distribuir svg { width: 15px; height: 15px; }
+
+.dist-base { margin-top: .7rem; }
+.dist-base > label { margin-bottom: .3rem; }
+
+.dist-opcao {
+  display: flex; align-items: center; gap: .5rem;
+  margin-top: .5rem; font-size: .84rem; color: var(--text);
+}
+.dist-opcao input[type="checkbox"] { width: 16px; height: 16px; flex: 0 0 auto; margin: 0; }
+.dist-opcao small { display: block; color: var(--muted); font-size: .75rem; }
+
+.dist-previa { margin-top: .9rem; }
+.dist-tabela tbody tr.travada { color: var(--muted); }
+.dist-tabela tbody tr.travada td:first-child { text-align: left; }
+
+/* A soma tem que bater com a meta geral — é a conferência que prova a conta */
+.dist-tabela tfoot td {
+  border-top: 2px solid var(--border);
+  padding: .55rem .6rem;
+  font-weight: 600;
+}
+.dist-tabela tfoot tr.confere td { color: #1C7A3C; }
+.dist-tabela tfoot tr.diverge td { color: var(--red); }
+.dist-tabela tfoot svg { width: 14px; height: 14px; vertical-align: -2px; margin-left: .2rem; }
+
+/* ---------- Telas estreitas ---------- */
+@media (max-width: 900px) {
+  .meta-cabecalho { display: none; }
+  .meta-linha,
+  .meta-tabela.com-acao .meta-linha {
+    grid-template-columns: 1fr auto;
+    gap: .35rem .6rem;
+    padding: .7rem 0;
+  }
+  .meta-linha .meta-barra { grid-column: 1 / -1; }
+  .meta-realizado { text-align: left; grid-column: 1; }
+  .btn-acao.usar-realizado { grid-column: 2; justify-self: end; }
+}
+
+/* ---------- Escopo de acesso do usuário (tela de Usuários) ---------- */
+.escopo-bloco {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;
+  margin: 1rem 0;
+  padding: .9rem 1rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+}
+.escopo-lista { display: flex; flex-wrap: wrap; gap: .5rem .9rem; }
+
+.escopo-opcao {
+  display: flex; align-items: flex-start; gap: .5rem;
+  font-size: .86rem; color: var(--text); cursor: pointer;
+}
+.escopo-opcao input[type="checkbox"] {
+  width: 16px; height: 16px; margin: .12rem 0 0; flex: 0 0 auto;
+}
+.escopo-opcao small { display: block; color: var(--muted); font-size: .74rem; }
+.escopo-opcao.destaque {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: .55rem .7rem;
+}
+
+.celula-escopo { line-height: 2; }
+.celula-escopo .tag.regional {
+  background: #FDF9F0; border-color: var(--gold); color: #8A6A1F; font-weight: 600;
+}
+.celula-escopo .tag.alerta { background: #FBEBEB; border-color: #F0CFCF; color: #9B2C2C; }
+
+@media (max-width: 700px) {
+  .escopo-bloco { grid-template-columns: 1fr; gap: .8rem; }
+}

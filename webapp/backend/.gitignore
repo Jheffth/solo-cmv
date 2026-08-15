@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+solo_cmv.db
+solo_cmv.db-journal
+uploads/

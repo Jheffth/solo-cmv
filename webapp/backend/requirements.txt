@@ -1,0 +1,23 @@
+# Versões em faixa (não fixas) de propósito: pins antigos (fastapi 0.111 /
+# pydantic 2.7) não têm wheel pronto para Python novos (ex.: 3.14) e forçam
+# compilar pydantic-core do zero com Rust, o que falha. Deixando em faixa,
+# o pip busca sempre um wheel já compilado compatível com o Python instalado.
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sqlalchemy>=2.0.35
+# Driver do PostgreSQL. psycopg 3 (não o 2) traz wheel binário para Windows,
+# Linux e macOS — o psycopg2-binary não tinha para Windows, e era por isso
+# que a linha antiga carregava um marcador de plataforma. A URL usa o
+# dialeto "postgresql+psycopg://".
+psycopg[binary]>=3.1.18
+
+python-jose[cryptography]>=3.3.0
+# Hash de senha via bcrypt puro (ver auth/security.py) — sem passlib, que
+# está sem manutenção e quebra com bcrypt novo.
+bcrypt>=4.1.2
+python-multipart>=0.0.9
+python-dotenv>=1.0.1
+python-dateutil>=2.9.0
+pydantic>=2.9.0
+# Relatório PDF do inventário (routers/inventario.py)
+reportlab>=4.0.0

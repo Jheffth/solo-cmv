@@ -1,0 +1,1292 @@
+{
+  "familias": [
+    "Família - Bar",
+    "Família - Bebidas sem álcool",
+    "Família - Carnes",
+    "Família - Cervejas",
+    "Família - Hortifruti",
+    "Família - Mercearia",
+    "Família - Peixes e Frutos do Mar",
+    "Família - Resfriados"
+  ],
+  "fornecedores": [
+    "A & S COM E DIST DE ALIM LTDA",
+    "ABRITA FOMENTO MERCANTIL LTDA - MIDIA COMERCIO",
+    "ACB ATACADISTA DE ALIMENTOS LTDA",
+    "AMBEV S A",
+    "ASSAI",
+    "BACCO DISTRIBUIDORA DE BEBIDAS LTDA",
+    "BIG BOI",
+    "BM DISTRIBUICAO DE PRODUTOS ALIMENTICIOS LTDA",
+    "BMOT DISTRIBUIDORA DE HORTFRUTGRANJEIROS LTDA",
+    "BRASAL REFRIGERANTES S A",
+    "CASA DE CARNES E PEIXES",
+    "CHICO ESPETO",
+    "CIDADE COM. IND E DIST DE ALIMENTOS LTDA",
+    "CLARO",
+    "COMERCIAL ALVORADA PROD LIMP DESC LT",
+    "COMPER",
+    "CONDOMINIO DO EDIFICIO LINEA STUDIO HOME",
+    "DIA A DIA",
+    "DISTRIBUIDORA DE GELO PARANOA LTDA ME - QGELO",
+    "DISTRIBUIDORA MANSINHA E CONVENIENCIA",
+    "ENGERSERVICE SOLUCOES EM PRODUTOS DE LIMPEZA",
+    "FACCOL DISTRIBUIDORA",
+    "FLEX DISTRIBUIÇÃO E SERVIÇO LTDA",
+    "FONTE BOA COM DE PROD DE LIMPEZA LTDA",
+    "FORT BEEF COMERCIO VAREJISTA DE CARNES EIRELI",
+    "FRIGORIFICO JAHU LTDA - GAMA",
+    "GARRA COMERCIO ATACADISTA DE ALIM LTDA",
+    "GIRARDI & ARAUJO LTDA",
+    "INVENTÁRIO",
+    "JBS S/A",
+    "JC DISTRIBUIÇÃO",
+    "LE PETIT DOCES BSB LTDA ME",
+    "LOG2 COMERCIO E DESENVOLVIMENTO DE NEGÓCIOS LTDA",
+    "MB  DISTRIBUIDORA CONVENIENCIA E BAR EIRELLI",
+    "MINEIROS COMERCIAL DE CARNES E ALIMENTOS LTDA",
+    "MINERVA FUNDO DE INVESTIMENTO EM DIREITOS",
+    "MULT DISTRIBUIDORA DE ALIMENTOS",
+    "MULT DISTRIBUIDORA DE ALIMENTOS LTDA",
+    "NESTLE BRASIL LTDA",
+    "NOELY CARPACCIO BOVINO - pix: 61981868430",
+    "NOVA AMAZONAS IND COM",
+    "OESA COMERCIO E REPRESENTAÇÕES",
+    "PONTUAL COMERCIO DE EMBALAGENS LTDA",
+    "PRB COMERCIOS DE HORTFRUT, PESCADOS E P",
+    "PREMIUM PESACADOS LTDA",
+    "SANTA THEREZINHA ATACADISTA PROD ALIMEN LTDA",
+    "SLG COM. PRODUTOS LIMPEZA E DESCARTÁVEIS",
+    "SUINOAVES ALIMENTOS LTDA",
+    "SUPERGASBRAS ENERGIA LTDA",
+    "SWEET INDUSTRIA E COMERCIO LTDA ( SUCO)",
+    "TANAPORTA HORTFRUTI DELIVERY LTDA",
+    "TOTALMAQ EQUIPTOS P/ COZINHAS PROFISSIONAIS",
+    "TOTALSERV SOLUÇOES",
+    "TRES CORACÕES ALIMENTOS S A",
+    "VERONI E-COMMERCE DE VINHOS LTDA.",
+    "VIDEIRA COMERCIO DE VINHOS LTDA"
+  ],
+  "produtos": [
+    {
+      "nome": "Acucar refinado 01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Alcaparras 2kg Drenado",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Alho Crocante kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Amaciante Carne 1,01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Amido de milho 01 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Arroz Arbório 1kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Arroz branco 05kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Arroz integral 01 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Azeite de dendê",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Azeitona sem caroco",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Batata palha 800g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cacau em pó 50%",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Cachaça 51",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Cafe torrado 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Caldo de carne 1,01 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Caldo de galinha 1,01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Caldo sabor Bacon 1,01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Caldo sabor frutos do mar 1,01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Catchup 3,5 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cerveja preta 330ml",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Chimichurri s/ Pimenta kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Coco Ralado Fresco 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Coloral",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Creme Culinario 1kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Creme de cebola 1,01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Creme de leite 01lt",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Doce de leite 350g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Extrato de tomate Premium Bonare 4kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Farinha de mandioca amarela 01 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Farinha de mandioca branca 01 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Farinha de trigo 01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Farinha Panko 01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Feijao carioca 01 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Feijao fradinho 01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Feijao preto  01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Fermento em pó 200g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Flocao de milho 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Folha de louro Kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Grão de bico Kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Leite condesado 395g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Leite de coco 500ml",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Leite integral 01lt",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Lemon papper Kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Macarrao espaguetti 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Macarrão fettuccine  grano duro 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Maionese 2,7kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Manteiga de garrafa",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Margarina Kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Melado de cana 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Molho de shoyu 1,01lt",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Mostarda 3,3kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Nhoque 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Oleo composto 5L",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Oleo de Algodao balde 14,5kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Oleo de soja 900ml",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Paprica defumada Kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Pimenta biquinho 2kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Pimenta do reino em pó",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Polenta instantanea 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Rapadura kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Sal grosso 01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Sal refinado 01 kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Tapioca granulada Kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Tempero arisco Completo s/ pimenta",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Tempero de carne 1,01kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Temperos oregano",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Vinagre de alcool 750ml",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Vinho branco seco 1L",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Vinho tinto seco 750ml",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Abacaxi und",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Abobora Italia kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Abobora Japonesa kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Abobora pescoço",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Abobrinha",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Acelga und",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "ubd"
+    },
+    {
+      "nome": "Agrião und",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Alface Americana und",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Alface Crespa und",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Alface Roxa und",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Alho Limpo kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Alho Poro und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Amora congelada kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Banana Terra kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Banana Nanica kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Batata Baroa Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Batata Bolinha kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Batata Inglesa kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Beterraba kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Brocolis und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Brocolis Americano und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Caju bdj",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cebola Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cebola roxa kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cebolinha",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Cenoura kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Chuchu kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cogumelo Paris kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Bdj"
+    },
+    {
+      "nome": "Cogumelo Shitake kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Bdj"
+    },
+    {
+      "nome": "Couve und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Couve Flor und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Ervilha kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Hortela und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Kiwi Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Laranja",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Laranja Pera (18kg)",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Limao Siciliano kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Limão Tahiti",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Maca Nacional kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Mandioca descascada kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Manjericao und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Maracuja Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Milho Verde Bdj (Espiga)",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Morango bdj",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Bdj"
+    },
+    {
+      "nome": "Nabo",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Ovos Grandes (Bdj 30 und)",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Bdj"
+    },
+    {
+      "nome": "Pepino",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Pepino Japones",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Pimenta dedo de moça kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Pimentao Amarelo Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Pimentao vermelho Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Quiabo kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Rabanete kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Repolho und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Repolho Roxo und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Salsa und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Tomate Cereja bdj",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Tomate Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Tomilho und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Uva roxa kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Vagem Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Alecrim und",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Pimenta de Cheiro kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Gengibre kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Bacon manta kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Batata Frita Kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Linguica Calabresa kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cobertura de chocolate Marvi 1kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Ervilha congelada 2,5kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Massa de Pastel Especial kg (500G)",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Milho verde lata 1,7kg",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Mini pastel de carne",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Mini pastel de queijo",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Muçarela fatiada",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Nata Frimesa 300G",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Batata Doce",
+      "familia": "Família - Hortifruti",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Petit Gateau Doce de leite",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Petit Gateau Mr. Bey",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Sorvete Creme pote",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Presunto kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Pudim",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Queijo Coalho Kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Queijo de cabra kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Queijo gorgonzola kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Queijo Parmesao Kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Requeijão cremoso 1,8 KG",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Sorvete Tapioca 1l",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Queijo Mussarela Fatiada kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Acem moido kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Bisteca suína",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "kg"
+    },
+    {
+      "nome": "Bombom da alcatra kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Contrafile grill kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Costela bovina Kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Espeto Alcatra und",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "KG"
+    },
+    {
+      "nome": "Espeto frango und",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Espeto Frango com bacon",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Espeto queijo coalho und",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "und"
+    },
+    {
+      "nome": "Figado Kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Rabo Bovino Kg",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Espeto coracao",
+      "familia": "Família - Resfriados",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Fraldinha red Kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Frango a passarinho Kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Linguiça de Frango Fina und",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Maminha kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Panceta kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Pernil suíno kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Picanha suína excelência kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Sobrecoxa desossada kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Costelinha salgada kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Lombo suíno salgado kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Pe Salgado kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Rabo salgado kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "KG"
+    },
+    {
+      "nome": "Toucinho kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Coxao Mole kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Espeto Frango und",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "File de Peito de Frango kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Camarão cinza 41/50 limpo e eviscerado",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "File de Tilapia kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "F. SALMON COHO PEDACOS S/E 7 oz VAC",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cerveja Amstel 600ml",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cerveja Baden Baden Pilsen 600ml",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cerveja Brahma duplo Malte 600ml",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Corona longneck 300ml",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Devassa lata 350ml",
+      "familia": "Família - Defumados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Eisenbahn Ipa long neck",
+      "familia": "Família - Defumados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Estrela Galicia longneck 355ml",
+      "familia": "Família - Defumados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Heineken 600ml",
+      "familia": "Família - Defumados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Heineken Long 0 alcool",
+      "familia": "Família - Defumados",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Heineken Long neck 330ml",
+      "familia": "Família - Peixes e Frutos do Mar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Original Pilsen 600ml",
+      "familia": "Família - Peixes e Frutos do Mar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Spaten 600ml",
+      "familia": "Família - Peixes e Frutos do Mar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Spaten longneck 330ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Stella Artois long neck",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Stella Artois Pure Gold long neck",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Baden Baden Witbier 600ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Baden Baden IPA c/ Maracuja 600ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Agua com gas 500ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Agua sem Gas 500ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Agua Tonica Antartica 330ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Agua Tonica Antartica Zero 330ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Suco Del Valle 255ml Pessego",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Suco Del Valle 290ml Uva",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Agua saborizada Sprite Fresh",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Red Bull Tradicional 250ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Corona 600ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Cerveja Michelob ultra long neck",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Stella artois pure gold 600ml",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "Red Bull Tropical 250ml",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Coca cola 600ml",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Coca cola 600ml zero",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Coca cola KS 290ml",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Coca Cola KS sem açucar 290ml",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Coca cola lata",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Coca cola zero lata",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Fanta Guarana Lata 310ml",
+      "familia": "Família - Bebidas sem álcool",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Fanta Guarana Lata Zero 310ml",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Fanta laranja lata",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante guarana Antartica lata",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante guarana Antartica zero lata",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Schweppes lata",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Schweppes lata zero 310ml",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Sprite lata 310ml",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante Sprite zero lata",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante SaintPierre Ginger 250ml",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Agua Tonica Schweppes zero lata 250ml",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Refrigerante SaintPierre Pink Lemonade 250ml",
+      "familia": "Família - Bar",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Pao de forma integral 500g",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Und"
+    },
+    {
+      "nome": "Massa de Mini Pasteis kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Acafrao kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Acucar Cristal 05kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cogumelo Fatiado Kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Cereja Vermelha 1,8kg",
+      "familia": "Família - Mercearia",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "Rabo Bovino kg",
+      "familia": "Família - Carnes",
+      "unidade_medida": "Kg"
+    },
+    {
+      "nome": "BARRIL",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "L"
+    },
+    {
+      "nome": "STELLA ARTOIS PURE GOLD 600ML",
+      "familia": "Família - Cervejas",
+      "unidade_medida": "L"
+    }
+  ]
+}

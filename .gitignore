@@ -1,0 +1,37 @@
+# Ambientes virtuais
+venv/
+.venv/
+env/
+ENV/
+
+# Python Cache e Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Arquivos sensíveis e variáveis de ambiente
+.env
+.env.local
+.env.production
+*.env
+
+# Bancos de dados locais
+*.db
+*.sqlite3
+*.db-journal
+
+# Uploads / Arquivos temporários
+uploads/
+temp/
+tmp/
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

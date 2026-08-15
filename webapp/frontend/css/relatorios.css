@@ -1,0 +1,70 @@
+/* ============================================================
+   RELATÓRIOS — abas, procedência e a curva ABC.
+
+   Reaproveita o que já existe: .kpi-grid e .kpi-card do painel,
+   .abas-pagina de Cadastros, .barra-trilho do dashboard. O que está
+   aqui é só o que é próprio desta tela.
+   ============================================================ */
+
+/* Descrição do relatório escolhido, logo abaixo das abas */
+.rel-descricao {
+  font-size: .84rem;
+  color: var(--muted);
+  margin: -.4rem 0 1rem;
+}
+
+/* Procedência: de quais inventários o estoque saiu. Um CMV sem essa
+   informação é indefensável numa reunião. */
+.rel-procedencia {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .8rem;
+  color: var(--muted);
+}
+.rel-procedencia svg { width: 15px; height: 15px; color: var(--gold); flex-shrink: 0; }
+.rel-procedencia.alerta { color: #9B2C2C; }
+.rel-procedencia.alerta svg { color: var(--red); }
+
+/* ---------- Curva ABC ---------- */
+.faixa-abc {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+  font-weight: 700;
+  font-size: .78rem;
+  border-radius: 5px;
+  padding: .1rem .3rem;
+}
+.faixa-abc.faixa-a { background: #FBEBEB; color: #9B2C2C; }
+.faixa-abc.faixa-b { background: #FBF3E3; color: #8A6A1F; }
+.faixa-abc.faixa-c { background: var(--bg); color: var(--muted); }
+
+/* Cores das faixas nos cartões de resumo */
+.kpi-card .valor.faixa-a { color: var(--red); }
+.kpi-card .valor.faixa-b { color: var(--gold); }
+.kpi-card .valor.faixa-c { color: var(--muted); }
+
+/* ---------- Comparativo ---------- */
+.rel-delta-pct {
+  display: block;
+  font-size: .72rem;
+  font-weight: 400;
+  opacity: .8;
+}
+
+/* ---------- Consumo por família ---------- */
+.rel-herdada {
+  color: var(--gold);
+  font-weight: 700;
+  cursor: help;
+}
+
+/* Tabelas destes relatórios são largas; rolam em vez de espremer */
+#rel-conteudo .tabela-rolavel { overflow-x: auto; }
+#rel-conteudo table.tabela-simples { min-width: 620px; }
+
+@media (max-width: 900px) {
+  .rel-procedencia { font-size: .76rem; }
+  #rel-abas { overflow-x: auto; }
+}

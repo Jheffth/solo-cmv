@@ -1,0 +1,452 @@
+:root {
+  --navy: #1F3B57;
+  --navy-dark: #16293e;
+  --gold: #B08D3E;
+  --red: #A6231F;
+  --bg: #F3F4F7;
+  --card: #FFFFFF;
+  --border: #E3E6EA;
+  --text: #20242B;
+  --muted: #6B7280;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+/* IMPORTANTE: sem esta regra, o atributo hidden não funciona em elementos
+   que têm display definido por classe (.login-screen usa flex, .app-shell
+   usa grid). O CSS do autor vence o padrão do navegador ([hidden]{display:none}),
+   então a tela de login continuava visível por cima do app após o login —
+   dando a impressão de que o botão "Entrar" não fazia nada. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+h1, h2, h3 { margin: 0 0 .4rem 0; color: var(--navy); }
+p { margin: 0 0 .6rem 0; }
+
+/* ---------- Login ---------- */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-dark) 55%, #0f1c2a 100%);
+  padding: 1rem;
+}
+.login-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 2.4rem 2.2rem;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.login-logo { width: 76px; height: 76px; object-fit: contain; margin-bottom: .8rem; }
+.login-subtitulo { color: var(--muted); font-size: .9rem; margin-bottom: 1.4rem; }
+.login-card form { display: flex; flex-direction: column; gap: .9rem; text-align: left; }
+.login-card .form-group label { font-size: .78rem; color: var(--muted); margin-bottom: .25rem; display: block; }
+.btn-login { margin-top: .4rem; }
+.login-erro { color: var(--red); font-size: .84rem; margin-top: .4rem; }
+.erro-tecnico { color: var(--muted); font-size: .74rem; margin-top: 1rem; padding-top: .7rem; border-top: 1px dashed var(--border); text-align: left; }
+
+/* ---------- Shell ----------
+   A janela inteira é o shell, e ele NÃO rola: quem rola é o miolo.
+   Com `min-height` o shell crescia junto com a página, então a rolagem
+   acontecia no documento e levava a barra lateral embora. Travando a
+   altura em 100% da tela, menu e topo ficam parados e só o conteúdo
+   se move. `dvh` cobre o celular, onde a barra do navegador aparece e
+   some e `vh` mede errado. */
+.app-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.sidebar {
+  background: var(--navy); color: rgba(255,255,255,.9);
+  display: flex; flex-direction: column;
+  min-height: 0;   /* deixa o #menu-lateral rolar por conta própria */
+}
+.sidebar-brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.1rem .9rem; font-weight: 700; font-size: 1.05rem; border-bottom: 1px solid rgba(255,255,255,.12); }
+.sidebar-brand img { width: 30px; height: 30px; object-fit: contain; border-radius: 6px; background: #fff; }
+
+/* Se o menu tiver mais itens que a altura da tela, ele rola sozinho —
+   sem arrastar a marca do topo nem o conteúdo junto. */
+#menu-lateral { padding: .8rem .6rem; display: flex; flex-direction: column; gap: .2rem; overflow-y: auto; flex: 1; min-height: 0; }
+.sidebar-brand { flex-shrink: 0; }
+.nav-item {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .55rem .7rem; border-radius: 8px;
+  color: rgba(255,255,255,.82); text-decoration: none; font-size: .88rem;
+  cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav-item.ativo { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 3px 0 var(--gold); }
+.nav-item .badge-soon {
+  margin-left: auto; font-size: .62rem; letter-spacing: .02em; text-transform: uppercase;
+  background: var(--gold); color: var(--navy-dark); padding: .12rem .4rem; border-radius: 999px; font-weight: 700;
+}
+
+.area-principal { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.topbar {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .8rem 1.4rem; background: var(--card); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;   /* o topo também fica parado */
+}
+.topbar-titulo { font-weight: 700; color: var(--navy); font-size: 1.05rem; margin-right: auto; min-width: 0; }
+.topbar-usuario { display: flex; align-items: center; gap: .7rem; font-size: .86rem; color: var(--muted); min-width: 0; }
+
+/* Botão do menu — só aparece quando a barra lateral vira gaveta */
+.btn-menu {
+  display: none; background: none; border: 1px solid var(--border);
+  border-radius: 8px; padding: .35rem; cursor: pointer; color: var(--navy);
+  align-items: center; justify-content: center; flex-shrink: 0;
+}
+.btn-menu svg { width: 20px; height: 20px; }
+.btn-menu:hover { background: var(--bg); }
+
+/* Fundo escurecido atrás da gaveta */
+.menu-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1100;
+  background: rgba(15, 28, 42, .45);
+}
+.menu-overlay.visivel { display: block; }
+.badge-role { background: var(--gold); color: var(--navy-dark); padding: .18rem .55rem; border-radius: 999px; font-size: .68rem; font-weight: 700; text-transform: uppercase; }
+.btn-icone { background: none; border: none; cursor: pointer; color: var(--muted); padding: .3rem; border-radius: 6px; display: flex; }
+.btn-icone:hover { background: var(--bg); color: var(--red); }
+.btn-icone svg { width: 18px; height: 18px; }
+
+/* O único elemento que rola na aplicação */
+.conteudo { padding: 1.6rem; flex: 1; min-height: 0; overflow-y: auto; }
+
+/* ---------- Componentes ---------- */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; margin-bottom: 1.2rem; }
+.card h2 { font-size: 1.02rem; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+
+/* ---------- Abas de página (ex.: Cadastros) ---------- */
+.abas-pagina {
+  display: flex;
+  gap: .25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.2rem;
+}
+.aba-pagina {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: .6rem 1rem;
+  cursor: pointer;
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: -1px;
+}
+.aba-pagina svg { width: 16px; height: 16px; }
+.aba-pagina:hover { color: var(--navy); }
+.aba-pagina.ativa { color: var(--navy); border-bottom-color: var(--gold); }
+.aba-pagina .contador {
+  font-size: .7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: .05rem .4rem;
+  font-weight: 700;
+}
+.aba-pagina.ativa .contador { background: var(--navy); color: #fff; border-color: var(--navy); }
+@media (max-width: 560px) { .aba-pagina { padding: .6rem .55rem; font-size: .8rem; } }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.4rem; }
+.kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; }
+.kpi-card .rotulo { font-size: .76rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.kpi-card .valor { font-size: 1.9rem; font-weight: 700; color: var(--navy); margin-top: .2rem; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+@media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* Código único do produto (6 dígitos) — monoespaçado para alinhar na coluna */
+.codigo-item {
+  font-family: "Consolas", "SF Mono", "Menlo", monospace;
+  font-size: .82rem;
+  color: var(--navy);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: .1rem .38rem;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+table.tabela-simples td.num, table.tabela-simples th.num { text-align: right; white-space: nowrap; }
+.zerado { color: #B0B4BB; }
+
+table.tabela-simples { width: 100%; border-collapse: collapse; font-size: .88rem; }
+table.tabela-simples th { text-align: left; padding: .55rem .6rem; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--border); font-size: .76rem; text-transform: uppercase; letter-spacing: .02em; }
+table.tabela-simples td { padding: .55rem .6rem; border-bottom: 1px solid var(--border); }
+table.tabela-simples tr:last-child td { border-bottom: none; }
+
+/* ---------- Tabela com cabeçalho agrupado ----------
+   Quantidade e valor moram em colunas separadas, sob um mesmo título
+   ("Estoque inicial"). O filete vertical marca onde cada bloco começa,
+   para o olho não se perder em 12 colunas de números. */
+.tabela-rolavel { overflow-x: auto; }
+table.tabela-agrupada th.grupo {
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: .35rem;
+  color: var(--navy);
+}
+table.tabela-agrupada thead tr.grupos th[rowspan] { vertical-align: bottom; }
+table.tabela-agrupada thead tr:last-child th {
+  padding-top: .3rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: .72rem;
+}
+table.tabela-agrupada th.inicio-grupo,
+table.tabela-agrupada td.inicio-grupo { border-left: 1px solid var(--border); }
+
+/* A unidade acompanha o número sem competir com ele: R$ 10,60/Kg */
+td.un-medida { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+.por-unidade { color: var(--muted); font-size: .78rem; }
+
+form.form-inline { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; }
+.form-group { display: flex; flex-direction: column; gap: .28rem; font-size: .8rem; color: var(--muted); min-width: 140px; }
+input, select, button { font: inherit; }
+input, select { padding: .55rem .65rem; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); }
+input:focus, select:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+button.btn { background: var(--navy); color: #fff; border: none; padding: .6rem 1.1rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .88rem; }
+button.btn:hover { background: var(--navy-dark); }
+button.btn.secundario { background: transparent; color: var(--navy); border: 1px solid var(--border); }
+button.btn.secundario:hover { background: var(--bg); }
+
+.tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .15rem .55rem; font-size: .74rem; color: var(--muted); }
+.tag.aberta { background: #e9f7ee; color: #1c7a3c; border-color: #bfe6cc; }
+.tag.fechada { background: var(--bg); color: var(--muted); }
+
+.estado-vazio { text-align: center; padding: 2.2rem 1rem; color: var(--muted); font-size: .9rem; }
+
+/* ---------- Status do inventário ---------- */
+.status-badge {
+  display: inline-block;
+  font-size: .74rem;
+  font-weight: 700;
+  padding: .18rem .6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.status-aberto    { background: #E7F0FA; color: #1F5A8F; border-color: #C4DCF0; }
+.status-congelado { background: #E8F4F8; color: #17667A; border-color: #BDE0E9; }
+.status-contagem  { background: #FBF3E3; color: #8A6A1F; border-color: #E8D9B5; }
+.status-fechado   { background: #E9F7EE; color: #1C7A3C; border-color: #BFE6CC; }
+.status-cancelado { background: #F4F4F5; color: #7A7A80; border-color: #DEDEE2; }
+/* Perda é dinheiro que evaporou: destaque em vermelho, não em cinza */
+.status-perda     { background: #FBEBEB; color: #9B2C2C; border-color: #F0CFCF; }
+
+/* ---------- Barra de filtros ---------- */
+.filtros-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .7rem;
+  align-items: flex-end;
+  padding: .9rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+/* Por padrão cada filtro ocupa só o que precisa. Quem deve esticar recebe a
+   classe `cresce` — antes isso era ligado ao primeiro campo por posição, o
+   que fazia um campo de data esticar sem motivo. */
+.filtros-barra .form-group { min-width: 0; flex: 0 0 auto; }
+.filtros-barra .form-group.cresce { flex: 1 1 190px; min-width: 190px; }
+.filtros-barra .form-group.data input { width: 148px; }
+.filtros-barra .form-group select { min-width: 150px; }
+.filtros-barra label { font-size: .73rem; }
+.filtros-barra .btn { margin-left: auto; }
+/* Separa visualmente os grupos de opção do resto dos filtros */
+.filtros-barra .form-group.opcao { margin-left: .3rem; }
+
+/* ---------- Botões de ação por linha ---------- */
+th.col-acoes, td .acoes-linha { white-space: nowrap; }
+th.col-num-inv { width: 60px; text-align: center; }
+table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
+.acoes-linha { display: flex; gap: .3rem; }
+.btn-acao {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--navy);
+  border-radius: 7px;
+  padding: .28rem .6rem;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-acao:hover:not(:disabled) { background: var(--navy); color: #fff; border-color: var(--navy); }
+.btn-acao.cancelar:hover:not(:disabled) { background: var(--red); border-color: var(--red); }
+.btn-acao.finalizar:hover:not(:disabled) { background: #1C7A3C; border-color: #1C7A3C; }
+.btn-acao:disabled { opacity: .4; cursor: not-allowed; }
+
+.aviso-acao {
+  font-size: .8rem;
+  color: #8A6A1F;
+  background: #FBF3E3;
+  border: 1px solid #E8D9B5;
+  border-radius: 7px;
+  padding: .55rem .75rem;
+  margin: 0 0 .9rem;
+}
+.aviso-acao.sucesso { color: #1C7A3C; background: #E9F7EE; border-color: #BFE6CC; }
+.aviso-acao.erro    { color: var(--red); background: #FDF3F3; border-color: #F0CFCE; }
+
+.btn-acao.congelar:hover:not(:disabled) { background: #17667A; border-color: #17667A; }
+.btn-acao.pdf:hover:not(:disabled) { background: var(--gold); border-color: var(--gold); color: #fff; }
+.btn-acao.folha:hover:not(:disabled) { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* Alternador de opções (modo de apuração, método de custo) */
+.seletor-opcoes { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--card); }
+.seletor-opcoes button {
+  background: none; border: none; padding: .5rem .8rem; cursor: pointer;
+  font-size: .82rem; font-weight: 600; color: var(--muted); white-space: nowrap;
+}
+.seletor-opcoes button + button { border-left: 1px solid var(--border); }
+.seletor-opcoes button:hover:not(.ativo) { background: var(--bg); color: var(--navy); }
+.seletor-opcoes button.ativo { background: var(--navy); color: #fff; }
+
+.valor-bom { color: #1C7A3C; }
+.valor-ruim { color: var(--red); }
+.nota-formula { font-size: .78rem; color: var(--muted); margin: .8rem 0 0; }
+
+/* De onde vieram os estoques do CMV — o número precisa ter origem visível */
+.origem-inventarios {
+  display: flex; align-items: flex-start; gap: .7rem;
+  font-size: .82rem; color: var(--text); line-height: 1.5;
+  background: #EEF3F8; border: 1px solid #C4DCF0; border-radius: 9px;
+  padding: .7rem .85rem; margin-bottom: 1.2rem;
+}
+.origem-inventarios svg { width: 18px; height: 18px; color: var(--navy); flex-shrink: 0; margin-top: .1rem; }
+.origem-inventarios strong { color: var(--navy); }
+
+.diverg-neg { color: var(--red); font-weight: 600; }
+.diverg-pos { color: #1C7A3C; font-weight: 600; }
+
+.legenda-status { display: grid; gap: .55rem; font-size: .84rem; color: var(--muted); }
+.legenda-status > div { display: flex; align-items: center; gap: .55rem; }
+
+tr.linha-vazia td { text-align: center; padding: 2.2rem 1rem; color: var(--muted); font-size: .9rem; }
+tr.linha-vazia .obs { font-size: .78rem; margin-top: .5rem; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+
+/* ---------- Placeholder de seção ainda não iniciada ---------- */
+.placeholder-em-construcao {
+  text-align: center; padding: 3rem 1.5rem; color: var(--muted);
+  border: 1.5px dashed var(--border); border-radius: var(--radius); background: var(--card);
+}
+.placeholder-em-construcao svg { width: 46px; height: 46px; color: var(--gold); margin-bottom: .8rem; }
+.placeholder-em-construcao h2 { color: var(--navy); }
+.placeholder-em-construcao .fase-tag { display:inline-block; margin-top: .8rem; font-size: .76rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .25rem .7rem; color: var(--navy); font-weight: 600; }
+
+.grafico-vazio {
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: .5rem;
+  height: 220px; color: var(--muted); font-size: .86rem; border: 1.5px dashed var(--border); border-radius: 10px;
+}
+.grafico-vazio svg { width: 32px; height: 32px; color: var(--gold); }
+
+canvas { max-width: 100%; }
+
+/* ==========================================================================
+   RESPONSIVIDADE
+   Regra que valia antes: abaixo de 900px a barra lateral era escondida
+   (display:none) — o usuário ficava sem nenhuma forma de navegar. Agora ela
+   vira uma gaveta, aberta pelo botão de menu na topbar.
+   ========================================================================== */
+
+/* ---------- Tablet e telas médias ---------- */
+@media (max-width: 1100px) {
+  .conteudo { padding: 1.1rem; }
+  .topbar { padding: .7rem 1rem; }
+}
+
+/* ---------- Barra lateral vira gaveta ---------- */
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: 1fr; }
+
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 260px; max-width: 82vw; z-index: 1200;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    box-shadow: 4px 0 24px rgba(15, 28, 42, .25);
+  }
+  .sidebar.aberta { transform: translateX(0); }
+
+  .btn-menu { display: flex; }
+
+  .topbar { flex-wrap: wrap; }
+  .topbar-titulo { font-size: .98rem; }
+  .topbar-usuario { gap: .5rem; font-size: .8rem; }
+  #nome-usuario { display: none; }
+  #seletor-unidade { max-width: 130px; }
+
+  /* Tabelas passam a rolar na horizontal em vez de espremer as colunas */
+  .card { overflow-x: auto; }
+  table.tabela-simples { min-width: 620px; }
+
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .7rem; }
+  .kpi-card { padding: .8rem .9rem; }
+  .kpi-card .valor { font-size: 1.5rem; }
+}
+
+/* ---------- Celular ---------- */
+@media (max-width: 600px) {
+  .conteudo { padding: .85rem; }
+  .card { padding: .9rem; border-radius: 10px; }
+  .card-header { flex-wrap: wrap; gap: .55rem; }
+  .card-header h2 { font-size: .95rem; }
+
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-card .rotulo { font-size: .68rem; }
+  .kpi-card .valor { font-size: 1.35rem; }
+
+  /* Filtros empilhados, cada um ocupando a linha toda */
+  .filtros-barra { padding: .7rem; gap: .55rem; }
+  .filtros-barra .form-group,
+  .filtros-barra .form-group.cresce,
+  .filtros-barra .form-group.opcao { min-width: 100%; flex: 1 1 100%; margin-left: 0; }
+  .filtros-barra .form-group.data input,
+  .filtros-barra .form-group select { width: 100%; }
+  /* As duas datas dividem a linha, em vez de gastar duas */
+  .filtros-barra .form-group.data { min-width: 0; flex: 1 1 calc(50% - .3rem); }
+  .filtros-barra .seletor-opcoes { width: 100%; }
+  .filtros-barra .seletor-opcoes button { flex: 1; }
+  .filtros-barra .btn { margin-left: 0; width: 100%; }
+
+  form.form-inline { gap: .6rem; }
+  form.form-inline .form-group { min-width: 100%; }
+  form.form-inline .btn { width: 100%; }
+
+  /* Ações da linha quebram em duas colunas em vez de estourar a largura */
+  .acoes-linha { flex-wrap: wrap; gap: .25rem; }
+  .btn-acao { padding: .26rem .5rem; font-size: .74rem; }
+
+  .abas-pagina { overflow-x: auto; }
+  .aba-pagina { white-space: nowrap; }
+
+  .login-card { padding: 1.8rem 1.4rem; }
+  .legenda-status { font-size: .8rem; }
+  .legenda-status > div { align-items: flex-start; }
+}
