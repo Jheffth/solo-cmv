@@ -42,9 +42,15 @@ Acesse http://localhost:8095 — o backend serve o frontend automaticamente.
 Na primeira execução, o sistema já cria:
 - Empresa "Josefina Gastronomia" e as unidades **Josefina** e **Casa Josefina**;
 - O usuário inicial com acesso irrestrito:
-  - **Login:** `Jh3ffth`
-  - **Senha:** `1601Jcs33@2503`
+  - **Login:** `Jh3ffth` (ou o que estiver em `ARQUITETO_LOGIN`)
+  - **Senha:** definida por você em `ARQUITETO_SENHA`, no `.env`. Se não
+    definir, o sistema gera uma aleatória e **imprime no terminal, uma única
+    vez**, no momento em que cria o usuário — anote na hora.
   - **Papel:** Arquiteto (todas as permissões, todas as empresas)
+
+  > Senha de acesso não mora no código. Este repositório é versionado e o
+  > sistema será instalado em vários restaurantes: uma senha escrita aqui
+  > seria pública e seria a mesma em todas as instalações.
 - O catálogo mestre importado das planilhas: 8 categorias, 56 fornecedores e
   244 produtos (`backend/seed_data.json`, gerado a partir das duas planilhas
   originais).

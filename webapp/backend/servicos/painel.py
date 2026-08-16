@@ -38,6 +38,7 @@ from models import (
 from calculo_estoque import saldos_por_produto, ultimos_custos, data_ultima_contagem
 from servicos import cmv as motor
 from servicos import metas as servico_metas
+from servicos.memoria import lembrar
 from servicos.perda import ROTULOS_MOTIVO
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -78,19 +79,34 @@ def mes_de(referencia: Optional[str] = None) -> tuple:
 
 
 def _inventarios_finalizados(db: Session, unidade_id: Optional[int]) -> List[tuple]:
-    """(data, número) de cada inventário finalizado, do mais antigo ao mais novo."""
-    query = db.query(SessaoInventario).filter(
-        SessaoInventario.status == StatusSessaoInventario.FINALIZADO)
-    if unidade_id:
-        query = query.filter(SessaoInventario.unidade_id == unidade_id)
+    """(data, número) de cada inventário finalizado, do mais antigo ao mais novo.
 
-    saida = []
-    for s in query.all():
-        marco = s.data_fechamento or s.data_abertura
-        if marco:
-            saida.append((marco.date() if hasattr(marco, "date") else marco,
-                          s.numero_documento))
-    return sorted(saida, key=lambda x: x[0])
+    Lido uma vez por pedido: o painel pergunta isto a cada faixa da tela —
+    o encaixe no ciclo, o histórico, a cobertura — e a resposta é sempre a
+    mesma. Eram nove consultas idênticas por página.
+
+    Buscamos só as três colunas usadas, em vez dos objetos inteiros: o ORM
+    montaria uma SessaoInventario completa e a registraria na sessão para
+    nada.
+    """
+    def carregar():
+        query = db.query(
+            SessaoInventario.data_fechamento,
+            SessaoInventario.data_abertura,
+            SessaoInventario.numero_documento,
+        ).filter(SessaoInventario.status == StatusSessaoInventario.FINALIZADO)
+        if unidade_id:
+            query = query.filter(SessaoInventario.unidade_id == unidade_id)
+
+        saida = []
+        for fechamento, abertura, numero in query.all():
+            marco = fechamento or abertura
+            if marco:
+                saida.append((marco.date() if hasattr(marco, "date") else marco,
+                              numero))
+        return sorted(saida, key=lambda x: x[0])
+
+    return lembrar(db, ("inventarios_finalizados", unidade_id), carregar)
 
 
 def encaixar_no_ciclo(db: Session, unidade_id: Optional[int],
@@ -419,11 +435,13 @@ def montar(db: Session, unidade_id: Optional[int] = None,
     if unidade_id:
         limite = date_type.today() - timedelta(days=DIAS_SEM_GIRO)
         ultimo_movimento = {}
-        query_mov = db.query(Movimento).filter(Movimento.unidade_id == unidade_id)
-        for m in query_mov.all():
-            atual = ultimo_movimento.get(m.produto_id)
-            if atual is None or m.data > atual:
-                ultimo_movimento[m.produto_id] = m.data
+        from sqlalchemy import func
+        query_max = db.query(
+            Movimento.produto_id,
+            func.max(Movimento.data)
+        ).filter(Movimento.unidade_id == unidade_id).group_by(Movimento.produto_id)
+        for produto_id, max_data in query_max.all():
+            ultimo_movimento[produto_id] = max_data
         for produto_id, saldo in saldos.items():
             if not saldo or saldo <= 0:
                 continue

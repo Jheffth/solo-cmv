@@ -496,8 +496,19 @@ window.Paginas.dashboard = (function () {
 
       let d;
       try {
-        d = await api.get(`/dashboard/painel?unidade_id=${UNIDADE_SELECIONADA}`
-          + `&referencia=${referencia}`);
+        // Na primeira pintura os números já vieram junto com a sessão, numa
+        // viagem só. Só aproveitamos se forem do mesmo mês e da mesma
+        // unidade que a tela vai mostrar — trocar de loja ou de mês exige
+        // dado novo. Depois de usado, o adiantamento é descartado: qualquer
+        // atualização daqui em diante busca do servidor.
+        const adiantado = window.ABERTURA && ABERTURA.painel;
+        const serve = adiantado
+          && String(ABERTURA.unidade) === String(UNIDADE_SELECIONADA)
+          && referencia === mesAtual();
+        if (window.ABERTURA) ABERTURA.painel = null;
+
+        d = serve ? adiantado : await api.get(
+          `/dashboard/painel?unidade_id=${UNIDADE_SELECIONADA}&referencia=${referencia}`);
       } catch (erro) {
         container.innerHTML =
           `<div class="estado-vazio">Não foi possível carregar o painel: ${erro.message}</div>`;

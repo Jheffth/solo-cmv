@@ -20,7 +20,7 @@ o CMV está subindo.
 Sem nenhuma contagem, o saldo é compras − saídas — que dá 0 para item
 recém-cadastrado.
 """
-from typing import Dict, Optional, Iterable
+from typing import Dict, Iterable, NamedTuple, Optional
 
 from sqlalchemy.orm import Session
 
@@ -30,10 +30,41 @@ TIPOS_CONTAGEM = (TipoMovimento.CONTAGEM_INICIAL, TipoMovimento.CONTAGEM_FINAL)
 TIPOS_SAIDA = (TipoMovimento.REQUISICAO, TipoMovimento.PERDA)
 
 
+class _Mov(NamedTuple):
+    """Um movimento reduzido ao que o cálculo de saldo precisa.
+
+    Buscamos colunas soltas em vez de objetos Movimento inteiros: o ORM
+    monta um objeto com dezenas de atributos e o registra na sessão, e aqui
+    são milhares de linhas para somar quatro campos.
+
+    São campos NOMEADOS de propósito. A versão anterior guardava tuplas
+    anônimas e lia `m[4]` para pegar a quantidade — índice que existia na
+    consulta (onde produto_id é a coluna 0) mas não na tupla guardada (onde
+    produto_id virou a chave do dicionário). Resultado: IndexError em toda
+    tela que mostra saldo. Com nome, esse erro não tem como acontecer.
+    """
+    tipo: object
+    data: object
+    id: int
+    quantidade: float
+
+    @property
+    def ordem(self):
+        """Critério de "veio depois": data, e o id para desempatar no mesmo dia."""
+        return (self.data, self.id)
+
+
 def saldos_por_produto(db: Session, unidade_id: int,
                        produto_ids: Optional[Iterable[int]] = None) -> Dict[int, float]:
     """Saldo atual de cada produto na unidade. Chave = produto_id."""
-    query = db.query(Movimento).filter(Movimento.unidade_id == unidade_id)
+    query = db.query(
+        Movimento.produto_id,
+        Movimento.tipo,
+        Movimento.data,
+        Movimento.id,
+        Movimento.quantidade,
+    ).filter(Movimento.unidade_id == unidade_id)
+
     if produto_ids is not None:
         ids = list(produto_ids)
         if not ids:
@@ -41,24 +72,26 @@ def saldos_por_produto(db: Session, unidade_id: int,
         query = query.filter(Movimento.produto_id.in_(ids))
 
     por_produto: Dict[int, list] = {}
-    for m in query.all():
-        por_produto.setdefault(m.produto_id, []).append(m)
+    for pid, tipo, data, mid, qtde in query.all():
+        por_produto.setdefault(pid, []).append(_Mov(tipo, data, mid, qtde or 0))
 
     saldos: Dict[int, float] = {}
     for produto_id, movs in por_produto.items():
         contagens = [m for m in movs if m.tipo in TIPOS_CONTAGEM]
-        ultima = max(contagens, key=lambda m: (m.data, m.id)) if contagens else None
+        ultima = max(contagens, key=lambda m: m.ordem) if contagens else None
+        corte = ultima.ordem if ultima else None
 
-        def posterior(m):
-            """Movimento que aconteceu depois da última contagem."""
-            return ultima is None or (m.data, m.id) > (ultima.data, ultima.id)
+        entradas = 0.0
+        saidas = 0.0
+        for m in movs:
+            if corte is not None and m.ordem <= corte:
+                continue          # já está embutido na contagem
+            if m.tipo == TipoMovimento.COMPRA:
+                entradas += m.quantidade
+            elif m.tipo in TIPOS_SAIDA:
+                saidas += m.quantidade
 
-        entradas = sum(m.quantidade for m in movs
-                       if m.tipo == TipoMovimento.COMPRA and posterior(m))
-        saidas = sum(m.quantidade for m in movs
-                     if m.tipo in TIPOS_SAIDA and posterior(m))
-
-        base = ultima.quantidade if ultima else 0
+        base = ultima.quantidade if ultima else 0.0
         saldos[produto_id] = round(base + entradas - saidas, 3)
 
     return saldos
@@ -67,22 +100,22 @@ def saldos_por_produto(db: Session, unidade_id: int,
 def data_ultima_contagem(db: Session, unidade_id: int) -> Dict[int, object]:
     """Data da última contagem de cada produto (para exibição)."""
     resultado: Dict[int, object] = {}
-    movs = db.query(Movimento).filter(
+    movs = db.query(Movimento.produto_id, Movimento.data).filter(
         Movimento.unidade_id == unidade_id,
         Movimento.tipo.in_(TIPOS_CONTAGEM),
     ).all()
-    for m in movs:
-        atual = resultado.get(m.produto_id)
-        if atual is None or m.data > atual:
-            resultado[m.produto_id] = m.data
+    for pid, data in movs:
+        atual = resultado.get(pid)
+        if atual is None or data > atual:
+            resultado[pid] = data
     return resultado
 
 
 def ultimos_custos(db: Session, unidade_id: int) -> Dict[int, float]:
     """Último custo pago por produto na unidade (equivalente à aba UCustoInfo)."""
     custos: Dict[int, float] = {}
-    for h in (db.query(HistoricoCusto)
+    for pid, custo in (db.query(HistoricoCusto.produto_id, HistoricoCusto.custo)
               .filter(HistoricoCusto.unidade_id == unidade_id)
               .order_by(HistoricoCusto.data.asc(), HistoricoCusto.id.asc()).all()):
-        custos[h.produto_id] = h.custo
+        custos[pid] = custo
     return custos

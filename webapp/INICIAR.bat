@@ -48,7 +48,10 @@ start http://localhost:8095
 echo.
 echo ========================================================
 echo  Sistema iniciado! Acesse: http://localhost:8095
-echo  Login: Jh3ffth  ^|  Senha: 1601Jcs33@2503
+echo  Login: Jh3ffth (ou o de ARQUITETO_LOGIN no .env)
+echo  Senha: a que voce definiu em ARQUITETO_SENHA. Na primeira
+echo         execucao sem essa variavel, o sistema gera uma e mostra
+echo         aqui na tela, uma vez so.
 echo  Porta 8000 e 8080 sao do Solo Rotinas - nao usar aqui.
 echo  Para encerrar: Ctrl+C
 echo ========================================================

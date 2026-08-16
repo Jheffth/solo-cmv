@@ -179,3 +179,80 @@ Três coisas que merecem atenção porque o servidor já tem projetos rodando:
 
 Backup: `pg_dump solo_cmv` cobre tudo. O arquivo `solo_cmv.db` do SQLite pode
 ser guardado como ponto de retorno da migração.
+
+---
+
+## 6. Desempenho — o que foi medido e o que foi feito (15/08/2026)
+
+### 6.1 A medição
+
+Feita no navegador, contra o servidor no ar. O número que orienta tudo:
+
+```
+/api/health  →  50 bytes, sem banco, sem autenticação  →  241 ms
+```
+
+Três destinos, do mesmo navegador, no mesmo momento:
+
+| destino | latência |
+|---|---|
+| Google | 37 ms |
+| CDN da Cloudflare | 79 ms |
+| **Contabo (solocmv)** | **258 ms** |
+
+E a decomposição do pedido: **aperto de mão TCP 226 ms**, TLS 242 ms, DNS
+178 ms. O tempo de espera da resposta (~245 ms) é praticamente igual ao TCP.
+
+**Conclusão: o servidor responde na hora. O que custa é a distância.** Nenhuma
+linha de código conserta isso — só mudar a região do VPS. O que *dá* para
+fazer é reduzir o número de viagens e o tamanho do que viaja.
+
+### 6.2 O que foi feito
+
+| mudança | onde | efeito medido |
+|---|---|---|
+| Abertura em um pedido só | `routers/sessao.py` | **820 ms → 283 ms** (−66%) |
+| Compressão gzip | `main.py` | **383 KB → 118 KB** (−69%), ~600 ms na 1ª carga |
+| Metas lidas uma vez por pedido | `servicos/memoria.py` | painel: 60 → 30 consultas |
+| Inventários lidos uma vez | `servicos/painel.py` | −9 consultas por página |
+| Escopo lido uma vez | `servicos/escopo.py` | −1 consulta em toda rota |
+| `Cache-Control` nos estáticos | `main.py` | sem revalidação durante o expediente |
+
+### 6.3 A armadilha do `unidade_id` na rota de abertura
+
+`/api/sessao` recebe a última unidade usada no parâmetro **`preferida`**, e
+não `unidade_id`. Não é capricho: o guarda de unidade intercepta `unidade_id`
+em qualquer pedido e devolve 403 quando a unidade não é permitida — correto
+em toda rota de dado, e desastroso aqui.
+
+A unidade lembrada vem do navegador e pode estar velha: a pessoa pode ter
+perdido o acesso, ou a loja pode ter sido removida. Com `unidade_id`, isso
+viraria 403 na abertura e a pessoa ficaria trancada do lado de fora sem
+entender por quê. Com outro nome, o guarda ignora e a rota decide: preferência
+inválida é descartada em silêncio e abre na primeira unidade permitida.
+
+Coberto por `teste_abertura.js`, seção 6.
+
+### 6.4 O bug que a otimização quase introduziu
+
+`calculo_estoque.py` foi reescrito para buscar colunas soltas em vez de
+objetos ORM inteiros — a mudança certa. Mas a tupla guardada descarta o
+`produto_id` (virou a chave do dicionário), e as leituras continuaram em
+`m[4]`. Índice válido na consulta, inexistente na tupla: `IndexError` em
+Estoque, Inventário, Requisições, Painel, Perdas e Regional.
+
+A correção manteve a otimização e trocou a tupla anônima por uma `NamedTuple`.
+Com campo nomeado, esse erro não tem como voltar.
+
+### 6.5 O que continua na mesa
+
+- **Os ~250 ms de distância.** Só muda trocando a região do VPS. Vale
+  comparar onde ficam os restaurantes e onde fica o datacenter.
+- **Dois deploys.** Existem `deploy_contabo.py` (systemd) e `deploy_docker.py`
+  (Docker), os dois mirando a porta 8095. Se ambos rodaram, há processo órfão
+  consumindo RAM — e a máquina também sustenta Solo Rotinas e Solo Finances.
+  `diagnostico_servidor.py`, na raiz do projeto, responde isso sem alterar nada.
+- **Segredos em texto puro.** Os scripts de implantação carregam a senha de
+  root da Contabo — por isso ficam fora do repositório (ver `.gitignore`). A
+  `SECRET_KEY` que foi para produção é uma frase curta e previsível, escrita
+  à mão: precisa ser trocada por `secrets.token_urlsafe(64)`.

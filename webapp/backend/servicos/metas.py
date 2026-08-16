@@ -25,6 +25,8 @@ from typing import Dict, List, Optional
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from servicos.memoria import lembrar
+
 from models import (
     Meta, TipoMeta, FormatoMeta, PeriodicidadeMeta, OrigemMeta, Categoria,
 )
@@ -100,22 +102,37 @@ def _consulta_base(db: Session, unidade_id: Optional[int]):
     return query
 
 
+def _todas_da_unidade(db: Session, unidade_id: Optional[int]) -> List[Meta]:
+    """Todas as metas que podem valer para a unidade, lidas uma vez por pedido.
+
+    Antes cada chamada de `_vigente_em` fazia sua própria consulta. Montar o
+    painel de uma unidade dispara umas vinte e cinco delas — uma por família,
+    mais os degraus da herança — todas à mesma tabela, com o mesmo filtro, e
+    a tabela tem quatro linhas.
+
+    Em PostgreSQL cada consulta é uma ida e volta pela rede; foi metade do
+    tempo do painel no servidor. Lendo tudo de uma vez e filtrando em Python,
+    vinte e cinco viram uma.
+    """
+    return lembrar(db, ("metas_da_unidade", unidade_id),
+                   lambda: _consulta_base(db, unidade_id).all())
+
+
 def _vigente_em(db: Session, unidade_id: Optional[int], tipo: TipoMeta,
                 em: date_type, categoria_id: Optional[int] = None) -> Optional[Meta]:
     """A meta daquele tipo que estava valendo na data — sem herança."""
-    query = _consulta_base(db, unidade_id).filter(
-        Meta.tipo == tipo,
-        Meta.vigencia_inicio <= em,
-        or_(Meta.vigencia_fim.is_(None), Meta.vigencia_fim >= em),
-    )
-    if tipo == TipoMeta.CMV_FAMILIA:
-        query = query.filter(Meta.categoria_id == categoria_id)
+    candidatas = [
+        m for m in _todas_da_unidade(db, unidade_id)
+        if m.tipo == tipo
+        and m.vigencia_inicio <= em
+        and (m.vigencia_fim is None or m.vigencia_fim >= em)
+        and (tipo != TipoMeta.CMV_FAMILIA or m.categoria_id == categoria_id)
+    ]
+    if not candidatas:
+        return None
 
     # Unidade específica ganha da meta geral da rede; entre duas, a mais
     # recente. `nullslast` não existe em todo dialeto, então ordena em Python.
-    candidatas = query.all()
-    if not candidatas:
-        return None
     candidatas.sort(
         key=lambda m: (1 if m.unidade_id else 0, m.vigencia_inicio, m.id),
         reverse=True,

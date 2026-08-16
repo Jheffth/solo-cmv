@@ -1,37 +1,76 @@
-# Ambientes virtuais
+# ============================================================================
+# SEGREDOS — nunca versionar
+# ============================================================================
+# Senhas, chaves e URLs de banco com credencial.
+.env
+.env.*
+!.env.example
+
+# Scripts de deploy gerados durante a implantação. Vinte e quatro deles
+# carregam a senha de root da Contabo em texto puro — e essa máquina também
+# sustenta o Solo Rotinas e o Solo Finances. Continuam no seu disco; só não
+# entram no repositório.
+#
+# O procedimento de implantação, sem segredo nenhum, está documentado em
+# webapp/MIGRACAO_POSTGRES.md.
+deploy_*.py
+fix_*.py
+check_*.py
+final_*.py
+force_*.py
+get_*.py
+inspect_*.py
+install_*.py
+run_remote.py
+upload_and_build.py
+restart_caddy.py
+remote_setup.sh
+diagnostico_resultado.txt
+
+# ============================================================================
+# DADOS REAIS DOS RESTAURANTES
+# ============================================================================
+# O banco de trabalho tem estoque, compras e faturamento de verdade das duas
+# lojas. Em produção quem guarda isso é o PostgreSQL, com pg_dump.
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ============================================================================
+# PYTHON
+# ============================================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.deps_ok
 venv/
 .venv/
 env/
-ENV/
-
-# Python Cache e Bytecode
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
 .pytest_cache/
+.mypy_cache/
 
-# Arquivos sensíveis e variáveis de ambiente
-.env
-.env.local
-.env.production
-*.env
+# ============================================================================
+# NODE
+# ============================================================================
+node_modules/
+npm-debug.log*
 
-# Bancos de dados locais
-*.db
-*.sqlite3
-*.db-journal
+# ============================================================================
+# SAÍDAS GERADAS
+# ============================================================================
+*.pdf
+!docs/**/*.pdf
 
-# Uploads / Arquivos temporários
-uploads/
-temp/
-tmp/
-
-# IDEs e Editores
-.vscode/
-.idea/
+# ============================================================================
+# SISTEMA OPERACIONAL E EDITORES
+# ============================================================================
+Thumbs.db
+desktop.ini
+.DS_Store
 *.swp
-*.swo
-
-# Logs
-*.log
+*~
+.idea/
+.vscode/
+~$*

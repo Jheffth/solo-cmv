@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -14,6 +15,7 @@ from seed import popular_banco
 
 # Routers
 from auth.router import router as auth_router
+from routers.sessao import router as sessao_router
 from routers.unidades import router as unidades_router
 from routers.categorias import router as categorias_router
 from routers.fornecedores import router as fornecedores_router
@@ -66,6 +68,18 @@ app.add_middleware(
 # carregando uma unidade que o usuário não pode ver (ver auth/guarda_unidade.py).
 app.add_middleware(GuardaDeUnidade)
 
+# Compressão. Acrescentado por último = camada mais externa, então vale para
+# tudo: JSON das rotas, JS, CSS e as respostas de erro.
+#
+# Por que importa mais aqui do que num sistema comum: o servidor está a ~250 ms
+# de distância de quem usa (medido: 258 ms contra 37 ms do Google), e a 250 ms
+# de ida e volta cada quilobyte a menos aparece na tela. Sem isto, o
+# chart.umd.js viaja 205 KB crus e a lista de estoque, 66 KB de JSON — os dois
+# comprimem para perto de um quarto do tamanho.
+#
+# minimum_size=500: abaixo disso o cabeçalho do gzip custa mais que a economia.
+app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
+
 
 @app.on_event("startup")
 def on_startup():
@@ -83,6 +97,7 @@ def health():
 
 
 app.include_router(auth_router, prefix="/api")
+app.include_router(sessao_router, prefix="/api")   # abertura em uma viagem só
 app.include_router(unidades_router, prefix="/api")
 app.include_router(categorias_router, prefix="/api")
 app.include_router(fornecedores_router, prefix="/api")
@@ -106,10 +121,34 @@ app.include_router(nfe_router, prefix="/api")             # seção reservada �
 # ==============================================================================
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
+UMA_HORA = 3600
+
+
+class EstaticosComCache(StaticFiles):
+    """StaticFiles dizendo por quanto tempo o navegador pode reusar o arquivo.
+
+    Sem `Cache-Control` o navegador decide sozinho por heurística — hoje ele
+    acerta, mas não é garantia, e uma revalidação custa os mesmos ~250 ms de
+    ida e volta que baixar o arquivo. Com 31 arquivos na página, é meio
+    segundo desperdiçado só para ouvir "não mudou".
+
+    Uma hora é o meio-termo: ninguém revalida durante o expediente, e um
+    deploy chega a todo mundo no mesmo dia.
+
+    (O parâmetro `max_age` existe no StaticFiles a partir do Starlette 0.37;
+    esta subclasse funciona em qualquer versão, inclusive a do servidor.)
+    """
+
+    def file_response(self, *args, **kwargs):
+        resposta = super().file_response(*args, **kwargs)
+        resposta.headers.setdefault("Cache-Control", f"public, max-age={UMA_HORA}")
+        return resposta
+
+
 if FRONTEND_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
-    app.mount("/css", StaticFiles(directory=FRONTEND_DIR / "css"), name="css")
-    app.mount("/js", StaticFiles(directory=FRONTEND_DIR / "js"), name="js")
+    app.mount("/assets", EstaticosComCache(directory=FRONTEND_DIR / "assets"), name="assets")
+    app.mount("/css", EstaticosComCache(directory=FRONTEND_DIR / "css"), name="css")
+    app.mount("/js", EstaticosComCache(directory=FRONTEND_DIR / "js"), name="js")
 
     @app.get("/", include_in_schema=False)
     def index():

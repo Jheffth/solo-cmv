@@ -35,6 +35,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Unidade, Usuario, PapelUsuario, PAPEIS_IRRESTRITOS
 from auth.deps import get_current_user
+from servicos.memoria import lembrar
 
 # Valor que a tela manda quando o usuário escolhe "Regional" no seletor.
 # É um sentinela explícito: `unidade_id` ausente já significa outra coisa
@@ -53,16 +54,25 @@ def irrestrito(usuario: Usuario) -> bool:
 
 
 def unidades_permitidas(db: Session, usuario: Usuario) -> List[Unidade]:
-    """As unidades que este usuário pode ver, em ordem alfabética."""
-    if irrestrito(usuario):
-        query = db.query(Unidade)
-        # ARQUITETO atravessa empresas (é quem opera o produto);
-        # DIRETOR é o topo de UMA empresa e não enxerga fora dela.
-        if usuario.papel != PapelUsuario.ARQUITETO and usuario.empresa_id:
-            query = query.filter(Unidade.empresa_id == usuario.empresa_id)
-        return query.order_by(Unidade.nome).all()
+    """As unidades que este usuário pode ver, em ordem alfabética.
 
-    return sorted(usuario.unidades or [], key=lambda u: u.nome)
+    Lida uma vez por pedido: o guarda de unidade pergunta isto antes da rota,
+    a rota pergunta de novo, e serviços chamados por ela perguntam mais uma
+    vez. A resposta não muda no meio de um pedido — e como isto roda em
+    *toda* rota, a consulta economizada aparece no sistema inteiro.
+    """
+    def carregar():
+        if irrestrito(usuario):
+            query = db.query(Unidade)
+            # ARQUITETO atravessa empresas (é quem opera o produto);
+            # DIRETOR é o topo de UMA empresa e não enxerga fora dela.
+            if usuario.papel != PapelUsuario.ARQUITETO and usuario.empresa_id:
+                query = query.filter(Unidade.empresa_id == usuario.empresa_id)
+            return query.order_by(Unidade.nome).all()
+
+        return sorted(usuario.unidades or [], key=lambda u: u.nome)
+
+    return lembrar(db, ("unidades_permitidas", usuario.id), carregar)
 
 
 def ids_permitidos(db: Session, usuario: Usuario) -> List[int]:

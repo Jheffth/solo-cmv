@@ -41,10 +41,20 @@ def ok(condicao, mensagem):
 
 print(f'\nDIALETO: {engine.dialect.name}')
 
+# Credenciais vêm do ambiente: este arquivo é versionado, e senha em
+# arquivo versionado é senha pública.
+#   set TESTE_LOGIN=... & set TESTE_SENHA=...     (Windows)
+#   export TESTE_LOGIN=... TESTE_SENHA=...        (Linux)
+LOGIN = os.environ.get('TESTE_LOGIN', 'Jh3ffth')
+SENHA = os.environ.get('TESTE_SENHA')
+if not SENHA:
+    sys.exit('Defina TESTE_SENHA com a senha do usuário Arquiteto para rodar este teste.')
+
 cliente = TestClient(app)
-t = cliente.post('/api/auth/login',
-                 json={'login': 'Jh3ffth', 'senha': '1601Jcs33@2503'}).json()['access_token']
-H = {'Authorization': 'Bearer ' + t}
+resposta = cliente.post('/api/auth/login', json={'login': LOGIN, 'senha': SENHA})
+if resposta.status_code != 200:
+    sys.exit(f'Login falhou ({resposta.status_code}). Confira TESTE_LOGIN e TESTE_SENHA.')
+H = {'Authorization': 'Bearer ' + resposta.json()['access_token']}
 
 print('\n[1] TODAS AS ROTAS RESPONDEM')
 ROTAS = [

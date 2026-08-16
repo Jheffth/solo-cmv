@@ -9,6 +9,7 @@ cadastro — sem precisar digitar tudo de novo.
 """
 import json
 import os
+import secrets
 
 from sqlalchemy.orm import Session
 
@@ -22,9 +23,42 @@ SEED_DATA_PATH = os.path.join(os.path.dirname(__file__), "seed_data.json")
 NOME_EMPRESA = "Josefina Gastronomia"
 UNIDADES_INICIAIS = ["Josefina", "Casa Josefina"]
 
-ARQUITETO_LOGIN = "Jh3ffth"
+ARQUITETO_LOGIN = os.getenv("ARQUITETO_LOGIN", "Jh3ffth")
 ARQUITETO_NOME = "Arquiteto"
-ARQUITETO_SENHA = "1601Jcs33@2503"
+
+
+def _senha_inicial() -> str:
+    """A senha do primeiro usuário — nunca escrita no código.
+
+    Senha em arquivo versionado é senha pública: qualquer pessoa com acesso
+    ao repositório, hoje ou daqui a cinco anos, entra como Arquiteto. E como
+    este sistema vai ser vendido a outros restaurantes, uma senha fixa no
+    código seria a MESMA senha em toda instalação.
+
+    Duas formas de definir, nesta ordem:
+
+      1. Variável de ambiente `ARQUITETO_SENHA` — é o caminho de produção,
+         e é o que o `.env` deve trazer.
+      2. Nenhuma: geramos uma aleatória e imprimimos UMA vez, no momento em
+         que o usuário é criado. Anote — não há como recuperá-la depois, só
+         redefinir.
+
+    Isto só roda quando o usuário ainda não existe. Instalação que já tem
+    Arquiteto não é afetada: a senha atual continua valendo.
+    """
+    do_ambiente = os.getenv("ARQUITETO_SENHA")
+    if do_ambiente:
+        return do_ambiente
+
+    senha = secrets.token_urlsafe(12)
+    print("\n" + "=" * 68)
+    print("  USUÁRIO ARQUITETO CRIADO")
+    print(f"  login: {ARQUITETO_LOGIN}")
+    print(f"  senha: {senha}")
+    print("  Anote agora. Esta senha não será mostrada de novo.")
+    print("  Para definir você mesmo, use ARQUITETO_SENHA no .env.")
+    print("=" * 68 + "\n")
+    return senha
 
 
 def _get_or_create_empresa(db: Session) -> Empresa:
@@ -59,7 +93,7 @@ def _get_or_create_arquiteto(db: Session, empresa: Empresa, unidades: list[Unida
             empresa_id=empresa.id,
             nome=ARQUITETO_NOME,
             login=ARQUITETO_LOGIN,
-            senha_hash=hash_senha(ARQUITETO_SENHA),
+            senha_hash=hash_senha(_senha_inicial()),
             papel=PapelUsuario.ARQUITETO,
             ativo=True,
         )

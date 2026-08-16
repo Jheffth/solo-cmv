@@ -25,14 +25,45 @@ function mostrarApp() {
 async function tentarLogin(login, senha) {
   const resposta = await api.post('/auth/login', { login, senha });
   setToken(resposta.access_token);
-  USUARIO_ATUAL = await api.get('/auth/me');
+  // Mesma rota de abertura usada quando já há sessão: quem acabou de entrar
+  // não deve esperar mais viagens do que quem só atualizou a página.
+  await carregarSessaoExistente();
   return USUARIO_ATUAL;
 }
 
+/* O que a rota /sessao já trouxe, para as etapas seguintes não pedirem de
+   novo. Cada campo é consumido uma vez e apagado: é adiantamento da
+   abertura, não cache — a segunda vez que a tela precisar do dado, ele tem
+   que vir fresco do servidor. */
+window.ABERTURA = { escopo: null, painel: null, unidade: null };
+
+/* Abre o sistema numa viagem só.
+
+   Eram três pedidos em fila — /auth/me, /unidades/escopo e
+   /dashboard/painel — e cada um custa ~250 ms de distância até o servidor,
+   medidos. O trabalho do servidor é o mesmo; o que se economiza são duas
+   idas e voltas antes de a tela aparecer.
+
+   A unidade lembrada vai como `preferida` (e não `unidade_id`): se a pessoa
+   perdeu o acesso àquela loja, o servidor ignora e abre na primeira
+   permitida, em vez de recusar a abertura inteira. */
 async function carregarSessaoExistente() {
   if (!getToken()) return false;
   try {
-    USUARIO_ATUAL = await api.get('/auth/me');
+    const params = new URLSearchParams();
+    const lembrada = localStorage.getItem(CHAVE_UNIDADE);
+    if (lembrada) params.set('preferida', lembrada);
+
+    // Só vale trazer o painel se for o painel que vai abrir. Entrando
+    // direto em #estoque, seria trabalho do servidor jogado fora.
+    const destino = (location.hash || '').replace('#', '').split('/')[0];
+    if (!destino || destino === 'dashboard') params.set('com_painel', 'true');
+
+    const dados = await api.get('/sessao?' + params.toString());
+    USUARIO_ATUAL = dados.usuario;
+    ABERTURA.escopo = dados.escopo;
+    ABERTURA.painel = dados.painel;
+    ABERTURA.unidade = dados.unidade;
     return true;
   } catch (e) {
     limparToken();
@@ -85,7 +116,11 @@ function nomeDoEscopo() {
 
 async function carregarUnidades() {
   // O backend decide o que este usuário enxerga; a tela só desenha.
-  const escopo = await api.get('/unidades/escopo');
+  // Na abertura o escopo já veio junto com a sessão; depois disso, e em
+  // qualquer recarga do seletor, vem da rota própria.
+  let escopo = ABERTURA.escopo;
+  ABERTURA.escopo = null;
+  if (!escopo) escopo = await api.get('/unidades/escopo');
   UNIDADES_DISPONIVEIS = escopo.unidades;
   ACESSO_REGIONAL = !!escopo.regional;
 
