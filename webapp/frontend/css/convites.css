@@ -1,0 +1,145 @@
+/* Convites — emissão, lista e a tela pública de aceite.
+   Usa as variáveis de main.css; nada de cor solta aqui. */
+
+/* ------------------------------------------------------ tela pública */
+.login-card--convite {
+  max-width: 460px;
+  text-align: left;
+}
+.login-card--convite h1,
+.login-card--convite .login-subtitulo,
+.login-card--convite .login-logo {
+  text-align: center;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* O quadro do que está sendo concedido. Fica antes do formulário de
+   propósito: ler o que se recebe vem antes de escolher a senha. */
+.convite-resumo {
+  background: var(--fundo-suave, rgba(0, 0, 0, .04));
+  border-radius: 10px;
+  padding: .9rem 1rem;
+  margin: 1.1rem 0 1.3rem;
+}
+.convite-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .35rem 0;
+  font-size: .9rem;
+  line-height: 1.35;
+}
+.convite-linha + .convite-linha {
+  border-top: 1px solid var(--borda, rgba(0, 0, 0, .08));
+}
+.convite-linha span { color: var(--texto-suave, #6b7280); flex: 0 0 auto; }
+.convite-linha strong { text-align: right; }
+
+.convite-motivo {
+  color: var(--perigo, #a6231f);
+  font-weight: 600;
+  text-align: center;
+  margin: .8rem 0;
+}
+
+/* ------------------------------------------------------ emissão */
+.form-convite .form-linha {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.form-convite .form-linha .form-group { flex: 1 1 180px; }
+
+.check-linha {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  padding: .4rem 0;
+  cursor: pointer;
+  font-size: .92rem;
+  line-height: 1.35;
+}
+.check-linha input { margin-top: .18rem; flex: 0 0 auto; }
+.check-destaque {
+  border: 1px solid var(--borda, rgba(0, 0, 0, .1));
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  margin-bottom: .4rem;
+}
+.check-destaque:has(input:checked) {
+  border-color: var(--primaria, #2563eb);
+  background: var(--fundo-suave, rgba(37, 99, 235, .05));
+}
+
+.lista-unidades {
+  margin-left: 1.6rem;
+  padding-left: .8rem;
+  border-left: 2px solid var(--borda, rgba(0, 0, 0, .1));
+  max-height: 220px;
+  overflow-y: auto;
+}
+/* Escolhendo "todas as lojas", a lista continua visível mas apagada: some
+   a ação, não a informação — quem olha ainda vê quais lojas existem hoje. */
+.lista-unidades.desabilitada {
+  opacity: .4;
+  pointer-events: none;
+}
+
+.form-dica {
+  display: block;
+  margin-top: .3rem;
+  color: var(--texto-suave, #6b7280);
+  font-size: .82rem;
+}
+
+.aviso-sucesso {
+  background: var(--sucesso-fundo, #ecfdf5);
+  color: var(--sucesso, #067647);
+  border-radius: 8px;
+  padding: .7rem .9rem;
+  margin-bottom: 1rem;
+  font-size: .9rem;
+}
+
+/* ------------------------------------------------------ lista */
+.codigo-convite {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .86rem;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.badge-estado {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  font-size: .76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-disponivel { background: #e0f2fe; color: #075985; }
+.badge-usado      { background: #ecfdf5; color: #067647; }
+.badge-expirado   { background: rgba(0, 0, 0, .06); color: #6b7280; }
+.badge-revogado   { background: #fef2f2; color: #a6231f; }
+
+/* Convite gasto ou vencido continua na lista, apagado: é registro de quem
+   autorizou a entrada de quem, e isso não se esconde. */
+tr.estado-expirado, tr.estado-revogado { opacity: .55; }
+
+.acoes { white-space: nowrap; text-align: right; }
+.btn-icone {
+  background: none;
+  border: 1px solid var(--borda, rgba(0, 0, 0, .12));
+  border-radius: 6px;
+  padding: .25rem .45rem;
+  cursor: pointer;
+  line-height: 1;
+  font-size: .9rem;
+}
+.btn-icone:hover { background: var(--fundo-suave, rgba(0, 0, 0, .05)); }
+.btn-icone.btn-perigo:hover {
+  border-color: var(--perigo, #a6231f);
+  color: var(--perigo, #a6231f);
+}

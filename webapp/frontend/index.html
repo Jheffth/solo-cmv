@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/css/metas.css">
 <link rel="stylesheet" href="/css/dashboard.css">
 <link rel="stylesheet" href="/css/relatorios.css">
+<link rel="stylesheet" href="/css/convites.css">
 <script>
   // Captura falhas reais de carregamento de script/CSS ou erros de JS e
   // mostra num aviso próprio (separado da mensagem de "login inválido"),
@@ -68,6 +69,14 @@
     </div>
   </div>
 
+  <!-- ===================== ACEITE DE CONVITE (público) =====================
+       Fica FORA do #app de propósito: quem abre esta tela ainda não tem conta,
+       logo não tem sessão, logo não pode depender de nada que o app carrega
+       depois do login. É a única tela do sistema que existe sem usuário. -->
+  <div id="tela-convite" class="login-screen" hidden>
+    <div class="login-card login-card--convite" id="convite-conteudo"></div>
+  </div>
+
   <!-- ===================== APP (pós-login) ===================== -->
   <div id="app" class="app-shell" hidden>
     <div class="menu-overlay" id="menu-overlay"></div>
@@ -77,17 +86,23 @@
         <span>Solo CMV</span>
       </div>
       <nav id="menu-lateral"></nav>
+      <!-- Bloco de Perfil do Usuário na Barra Lateral (Estilo Solo Routines) -->
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">J</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="nome-usuario"></div>
+          <div class="sidebar-user-role" id="badge-papel"></div>
+        </div>
+        <button id="btn-logout" class="sidebar-logout" title="Sair do Sistema" aria-label="Sair"></button>
+      </div>
     </aside>
 
     <div class="area-principal">
       <header class="topbar">
         <button class="btn-menu" id="btn-menu" type="button" aria-label="Abrir menu"></button>
         <div class="topbar-titulo" id="titulo-pagina">Painel</div>
-        <div class="topbar-usuario">
+        <div class="topbar-acoes">
           <select id="seletor-unidade" title="Unidade"></select>
-          <span class="badge-role" id="badge-papel"></span>
-          <span id="nome-usuario"></span>
-          <button id="btn-logout" class="btn-icone" title="Sair"></button>
         </div>
       </header>
       <main id="conteudo" class="conteudo"></main>
@@ -160,6 +175,8 @@
   <script src="/js/pages/metas.js"></script>
   <script src="/js/pages/relatorios.js"></script>
   <script src="/js/pages/nfe.js"></script>
+  <script src="/js/pages/convites.js"></script>
+  <script src="/js/aceitar-convite.js"></script>
   <script src="/js/lancador.js"></script>
   <script src="/js/abrir-inventario.js"></script>
   <script src="/js/abrir-requisicao.js"></script>

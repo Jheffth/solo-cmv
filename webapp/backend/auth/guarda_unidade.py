@@ -38,16 +38,23 @@ REGIONAL = "REGIONAL"
 
 
 def _unidades_do_usuario(db, usuario: Usuario) -> Set[int]:
-    if usuario.papel in PAPEIS_IRRESTRITOS:
-        query = db.query(Unidade.id)
-        if usuario.papel != PapelUsuario.ARQUITETO and usuario.empresa_id:
-            query = query.filter(Unidade.empresa_id == usuario.empresa_id)
-        return {linha[0] for linha in query.all()}
-    return {u.id for u in (usuario.unidades or [])}
+    """Delega a `servicos.escopo` — mesma resposta que as rotas usam.
+
+    Antes esta função tinha cópia própria da regra, e as duas cópias
+    envelheceram separadas: quando surgiu o escopo TODAS, as rotas passaram a
+    enxergar as lojas novas e o guarda continuou barrando. A pessoa recebia
+    403 numa unidade que o próprio sistema dizia que ela podia ver.
+
+    A importação é feita aqui dentro, e não no topo, porque `servicos.escopo`
+    importa `auth.deps`, que importa este módulo. No topo seria ciclo.
+    """
+    from servicos import escopo as servico_escopo
+    return {u.id for u in servico_escopo.unidades_permitidas(db, usuario)}
 
 
 def _pode_regional(usuario: Usuario) -> bool:
-    return usuario.papel in PAPEIS_IRRESTRITOS or bool(usuario.acesso_regional)
+    from servicos import escopo as servico_escopo
+    return servico_escopo.pode_ver_regional(usuario)
 
 
 def _extrair_do_corpo(corpo: bytes) -> Set[str]:

@@ -92,8 +92,25 @@ def migrar(origem_url: str, destino_url: str, aplicar: bool) -> int:
             try:
                 linhas = [dict(l._mapping) for l in con.execute(select(tabela))]
             except Exception as erro:
-                print(f"  !! {tabela.name}: não foi possível ler ({erro})")
-                linhas = []
+                # ABORTAR, não avisar e seguir.
+                #
+                # Antes isto virava `linhas = []` e a migração continuava. Uma
+                # tabela ilegível passava como tabela vazia, e o script
+                # terminava dizendo "conferido" sobre dados que não existiam.
+                # Aconteceu de verdade: a coluna `escopo_unidades` entrou no
+                # modelo, o SQLite de origem ainda não tinha, `usuarios` veio
+                # vazia — e só a chave estrangeira de `metas` acusou. Sem essa
+                # chave, o banco novo teria nascido sem usuário nenhum e o
+                # erro apareceria no primeiro login.
+                raise SystemExit(
+                    f"\n!! Não foi possível ler a tabela '{tabela.name}'.\n"
+                    f"   {erro}\n\n"
+                    f"   Causa mais provável: o banco de origem está atrás do\n"
+                    f"   modelo — falta uma coluna que o código já espera.\n\n"
+                    f"   Atualize a origem antes de migrar:\n"
+                    f'     DATABASE_URL="{origem_url}" python -c '
+                    f'"from migracoes import aplicar_migracoes; aplicar_migracoes()"\n'
+                )
             conteudo[tabela.name] = linhas
             total_origem += len(linhas)
             print(f"  {tabela.name:26} {len(linhas):>6} linha(s)")

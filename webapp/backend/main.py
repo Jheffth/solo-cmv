@@ -19,6 +19,7 @@ from routers.categorias import router as categorias_router
 from routers.fornecedores import router as fornecedores_router
 from routers.produtos import router as produtos_router
 from routers.usuarios import router as usuarios_router
+from routers.convites import router as convites_router
 from routers.movimentos import router as movimentos_router
 from routers.inventario import router as inventario_router
 from routers.vendas import router as vendas_router
@@ -107,6 +108,7 @@ app.include_router(categorias_router, prefix="/api")
 app.include_router(fornecedores_router, prefix="/api")
 app.include_router(produtos_router, prefix="/api")
 app.include_router(usuarios_router, prefix="/api")
+app.include_router(convites_router, prefix="/api")   # cadastro fechado por convite
 app.include_router(movimentos_router, prefix="/api")
 app.include_router(inventario_router, prefix="/api")
 app.include_router(vendas_router, prefix="/api")

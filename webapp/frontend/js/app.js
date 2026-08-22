@@ -16,6 +16,8 @@ window.NAV_ITEMS = [
   { chave: 'cmv',         rotulo: 'Motor de CMV',         icone: 'cmv',         emBreve: false },
   // Quem define o alvo é a diretoria; os demais papéis veem a meta nas telas
   { chave: 'metas',       rotulo: 'Metas',                icone: 'metas',       emBreve: false, papeis: ['ARQUITETO', 'DIRETOR'] },
+  // O cadastro é fechado: entra quem foi convidado. Só a diretoria convida.
+  { chave: 'convites',    rotulo: 'Convites',             icone: 'usuarios',    emBreve: false, papeis: ['ARQUITETO', 'DIRETOR'] },
   { chave: 'relatorios',  rotulo: 'Relatórios',           icone: 'relatorios', emBreve: false },
   { chave: 'nfe',         rotulo: 'Notas Fiscais (NF-e)',  icone: 'nfe',        emBreve: true },
   { chave: 'unidades',    rotulo: 'Unidades',             icone: 'unidades',    emBreve: false, papeis: ['ARQUITETO', 'ADMIN'] },
@@ -84,9 +86,24 @@ function ligarMenuLateral() {
 }
 
 function preencherTopbarUsuario() {
-  document.getElementById('nome-usuario').textContent = USUARIO_ATUAL.nome;
-  document.getElementById('badge-papel').textContent = USUARIO_ATUAL.papel;
-  document.getElementById('btn-logout').innerHTML = icone('logout');
+  if (!USUARIO_ATUAL) return;
+  const nomeEl = document.getElementById('nome-usuario');
+  const papelEl = document.getElementById('badge-papel');
+  const logoutBtn = document.getElementById('btn-logout');
+  const avatarEl = document.getElementById('sidebar-avatar');
+
+  if (nomeEl) nomeEl.textContent = USUARIO_ATUAL.nome;
+  if (papelEl) papelEl.textContent = USUARIO_ATUAL.papel;
+  if (logoutBtn) logoutBtn.innerHTML = icone('logout');
+
+  if (avatarEl) {
+    if (USUARIO_ATUAL.avatar_url) {
+      avatarEl.innerHTML = `<img src="${USUARIO_ATUAL.avatar_url}" alt="Avatar">`;
+    } else {
+      const inicial = (USUARIO_ATUAL.nome || 'U').trim().charAt(0).toUpperCase();
+      avatarEl.textContent = inicial;
+    }
+  }
 }
 
 async function iniciarApp() {
@@ -116,6 +133,11 @@ document.getElementById('form-login').addEventListener('submit', async (ev) => {
 document.getElementById('btn-logout').addEventListener('click', fazerLogout);
 
 (async function bootstrap() {
+  // O aceite de convite vem ANTES de tudo. É a única tela que existe sem
+  // usuário: exigir sessão para criar a primeira sessão seria um círculo.
+  // Se a URL não for de convite, `abrir()` devolve false e a vida segue.
+  if (window.AceitarConvite && await window.AceitarConvite.abrir()) return;
+
   const autenticado = await carregarSessaoExistente();
   if (autenticado) {
     await iniciarApp();

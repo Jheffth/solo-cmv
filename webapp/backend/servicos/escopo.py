@@ -91,9 +91,18 @@ def ids_permitidos(db: Session, usuario: Usuario) -> List[int]:
 
 
 def pode_ver_unidade(db: Session, usuario: Usuario, unidade_id: int) -> bool:
-    if irrestrito(usuario):
-        return unidade_id in ids_permitidos(db, usuario)
-    return unidade_id in {u.id for u in (usuario.unidades or [])}
+    """Uma pergunta, uma fonte: `unidades_permitidas`.
+
+    Este ramo já teve caminho próprio — lia `usuario.unidades` direto para
+    quem não é irrestrito. Funcionou enquanto "todas as unidades" era só
+    consequência do papel. Quando surgiu o escopo TODAS, a lista crua deixou
+    de contar a história inteira: o sistema dizia que a pessoa via a loja nova
+    e depois devolvia 403 nela.
+
+    A lição vale além deste caso: sempre que a mesma pergunta tem duas
+    respostas no código, uma delas envelhece sem ninguém perceber.
+    """
+    return unidade_id in ids_permitidos(db, usuario)
 
 
 def pode_ver_regional(usuario: Usuario) -> bool:
