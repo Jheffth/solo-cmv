@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from models import (
     PapelUsuario, TipoMovimento, StatusSessaoInventario, TipoDespesaExtra,
     StatusRequisicao, DestinoRequisicao, MotivoPerda,
-    TipoMeta, FormatoMeta, PeriodicidadeMeta, OrigemMeta,
+    TipoMeta, FormatoMeta, PeriodicidadeMeta, OrigemMeta, EscopoUnidades,
 )
 
 
@@ -30,7 +30,9 @@ class UsuarioOut(BaseModel):
     ativo: bool
     empresa_id: Optional[int] = None
 
-    # Escopo: quais unidades e se enxerga o consolidado da rede
+    # Escopo: quais unidades e se enxerga o consolidado da rede.
+    # São duas perguntas separadas — ver o comentário em models.Usuario.
+    escopo_unidades: EscopoUnidades = EscopoUnidades.LISTA
     acesso_regional: bool = False
     unidades: List["UnidadeResumo"] = []
 
@@ -41,18 +43,18 @@ class UnidadeResumo(BaseModel):
     nome: str
 
 
-class UsuarioCreate(BaseModel):
-    nome: str
-    login: str
-    senha: str
-    papel: PapelUsuario = PapelUsuario.OPERADOR
-    empresa_id: Optional[int] = None
-    unidade_ids: List[int] = []
-    acesso_regional: bool = False
+class UsuarioAtivo(BaseModel):
+    """Liga e desliga o acesso. Substitui apagar: o histórico de quem lançou
+    cada compra precisa continuar apontando para alguém."""
+    ativo: bool
 
 
 class UsuarioEscopo(BaseModel):
     """Altera só o escopo de acesso, sem mexer em senha ou papel."""
+    # LISTA usa `unidade_ids`; TODAS ignora a lista e acompanha as lojas
+    # futuras. Guardar a lista junto com TODAS criaria uma segunda verdade,
+    # desatualizada na primeira loja nova.
+    escopo_unidades: EscopoUnidades = EscopoUnidades.LISTA
     unidade_ids: List[int] = []
     acesso_regional: bool = False
 

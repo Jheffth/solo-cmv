@@ -143,3 +143,26 @@ tr.estado-expirado, tr.estado-revogado { opacity: .55; }
   border-color: var(--perigo, #a6231f);
   color: var(--perigo, #a6231f);
 }
+
+/* ------------------------------------------------------ tela de Usuários */
+/* O aviso de que conta nasce por convite fica no topo, não como rodapé:
+   quem abre a tela procurando "novo usuário" precisa achar o caminho antes
+   de concluir que a função sumiu. */
+.card-aviso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+.card-aviso .btn { flex: 0 0 auto; }
+
+.escopo-lista.desabilitada { opacity: .4; pointer-events: none; }
+
+tr.linha-inativa { opacity: .5; }
+tr.linha-inativa .badge-role { filter: grayscale(1); }
+
+.tabela-simples .acoes { white-space: nowrap; text-align: right; }
+.tabela-simples .acoes .btn-acao + .btn-acao { margin-left: .35rem; }
+.btn-acao.btn-perigo { color: var(--perigo, #a6231f); }
+.btn-acao.btn-perigo:hover { border-color: var(--perigo, #a6231f); }
