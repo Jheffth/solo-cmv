@@ -33,7 +33,8 @@ from fastapi import Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Unidade, Usuario, PapelUsuario, PAPEIS_IRRESTRITOS
+from models import (Unidade, Usuario, PapelUsuario, PAPEIS_IRRESTRITOS,
+                    EscopoUnidades)
 from auth.deps import get_current_user
 from servicos.memoria import lembrar
 
@@ -62,10 +63,20 @@ def unidades_permitidas(db: Session, usuario: Usuario) -> List[Unidade]:
     *toda* rota, a consulta economizada aparece no sistema inteiro.
     """
     def carregar():
-        if irrestrito(usuario):
+        # Duas portas levam a "todas as unidades", e são diferentes:
+        #   · o PAPEL — ARQUITETO e DIRETOR enxergam tudo por definição;
+        #   · o ESCOPO — TODAS, concedido a quem precisa acompanhar a rede
+        #     inteira sem receber os poderes da diretoria.
+        #
+        # As duas são REGRA, não lista: uma loja aberta amanhã entra sozinha.
+        # É essa a diferença para LISTA, que é fotografia e não se atualiza.
+        ve_tudo = irrestrito(usuario) or usuario.escopo_unidades == EscopoUnidades.TODAS
+
+        if ve_tudo:
             query = db.query(Unidade)
-            # ARQUITETO atravessa empresas (é quem opera o produto);
-            # DIRETOR é o topo de UMA empresa e não enxerga fora dela.
+            # ARQUITETO atravessa empresas (é quem opera o produto). Todo o
+            # resto — DIRETOR inclusive — para na fronteira da própria empresa,
+            # que é o que separa um cliente do outro.
             if usuario.papel != PapelUsuario.ARQUITETO and usuario.empresa_id:
                 query = query.filter(Unidade.empresa_id == usuario.empresa_id)
             return query.order_by(Unidade.nome).all()

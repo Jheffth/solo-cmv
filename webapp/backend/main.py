@@ -31,6 +31,7 @@ from routers.dashboard import router as dashboard_router
 from routers.cmv import router as cmv_router
 from routers.relatorios import router as relatorios_router
 from routers.nfe import router as nfe_router
+from routers.versao import router as versao_router
 
 # ==============================================================================
 # APP
@@ -118,6 +119,7 @@ app.include_router(dashboard_router, prefix="/api")
 app.include_router(cmv_router, prefix="/api")           # seção reservada — ver routers/cmv.py
 app.include_router(relatorios_router, prefix="/api")     # seção reservada — ver routers/relatorios.py
 app.include_router(nfe_router, prefix="/api")             # seção reservada — ver routers/nfe.py
+app.include_router(versao_router, prefix="/api")          # versão e commit SHA do sistema
 
 # ==============================================================================
 # FRONTEND ESTÁTICO

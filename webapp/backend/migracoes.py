@@ -215,8 +215,31 @@ def _usuario_escopo(conexao):
               f"receberam as unidades da própria empresa.")
 
 
+def _usuario_escopo_unidades(conexao):
+    """A coluna que separa "estas lojas" de "todas as lojas".
+
+    Quem já existe fica em LISTA — exatamente as unidades que hoje enxerga.
+    Isso é de propósito: promover alguém a "todas as unidades" sem que ninguém
+    tenha decidido seria ampliar acesso numa migração, que é o último lugar
+    onde alguém procuraria depois.
+
+    ARQUITETO e DIRETOR não precisam da marca: eles já enxergam tudo por serem
+    irrestritos, e essa regra não muda.
+    """
+    if not _tabela_existe(conexao, "usuarios"):
+        return
+    if "escopo_unidades" in _colunas(conexao, "usuarios"):
+        return
+
+    conexao.execute(text(
+        "ALTER TABLE usuarios ADD COLUMN escopo_unidades "
+        "VARCHAR(40) DEFAULT 'LISTA' NOT NULL"))
+    print("[MIGRACAO] usuarios: coluna 'escopo_unidades' adicionada (todos em LISTA).")
+
+
 def aplicar_migracoes():
     with engine.begin() as conexao:
+        _usuario_escopo_unidades(conexao)
         _inventario_descricao(conexao)
         _inventario_status(conexao)
         _inventario_escopo(conexao)

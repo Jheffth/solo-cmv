@@ -14,6 +14,11 @@ jobs:
       - name: Baixar codigo do repositorio (Checkout)
         uses: actions/checkout@v4
 
+      - name: Injetar Commit SHA
+        run: |
+          echo "${{ github.sha }}" | cut -c1-7 > webapp/backend/COMMIT_SHA
+          echo "Commit SHA gerado: $(cat webapp/backend/COMMIT_SHA)"
+
       - name: Sincronizar arquivos para o servidor via SSH (SCP)
         uses: appleboy/scp-action@v0.1.7
         with:

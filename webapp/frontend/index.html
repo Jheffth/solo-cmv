@@ -92,7 +92,54 @@
       </header>
       <main id="conteudo" class="conteudo"></main>
     </div>
-  </div>
+  <!-- FOOTER DE VERSÃO & EMBLEMA SVG (Estilo Solo Routines) -->
+  <footer id="version-footer" aria-label="Versão do sistema" style="
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 999;
+    pointer-events: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 1.2rem .4rem 0;
+  ">
+    <div id="version-badge" style="
+      pointer-events: auto;
+      display: flex; align-items: center; gap: .45rem;
+      background: rgba(15, 28, 42, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 20px;
+      padding: .2rem .65rem .2rem .5rem;
+      backdrop-filter: blur(8px);
+      cursor: default;
+      opacity: .65;
+      transition: opacity .25s, transform .25s;
+      font-size: .62rem;
+      letter-spacing: .06em;
+      color: #94a3b8;
+      user-select: none;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    "
+    onmouseenter="this.style.opacity='1'; this.style.transform='translateY(-1px)'"
+    onmouseleave="this.style.opacity='.65'; this.style.transform='translateY(0)'"
+    title="Solo CMV — Versão do Sistema">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <span id="version-text" style="color: #f8fafc; font-weight: 600;">v0.1.0</span>
+      <span id="version-env" style="
+        font-size: .52rem;
+        padding: .05rem .35rem;
+        border-radius: 4px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        background: rgba(251, 191, 36, .15);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, .3);
+      ">CONTABO</span>
+      <span id="version-sha" style="color: #64748b; font-size: .52rem; font-family: monospace;">#...</span>
+    </div>
+  </footer>
 
   <script src="/js/icons.js"></script>
   <script src="/js/api.js"></script>
@@ -118,5 +165,6 @@
   <script src="/js/abrir-requisicao.js"></script>
   <script src="/js/router.js"></script>
   <script src="/js/app.js"></script>
+  <script src="/js/version.js"></script>
 </body>
 </html>

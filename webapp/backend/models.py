@@ -64,6 +64,26 @@ class PapelUsuario(str, enum.Enum):
 PAPEIS_IRRESTRITOS = (PapelUsuario.ARQUITETO, PapelUsuario.DIRETOR)
 
 
+class EscopoUnidades(str, enum.Enum):
+    """Como as unidades de um usuário são decididas: por lista ou por regra.
+
+    LISTA é uma fotografia — "estas duas lojas". Abrir a Josefina Asa Sul
+    amanhã não muda nada para quem tem LISTA, e é isso que se quer: o gerente
+    da Casa Josefina não passa a enxergar a loja nova sem alguém decidir.
+
+    TODAS é uma regra — "todas as lojas da empresa". Acompanha as que ainda
+    não existem. É o que o convite chama de acesso Regional.
+
+    Antes disso, "todas as unidades" só existia colado ao papel: ARQUITETO e
+    DIRETOR enxergam tudo porque são irrestritos. Quem precisasse ver a rede
+    inteira sem ser da diretoria não tinha como — ou virava Diretor, o que dá
+    muito mais poder do que se queria dar, ou recebia uma lista que envelhecia
+    a cada loja nova.
+    """
+    LISTA = "LISTA"
+    TODAS = "TODAS"
+
+
 class TipoMovimento(str, enum.Enum):
     COMPRA = "COMPRA"
     CONTAGEM_INICIAL = "CONTAGEM_INICIAL"
@@ -258,6 +278,16 @@ class Usuario(Base):
     # um gerente pode responder por duas lojas sem que a diretoria queira
     # que ele enxergue o número da rede inteira.
     acesso_regional = Column(Boolean, default=False, nullable=False)
+
+    # LISTA = exatamente as unidades vinculadas abaixo.
+    # TODAS = todas as da empresa, inclusive as que ainda não existem.
+    #
+    # São duas perguntas diferentes, e misturá-las seria erro: `escopo_unidades`
+    # responde QUAIS lojas a pessoa enxerga; `acesso_regional` responde se ela
+    # pode ver a SOMA delas. Dá para ver as duas lojas sem ver o número da rede,
+    # e dá para acompanhar todas as lojas sem que isso implique ver o total.
+    escopo_unidades = Column(Enumerado(EscopoUnidades), nullable=False,
+                             default=EscopoUnidades.LISTA)
 
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -663,3 +693,78 @@ class Meta(Base):
     unidade = relationship("Unidade")
     categoria = relationship("Categoria")
     usuario = relationship("Usuario")
+
+
+# ==============================================================================
+# CONVITE — a única porta de entrada para uma conta nova
+# ==============================================================================
+# O cadastro é fechado: ninguém cria a própria conta. Quem tem autoridade
+# emite um convite JÁ COM o que a pessoa vai poder ver, e o convidado só
+# escolhe nome, login e senha.
+#
+# Isso importa porque o convite é uma rota PÚBLICA — quem a chama ainda não
+# tem conta, logo não tem token, logo o guarda de unidade não tem usuário para
+# conferir. Se o papel e as unidades viessem no corpo do pedido, qualquer um
+# se concederia o que quisesse. Vindo do convite, a decisão fica com quem
+# tinha autoridade no momento da emissão.
+convite_unidade = Table(
+    "convite_unidade",
+    Base.metadata,
+    Column("convite_id", Integer, ForeignKey("convites.id"), primary_key=True),
+    Column("unidade_id", Integer, ForeignKey("unidades.id"), primary_key=True),
+)
+
+
+class Convite(Base):
+    __tablename__ = "convites"
+
+    id = Column(Integer, primary_key=True)
+
+    # Formato SOLO-XXXX-XXXX, alfabeto sem 0/O e sem 1/I/L: o código é ditado
+    # por telefone e colado de WhatsApp, onde essas letras viram suporte.
+    codigo = Column(String(20), unique=True, nullable=False, index=True)
+
+    # A empresa do convidado. O Arquiteto tem empresa_id nulo — é assim que ele
+    # atravessa empresas —, então quando é ele quem convida, a empresa precisa
+    # ser escolhida. Sem isso o convidado nasceria órfão.
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
+    criado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+
+    # O que o convite concede. Copiado para o usuário no aceite, sem retoque.
+    papel = Column(Enumerado(PapelUsuario), nullable=False, default=PapelUsuario.OPERADOR)
+    escopo_unidades = Column(Enumerado(EscopoUnidades), nullable=False,
+                             default=EscopoUnidades.LISTA)
+    acesso_regional = Column(Boolean, default=False, nullable=False)
+
+    nota = Column(String(200), nullable=True)      # "para a Maria, do estoque"
+
+    expira_em = Column(DateTime, nullable=True)    # nulo = não expira
+    revogado = Column(Boolean, default=False, nullable=False)
+
+    # Uso único. Guardamos QUEM usou e QUANDO — um convite gasto é registro de
+    # quem autorizou a entrada de quem, e isso não se apaga.
+    usado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    usado_em = Column(DateTime, nullable=True)
+
+    criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    empresa = relationship("Empresa")
+    criado_por = relationship("Usuario", foreign_keys=[criado_por_id])
+    usado_por = relationship("Usuario", foreign_keys=[usado_por_id])
+    # Só faz sentido com escopo LISTA; com TODAS a regra substitui a lista.
+    unidades = relationship("Unidade", secondary=convite_unidade)
+
+    @property
+    def estado(self) -> str:
+        """DISPONIVEL, USADO, EXPIRADO ou REVOGADO — calculado, nunca guardado.
+
+        Estado guardado envelhece sozinho: um convite que expirou às 3 da manhã
+        continuaria marcado como disponível até alguém rodar alguma rotina.
+        """
+        if self.revogado:
+            return "REVOGADO"
+        if self.usado_por_id:
+            return "USADO"
+        if self.expira_em and datetime.utcnow() > self.expira_em:
+            return "EXPIRADO"
+        return "DISPONIVEL"
