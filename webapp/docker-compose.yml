@@ -3,10 +3,12 @@ services:
     image: postgres:15-alpine
     container_name: solo_cmv_db
     restart: always
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: solo_cmv
-      POSTGRES_PASSWORD: solo_cmv_2026_secreto
-      POSTGRES_DB: solo_cmv
+      POSTGRES_USER: ${POSTGRES_USER:-solo_cmv}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-solo_cmv}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -18,15 +20,20 @@ services:
       dockerfile: Dockerfile
     container_name: solo_cmv_app
     restart: always
-    command: uvicorn main:app --host 0.0.0.0 --port 8095 --workers 4
+    command: >
+      sh -c "python preparar_banco.py &&
+             uvicorn main:app --host 0.0.0.0 --port 8095
+             --workers ${WEB_CONCURRENCY:-2}"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql+psycopg://solo_cmv:solo_cmv_2026_secreto@db:5432/solo_cmv
-      SECRET_KEY: chave-secreta-solo-cmv-2026-xyz
-      ACCESS_TOKEN_EXPIRE_MINUTES: 480
-      PORT: 8095
-      HOST: 0.0.0.0
-      AMBIENTE: prod
-      CORS_ORIGINS: "https://solocmv.duckdns.org,http://localhost:8095,http://127.0.0.1:8095"
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      PORT: ${PORT:-8095}
+      HOST: ${HOST:-0.0.0.0}
+      AMBIENTE: ${AMBIENTE:-prod}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://solocmv.duckdns.org,http://localhost:8095,http://127.0.0.1:8095}
     depends_on:
       - db
     networks:

@@ -8,10 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from config import APP_NAME, APP_VERSION
-from database import criar_tabelas
-from migracoes import aplicar_migracoes
 from auth.guarda_unidade import GuardaDeUnidade
-from seed import popular_banco
+from preparar_banco import preparar
 
 # Routers
 from auth.router import router as auth_router
@@ -83,9 +81,14 @@ app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
 
 @app.on_event("startup")
 def on_startup():
-    criar_tabelas()
-    aplicar_migracoes()   # ajusta bancos que já existiam antes de mudanças de schema
-    popular_banco()
+    # Isto roda uma vez POR PROCESSO. Com --workers 4 são quatro execuções
+    # simultâneas — daí a preparação viver em preparar_banco.py, atrás de uma
+    # trava do próprio banco. Ver o cabeçalho daquele arquivo.
+    #
+    # Em produção o docker-compose já chamou `python preparar_banco.py` antes
+    # de subir os workers, e aqui não sobra o que fazer. A chamada continua
+    # para quem sobe a aplicação direto, sem passar pelo compose.
+    preparar(verboso=False)
 
 
 # ==============================================================================

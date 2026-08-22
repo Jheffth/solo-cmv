@@ -24,6 +24,8 @@ remote_setup.sh
 diagnostico_resultado.txt
 sync_*.py
 SUBIR_TUDO.py
+create_secure_*.py
+set_github_*.py
 
 # ============================================================================
 # DADOS REAIS DOS RESTAURANTES
