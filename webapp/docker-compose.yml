@@ -26,6 +26,7 @@ services:
       PORT: 8095
       HOST: 0.0.0.0
       AMBIENTE: prod
+      CORS_ORIGINS: "https://solocmv.duckdns.org,http://localhost:8095,http://127.0.0.1:8095"
     depends_on:
       - db
     networks:
