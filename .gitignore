@@ -5,14 +5,10 @@
 .env
 .env.*
 !.env.example
+*.pem
+*.key
 
-# Scripts de deploy gerados durante a implantação. Vinte e quatro deles
-# carregam a senha de root da Contabo em texto puro — e essa máquina também
-# sustenta o Solo Rotinas e o Solo Finances. Continuam no seu disco; só não
-# entram no repositório.
-#
-# O procedimento de implantação, sem segredo nenhum, está documentado em
-# webapp/MIGRACAO_POSTGRES.md.
+# Scripts de deploy gerados durante a implantação.
 deploy_*.py
 fix_*.py
 check_*.py
@@ -26,6 +22,8 @@ upload_and_build.py
 restart_caddy.py
 remote_setup.sh
 diagnostico_resultado.txt
+sync_*.py
+SUBIR_TUDO.py
 
 # ============================================================================
 # DADOS REAIS DOS RESTAURANTES

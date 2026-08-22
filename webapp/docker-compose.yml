@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: solo_cmv_db
+    restart: always
+    environment:
+      POSTGRES_USER: solo_cmv
+      POSTGRES_PASSWORD: solo_cmv_2026_secreto
+      POSTGRES_DB: solo_cmv
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - solo_cmv_net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solo_cmv_app
+    restart: always
+    command: uvicorn main:app --host 0.0.0.0 --port 8095 --workers 4
+    environment:
+      DATABASE_URL: postgresql+psycopg://solo_cmv:solo_cmv_2026_secreto@db:5432/solo_cmv
+      SECRET_KEY: chave-secreta-solo-cmv-2026-xyz
+      ACCESS_TOKEN_EXPIRE_MINUTES: 480
+      PORT: 8095
+      HOST: 0.0.0.0
+      AMBIENTE: prod
+    depends_on:
+      - db
+    networks:
+      - solo_cmv_net
+      - solo-network
+
+networks:
+  solo_cmv_net:
+  solo-network:
+    external: true
+
+volumes:
+  pgdata:

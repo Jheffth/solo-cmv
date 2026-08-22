@@ -1,0 +1,39 @@
+name: Deploy Solo CMV to Contabo VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Automatico na Nuvem (Contabo)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo do repositorio (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Sincronizar arquivos para o servidor via SSH (SCP)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "webapp/*,webapp/**/*"
+          target: "/var/www/solo-cmv"
+          strip_components: 1
+          overwrite: true
+
+      - name: Reconstruir e Reiniciar Containers Docker no Servidor
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd /var/www/solo-cmv
+            docker compose up -d --build
+            echo "Deploy concluído com sucesso no servidor Contabo!"
