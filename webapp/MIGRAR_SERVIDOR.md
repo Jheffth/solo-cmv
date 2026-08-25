@@ -66,7 +66,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES=480
 AMBIENTE=prod
 CORS_ORIGINS=https://<seu domínio>
 WEB_CONCURRENCY=2
-BACKUP_MANTER_DIAS=30
+BACKUP_DIAS_DIARIOS=7
+BACKUP_SEMANAS=8
+BACKUP_MESES=12
 FIM
 chmod 600 .env
 ```
@@ -143,8 +145,16 @@ não subiu é o que transforma uma migração tranquila em uma noite ruim.
 
 ## 6. Cópia externa do backup
 
-O serviço `backup` roda diariamente e guarda 30 dias no volume `backups`.
-Isso protege contra erro humano e corrupção. **Não protege contra a máquina
+O serviço `backup` roda diariamente e guarda em camadas — todos os dos
+últimos 7 dias, um por semana nas últimas 8, um por mês nos últimos 12.
+São ~28 arquivos cobrindo um ano.
+
+A escolha não é sobre espaço (mesmo com dez anos de operação são uns 170 MB),
+e sim sobre o tipo de acidente que acontece de verdade: não é o servidor
+pegando fogo, é o erro percebido cinco dias depois. Com um backup só, o erro
+já está dentro dele.
+
+Isso protege contra engano humano e corrupção. **Não protege contra a máquina
 morrer.**
 
 Uma linha no cron do host resolve:

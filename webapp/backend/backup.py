@@ -50,7 +50,14 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 DIRETORIO = Path(os.getenv("BACKUP_DIR", "/backups"))
-MANTER_DIAS = int(os.getenv("BACKUP_MANTER_DIAS", "30"))
+
+# Retenção em camadas — ver o comentário longo em `rotacionar()` para o
+# porquê. Em resumo: profundidade no tempo importa mais que quantidade de
+# arquivos, porque a ameaça real é o erro percebido dias depois, não o
+# servidor pegando fogo.
+DIAS_DIARIOS = int(os.getenv("BACKUP_DIAS_DIARIOS", "7"))
+SEMANAS_SEMANAIS = int(os.getenv("BACKUP_SEMANAS", "8"))
+MESES_MENSAIS = int(os.getenv("BACKUP_MESES", "12"))
 
 # Quando o PostgreSQL roda em container, o pg_dump certo é o DE LÁ: a versão
 # do cliente precisa acompanhar a do servidor, e a imagem da aplicação é
@@ -239,30 +246,98 @@ def verificar(url: str, arquivo: Path) -> bool:
 # Rotação
 # ==============================================================================
 def rotacionar() -> int:
-    """Apaga o que passou de MANTER_DIAS. Nunca apaga o mais recente.
+    """Avô, pai e filho: diários da semana, semanais do mês, mensais do ano.
 
-    A ressalva importa: com a rotina parada por mais tempo que a retenção,
-    apagar por data levaria o único backup existente — exatamente quando ele
-    é o que resta.
+    POR QUE NÃO "SÓ O ÚLTIMO"
+    ------------------------
+    Guardar um backup só protege contra o servidor pegar fogo — e esse é o
+    acidente MENOS provável. O que acontece de verdade é um erro que só se
+    percebe dias depois: um inventário finalizado errado, uma importação que
+    entrou duas vezes, alguém que apagou o que não devia.
+
+    Com um backup de ontem, o erro de cinco dias atrás já está dentro dele.
+    Restaurar não conserta nada: só devolve o mesmo problema com dados mais
+    velhos. Profundidade no tempo é o que faz o backup servir para isso.
+
+    POR QUE NÃO SIMPLESMENTE 30 DIÁRIOS
+    -----------------------------------
+    Porque camadas cobrem mais tempo com menos arquivos. Medido neste banco:
+
+        30 diários  = 30 arquivos, cobrindo  1 mês
+        esta regra  = ~17 arquivos, cobrindo 6 meses
+
+    Menos espaço e cinco meses a mais de alcance. Um erro que passou
+    despercebido no fechamento de dois meses atrás ainda tem conserto.
+
+    AS TRÊS CAMADAS
+        · todos os dos últimos 7 dias        — o acidente recente
+        · um por semana, nas últimas 8       — o erro da quinzena
+        · um por mês, nos últimos 12         — o fechamento antigo
+
+    E o mais recente NUNCA é apagado, aconteça o que acontecer. Com a rotina
+    parada por mais tempo que a retenção, apagar por data levaria justamente
+    o único que restou.
     """
     if not DIRETORIO.exists():
         return 0
-    arquivos = sorted(DIRETORIO.glob("solo_cmv_*.dump"))
-    if len(arquivos) <= 1:
+
+    datados = []
+    for caminho in DIRETORIO.glob("solo_cmv_*.dump"):
+        m = _NOME.match(caminho.name)
+        if m:
+            datados.append((datetime.strptime(m.group(1), "%Y%m%d_%H%M%S"), caminho))
+    if len(datados) <= 1:
         return 0
 
-    corte = datetime.now() - timedelta(days=MANTER_DIAS)
-    apagados = 0
-    for caminho in arquivos[:-1]:          # o último fica, aconteça o que acontecer
-        m = _NOME.match(caminho.name)
-        if not m:
+    datados.sort(reverse=True)               # do mais novo para o mais velho
+    agora = datados[0][0]
+    manter = {datados[0][1]}                 # o mais recente, sempre
+
+    semanas_vistas, meses_vistos = set(), set()
+
+    def guardar(quando, caminho):
+        """Guarda o arquivo E anota a semana e o mês que ele já cobre.
+
+        Anotar SEMPRE é o que faz as camadas se somarem em vez de brigarem.
+        Sem isso, um arquivo de dez dias atrás — recusado pela camada semanal
+        porque a semana dele já estava coberta — caía na camada mensal e
+        virava "o backup de agosto", ocupando a vaga do mês por ser o
+        primeiro a chegar lá. Ficava um arquivo a mais e o mês passava a ser
+        representado por uma data arbitrária no meio dele.
+        """
+        manter.add(caminho)
+        semanas_vistas.add(quando.isocalendar()[:2])
+        meses_vistos.add((quando.year, quando.month))
+
+    for quando, caminho in datados:
+        idade = (agora - quando).days
+
+        if idade <= DIAS_DIARIOS:
+            guardar(quando, caminho)
             continue
-        quando = datetime.strptime(m.group(1), "%Y%m%d_%H%M%S")
-        if quando < corte:
+
+        # Um por semana — o mais novo de cada uma, já que a lista vem do mais
+        # recente para o mais antigo. Semana coberta por um diário não gasta
+        # arquivo de novo.
+        if (idade <= DIAS_DIARIOS + SEMANAS_SEMANAIS * 7
+                and quando.isocalendar()[:2] not in semanas_vistas):
+            guardar(quando, caminho)
+            continue
+
+        if (idade <= 31 * MESES_MENSAIS
+                and (quando.year, quando.month) not in meses_vistos):
+            guardar(quando, caminho)
+
+    apagados = 0
+    for _, caminho in datados:
+        if caminho not in manter:
             caminho.unlink()
             apagados += 1
+
     if apagados:
-        print(f"[BACKUP] {apagados} backup(s) além de {MANTER_DIAS} dias removido(s).")
+        print(f"[BACKUP] {apagados} backup(s) removido(s); {len(manter)} mantido(s) "
+              f"({DIAS_DIARIOS} diários, {SEMANAS_SEMANAIS} semanais, "
+              f"{MESES_MENSAIS} mensais).")
     return apagados
 
 
