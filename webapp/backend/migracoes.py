@@ -261,10 +261,34 @@ def _usuario_exclusao(conexao):
         print("[MIGRACAO] usuarios: coluna 'excluido_por_id' adicionada.")
 
 
+def _usuario_perfil(conexao):
+    """Campos que a própria pessoa mantém: apelido, telefone e foto.
+
+    Todos nulos: quem já existe não tem nada disso, e inventar seria pior
+    que deixar em branco. A tela mostra as iniciais enquanto não houver foto.
+    """
+    if not _tabela_existe(conexao, "usuarios"):
+        return
+    colunas = _colunas(conexao, "usuarios")
+
+    novas = [
+        ("apelido", "VARCHAR(60)"),
+        ("telefone", "VARCHAR(30)"),
+        # TEXT porque a foto vem como data URL — ver o comentário em
+        # models.Usuario sobre por que ela mora no banco e não em disco.
+        ("avatar_url", TEXTO_LIVRE),
+    ]
+    for nome, tipo in novas:
+        if nome not in colunas:
+            conexao.execute(text(f"ALTER TABLE usuarios ADD COLUMN {nome} {tipo}"))
+            print(f"[MIGRACAO] usuarios: coluna '{nome}' adicionada.")
+
+
 def aplicar_migracoes():
     with engine.begin() as conexao:
         _usuario_escopo_unidades(conexao)
         _usuario_exclusao(conexao)
+        _usuario_perfil(conexao)
         _inventario_descricao(conexao)
         _inventario_status(conexao)
         _inventario_escopo(conexao)

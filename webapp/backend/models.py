@@ -304,6 +304,29 @@ class Usuario(Base):
     escopo_unidades = Column(Enumerado(EscopoUnidades), nullable=False,
                              default=EscopoUnidades.LISTA)
 
+    # ---------------------------------------------------------------- perfil
+    # Dados que a própria pessoa mantém. Separados do que define PODER (papel,
+    # unidades, regional): esses só mudam pela tela de Equipe, por alguém
+    # acima. Ninguém edita a própria autoridade.
+    apelido = Column(String(60), nullable=True)     # como quer ser chamado
+    telefone = Column(String(30), nullable=True)    # contato — e o bot do Telegram
+
+    # A FOTO VAI NO BANCO, NÃO EM DISCO
+    #
+    # Guardada como data URL (`data:image/jpeg;base64,...`), reduzida a
+    # 256×256 no navegador antes de subir — algo entre 20 e 40 KB.
+    #
+    # Parece desperdício, e seria, se houvesse onde pôr o arquivo. Não há: o
+    # deploy reconstrói a imagem do container a cada push, e o único volume
+    # declarado no docker-compose é o do PostgreSQL. Foto escrita no sistema
+    # de arquivos do container desapareceria no deploy seguinte — em silêncio,
+    # semanas depois de quem subiu ter esquecido que subiu.
+    #
+    # No banco ela sobrevive, entra no pg_dump junto com o resto, e não exige
+    # que ninguém lembre de configurar um volume. Se um dia houver
+    # armazenamento de verdade, esta coluna vira a URL e nada mais muda.
+    avatar_url = Column(Text, nullable=True)
+
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # EXCLUSÃO QUE NÃO APAGA A HISTÓRIA

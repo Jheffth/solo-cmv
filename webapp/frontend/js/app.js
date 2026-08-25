@@ -93,7 +93,9 @@ function preencherTopbarUsuario() {
   const logoutBtn = document.getElementById('btn-logout');
   const avatarEl = document.getElementById('sidebar-avatar');
 
-  if (nomeEl) nomeEl.textContent = USUARIO_ATUAL.nome;
+  // Apelido ganha do nome completo: é como a pessoa pediu para ser
+  // chamada, e a barra lateral é o lugar mais pessoal da tela.
+  if (nomeEl) nomeEl.textContent = USUARIO_ATUAL.apelido || USUARIO_ATUAL.nome;
   if (papelEl) papelEl.textContent = USUARIO_ATUAL.papel;
   if (logoutBtn) logoutBtn.innerHTML = icone('logout');
 
@@ -132,6 +134,21 @@ document.getElementById('form-login').addEventListener('submit', async (ev) => {
 });
 
 document.getElementById('btn-logout').addEventListener('click', fazerLogout);
+
+/* O card do usuário na barra lateral abre o perfil. É onde a pessoa já olha
+   quando quer trocar a foto — pedir que ela procure no menu seria fazer com
+   que o lugar óbvio não funcionasse. O botão de sair fica de fora do clique,
+   senão sair e editar o perfil virariam a mesma ação. */
+(function ligarAtalhoDoPerfil() {
+  const card = document.getElementById('sidebar-user');
+  if (!card) return;
+  card.style.cursor = 'pointer';
+  card.title = 'Ver e editar meu perfil';
+  card.addEventListener('click', (ev) => {
+    if (ev.target.closest('#btn-logout')) return;
+    location.hash = 'perfil';
+  });
+})();
 
 (async function bootstrap() {
   // O aceite de convite vem ANTES de tudo. É a única tela que existe sem

@@ -30,6 +30,13 @@ class UsuarioOut(BaseModel):
     ativo: bool
     empresa_id: Optional[int] = None
 
+    # Perfil: o que a própria pessoa mantém. Vem junto porque a barra lateral
+    # mostra foto e nome desde a abertura — pedir num segundo pedido custaria
+    # mais uma ida e volta de ~250 ms só para trocar as iniciais por uma foto.
+    apelido: Optional[str] = None
+    telefone: Optional[str] = None
+    avatar_url: Optional[str] = None
+
     # Escopo: quais unidades e se enxerga o consolidado da rede.
     # São duas perguntas separadas — ver o comentário em models.Usuario.
     escopo_unidades: EscopoUnidades = EscopoUnidades.LISTA

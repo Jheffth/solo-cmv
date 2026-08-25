@@ -101,6 +101,12 @@ def abrir(
             "login": usuario.login,
             "papel": usuario.papel.value if hasattr(usuario.papel, "value") else usuario.papel,
             "empresa_id": usuario.empresa_id,
+            # A barra lateral desenha a foto na abertura. Vindo aqui, ela
+            # aparece na primeira pintura em vez de trocar as iniciais por
+            # uma foto meio segundo depois — que é o tipo de tremida que
+            # todo mundo nota e ninguém sabe explicar.
+            "apelido": usuario.apelido,
+            "avatar_url": usuario.avatar_url,
         },
         "escopo": {
             "unidades": [{"id": u.id, "nome": u.nome} for u in permitidas],

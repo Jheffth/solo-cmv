@@ -33,9 +33,15 @@ async function renderizarRota() {
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('ativo', el.dataset.pagina === chave);
   });
+  // Páginas que existem sem entrada no menu — chega-se a elas por atalho.
+  // Sem isto o topo diria "Solo CMV", e quem clicou no próprio nome ficaria
+  // sem confirmação de onde foi parar.
+  const TITULOS_SEM_MENU = { perfil: 'Meu perfil' };
+
   const titulo = document.getElementById('titulo-pagina');
   const itemNav = (window.NAV_ITEMS || []).find(i => i.chave === chave);
-  titulo.textContent = itemNav ? itemNav.rotulo : 'Solo CMV';
+  titulo.textContent = itemNav ? itemNav.rotulo
+    : (TITULOS_SEM_MENU[chave] || 'Solo CMV');
 
   if (!pagina) {
     container.innerHTML = `<div class="estado-vazio">Seção não encontrada.</div>`;

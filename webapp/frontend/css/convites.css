@@ -237,3 +237,59 @@ tr.linha-excluida td { text-decoration: line-through; }
 tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: none; }
 
 .status-badge.status-pausado { background: #fef3c7; color: #854f0b; }
+
+/* ------------------------------------------------------ tela de Perfil */
+.perfil-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+}
+.perfil-foto-area { display: flex; align-items: center; gap: 1rem; }
+
+.perfil-foto {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;      /* recorta sem espremer: rosto espremido fica estranho */
+  flex: 0 0 auto;
+  border: 2px solid var(--borda, rgba(0, 0, 0, .1));
+}
+.perfil-foto--vazia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fundo-suave, rgba(37, 99, 235, .08));
+  color: var(--primaria, #2563eb);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+.perfil-foto-acoes { display: flex; flex-direction: column; gap: .45rem; }
+.perfil-foto-acoes .btn { cursor: pointer; }
+.perfil-identidade h2 { margin: 0 0 .2rem; }
+
+.perfil-acesso { display: grid; gap: .5rem; }
+.perfil-acesso > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  padding: .4rem 0;
+  border-bottom: 1px solid var(--borda, rgba(0, 0, 0, .06));
+  font-size: .92rem;
+}
+.perfil-acesso > div:last-child { border-bottom: none; }
+.perfil-acesso span:first-child { color: var(--texto-suave, #6b7280); }
+
+/* Campo travado: some a ação, fica a informação. O usuário não muda porque
+   identifica a pessoa no histórico de tudo que ela já lançou. */
+.form-group input:disabled {
+  background: var(--fundo-suave, rgba(0, 0, 0, .04));
+  color: var(--texto-suave, #6b7280);
+  cursor: not-allowed;
+}
+
+.sidebar-user { transition: background .15s; border-radius: 8px; }
+.sidebar-user:hover { background: rgba(255, 255, 255, .06); }
