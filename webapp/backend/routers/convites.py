@@ -101,7 +101,11 @@ def opcoes(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current
         "papeis": [p.value for p in servico.papeis_concedidos(usuario)],
         "unidades": [{"id": u.id, "nome": u.nome} for u in unidades],
         "pode_regional": servico_escopo.pode_ver_regional(usuario),
-        "precisa_escolher_empresa": usuario.papel == PapelUsuario.ARQUITETO,
+        # Só é pergunta quando existe mais de uma resposta possível. Nesta
+        # instalação há uma empresa — a Rede Josefina —, então o campo some
+        # da tela em vez de pedir um id que o sistema já conhece.
+        "precisa_escolher_empresa": (usuario.empresa_id is None
+                                     and servico.empresa_unica(db) is None),
         "validade_padrao_dias": servico.VALIDADE_PADRAO_DIAS,
     }
 

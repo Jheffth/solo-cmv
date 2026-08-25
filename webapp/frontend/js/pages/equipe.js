@@ -177,12 +177,17 @@ window.Paginas.equipe = (function () {
               </select>
             </div>
           </div>
+          ${/* Nesta instalação existe uma rede só — a Josefina —, então o
+                servidor responde `precisa_escolher_empresa: false` e este
+                campo não aparece. Pedir um id que o sistema já conhece era
+                burocracia; o bloco fica porque a decisão é do backend, não
+                daqui. */ ''}
           ${opcoesConvite.precisa_escolher_empresa ? `
           <div class="form-group">
             <label for="conv-empresa">Empresa</label>
             <input id="conv-empresa" type="number" placeholder="id da empresa" required>
-            <small class="form-dica">O Arquiteto não pertence a uma empresa,
-              então o convite precisa dizer para qual ele vale.</small>
+            <small class="form-dica">Há mais de uma empresa nesta instalação;
+              diga para qual o convite vale.</small>
           </div>` : ''}
           <div class="form-group">
             <label>Acesso às lojas</label>

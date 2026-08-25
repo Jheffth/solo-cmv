@@ -25,7 +25,10 @@ AS OUTRAS TRÊS FRONTEIRAS
 · Ninguém mexe em si mesmo — nem para promover, nem para se desativar. Sem
   isso, o último Diretor da empresa poderia se rebaixar e trancar todo mundo
   do lado de fora.
-· Ninguém sai da própria empresa. O Arquiteto atravessa; é o que o define.
+· Ninguém sai da própria empresa. Nesta instalação existe uma só — a Rede
+  Josefina —, então a regra nunca chega a barrar ninguém. Fica escrita
+  porque é barata e porque tirá-la deixaria a fronteira dependendo de não
+  haver uma segunda linha na tabela, o que é frágil demais para segurança.
 · Papel que não existe não é concedido — o enum já barra, mas o erro daqui
   explica.
 

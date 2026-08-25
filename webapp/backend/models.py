@@ -1,9 +1,21 @@
 """
 Modelo de dados do Solo CMV.
 
-Estrutura pensada para múltiplas empresas (clientes do produto) e múltiplas
-unidades (lojas) por empresa, replicando as regras de controle de estoque e
-CMV hoje operadas nas planilhas "INVENTÁRIO E CMV" (Josefina / Casa Josefina).
+UMA INSTALAÇÃO, UMA REDE
+------------------------
+Esta instalação é a Rede Josefina. Outra rede será outra instalação — outro
+banco, outro deploy — e não um segundo inquilino aqui dentro. A tabela
+`empresas` existe e tem uma linha só; ela dá um dono às unidades, produtos e
+metas, e é isso.
+
+Por que isso está escrito aqui: o modelo *parece* multiempresa, e essa
+aparência já custou caro uma vez — a tela de convite pedia "id da empresa"
+ao Arquiteto porque o código decidia pelo papel, e não pelo que sabia. Se
+você está lendo isto pensando em acrescentar uma segunda empresa, o caminho
+é uma instalação nova, não uma linha nova.
+
+Replica as regras de controle de estoque e CMV hoje operadas nas planilhas
+"INVENTÁRIO E CMV" (Josefina / Casa Josefina).
 
 Seções já modeladas mas com regra de negócio ainda não implementada (fases
 futuras do plano de migração) ficam claramente sinalizadas nos comentários.
@@ -267,7 +279,10 @@ class Usuario(Base):
     __tablename__ = "usuarios"
 
     id = Column(Integer, primary_key=True)
-    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=True)  # nulo para ARQUITETO (acesso global)
+    # Todo mundo pertence à empresa da instalação, o Arquiteto inclusive.
+    # Nulo é tolerado por herança do modelo antigo, mas não é o caminho:
+    # usuário sem empresa não tem unidade possível nem convite que herde.
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=True)
     nome = Column(String(120), nullable=False)
     login = Column(String(60), unique=True, nullable=False, index=True)
     senha_hash = Column(String(255), nullable=False)

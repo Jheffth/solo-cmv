@@ -91,27 +91,50 @@ def papeis_concedidos(usuario: Usuario) -> List[PapelUsuario]:
     return hierarquia.papeis_concedidos(usuario)
 
 
-def _resolver_empresa(db: Session, autor: Usuario, empresa_id: Optional[int]) -> int:
-    """A empresa do convidado.
+def empresa_unica(db: Session) -> Optional[int]:
+    """A empresa da instalação, quando só existe uma.
 
-    Para o Diretor é a dele, e ponto. O Arquiteto tem `empresa_id` nulo — é
-    assim que ele atravessa empresas —, então precisa escolher. Sem escolha, o
-    convidado nasceria órfão, sem empresa e sem unidade possível.
+    O Solo CMV é instalado por rede: esta instalação é a Rede Josefina.
+    Outra rede será outra instalação, com outro banco — não um segundo
+    inquilino aqui dentro. Então "qual empresa?" é uma pergunta sem
+    ambiguidade, e perguntar seria burocracia.
     """
-    if autor.papel == PapelUsuario.ARQUITETO:
-        if not empresa_id:
-            raise HTTPException(400, "Escolha a empresa do convidado. O Arquiteto "
-                                     "não pertence a uma empresa, então o convite "
-                                     "não tem de onde herdar.")
-        if not db.query(Empresa).filter(Empresa.id == empresa_id).first():
-            raise HTTPException(400, "Empresa não encontrada.")
-        return empresa_id
+    empresas = db.query(Empresa.id).limit(2).all()
+    return empresas[0][0] if len(empresas) == 1 else None
 
-    if not autor.empresa_id:
-        raise HTTPException(400, "Seu usuário não está vinculado a uma empresa.")
-    if empresa_id and empresa_id != autor.empresa_id:
+
+def _resolver_empresa(db: Session, autor: Usuario, empresa_id: Optional[int]) -> int:
+    """A empresa do convidado — decidida pelo que se SABE, não pelo papel.
+
+    Antes isto olhava para o papel: sendo ARQUITETO, exigia a escolha, mesmo
+    quando o próprio Arquiteto já pertencia a uma empresa e ela era a única
+    do sistema. Perguntava algo que já sabia, e o campo "id da empresa" na
+    tela de convite era o sintoma.
+
+    A ordem agora é a do conhecimento disponível:
+
+      1. o autor tem empresa       → é essa
+      2. só existe uma no sistema  → é essa
+      3. duas ou mais, sem escolha → aí sim, pergunta
+
+    Hoje o passo 1 responde tudo. O passo 3 nunca acontece nesta instalação,
+    e continua escrito porque custa três linhas e evita que a regra precise
+    ser reinventada se um dia a situação mudar.
+    """
+    da_instalacao = autor.empresa_id or empresa_unica(db)
+
+    if empresa_id and da_instalacao and empresa_id != da_instalacao:
         raise HTTPException(403, "Você só convida para a sua própria empresa.")
-    return autor.empresa_id
+
+    escolhida = empresa_id or da_instalacao
+    if not escolhida:
+        raise HTTPException(
+            400, "Não há empresa cadastrada nesta instalação. Rode o seed antes "
+                 "de convidar alguém.")
+
+    if not db.query(Empresa.id).filter(Empresa.id == escolhida).first():
+        raise HTTPException(400, "Empresa não encontrada.")
+    return escolhida
 
 
 def gerar(db: Session, autor: Usuario, papel: PapelUsuario,
