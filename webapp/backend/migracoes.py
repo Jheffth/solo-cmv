@@ -289,6 +289,9 @@ def aplicar_migracoes():
         _usuario_escopo_unidades(conexao)
         _usuario_exclusao(conexao)
         _usuario_perfil(conexao)
+        # A tabela `execucoes_backup` é criada pelo create_all — não há nada
+        # a migrar. Fica registrado aqui para quem procurar não concluir que
+        # foi esquecimento.
         _inventario_descricao(conexao)
         _inventario_status(conexao)
         _inventario_escopo(conexao)

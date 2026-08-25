@@ -205,3 +205,24 @@ table.tabela-simples tr.fora em { font-style: italic; }
 }
 .faixa-unidade strong { color: var(--navy); font-size: 1.05rem; }
 .faixa-unidade small { color: var(--muted); font-size: .74rem; }
+
+/* ---------------------------------------------- selo de proteção dos dados */
+/* Discreto de propósito: informa, não alarma. O alarme é a pendência lá em
+   cima, e ela só aparece quando há problema. */
+.selo-protecao {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0 0 1rem;
+  padding: .5rem .8rem;
+  border-radius: 8px;
+  background: var(--sucesso-fundo, #ecfdf5);
+  color: var(--sucesso, #067647);
+  font-size: .82rem;
+  line-height: 1.4;
+}
+.selo-protecao svg { flex: 0 0 auto; width: 15px; height: 15px; }
+
+/* Pendência sem tela para onde ir não finge ser botão. */
+.pendencia.sem-rota { cursor: default; text-align: left; }
+.pendencia.sem-rota:hover { transform: none; }

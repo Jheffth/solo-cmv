@@ -266,6 +266,43 @@ def rotacionar() -> int:
     return apagados
 
 
+def registrar(url: str, sucesso: bool, arquivo: Path = None, tabelas: int = None,
+              linhas: int = None, segundos: float = None, mensagem: str = None) -> None:
+    """Guarda o resultado no próprio banco, para o Painel poder avisar.
+
+    Falhar aqui NÃO derruba o backup: o arquivo já existe e já foi conferido,
+    e perder o registro é bem menos grave que perder o backup. Um banco fora
+    do ar impediria o registro — e é justamente o caso que o Painel detecta
+    pela ausência de sucesso recente, sem depender deste INSERT.
+    """
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from models import ExecucaoBackup
+
+        motor = create_engine(url)
+        Sessao = sessionmaker(bind=motor)
+        with Sessao() as sessao:
+            sessao.add(ExecucaoBackup(
+                sucesso=sucesso,
+                arquivo=arquivo.name if arquivo else None,
+                bytes=arquivo.stat().st_size if arquivo and arquivo.exists() else None,
+                tabelas=tabelas, linhas=linhas, segundos=segundos,
+                mensagem=(mensagem or "")[:2000] or None,
+            ))
+            # Histórico curto: o Painel só olha a última, e uma tabela que
+            # cresce para sempre por causa de uma rotina diária é lixo com
+            # data marcada.
+            antigas = sessao.query(ExecucaoBackup).order_by(
+                ExecucaoBackup.id.desc()).offset(90).all()
+            for velha in antigas:
+                sessao.delete(velha)
+            sessao.commit()
+        motor.dispose()
+    except Exception as erro:
+        print(f"[BACKUP] (não consegui registrar no banco: {erro})")
+
+
 def listar() -> None:
     if not DIRETORIO.exists() or not any(DIRETORIO.glob("solo_cmv_*.dump")):
         print(f"Nenhum backup em {DIRETORIO}.")
@@ -299,21 +336,35 @@ def main():
         ok = verificar(url, Path(args.verificar))
         sys.exit(0 if ok else 1)
 
-    arquivo = gerar(url)
+    comeco = datetime.now()
+    try:
+        arquivo = gerar(url)
+    except SystemExit as erro:
+        registrar(url, sucesso=False, mensagem=str(erro),
+                  segundos=(datetime.now() - comeco).total_seconds())
+        raise
 
     if args.sem_verificar:
         print("[BACKUP] Conferência pulada — este arquivo não foi provado.")
         rotacionar()
         return
 
+    contagem = contar_linhas(url)
     if not verificar(url, arquivo):
         invalido = arquivo.with_suffix(".dump.INVALIDO")
         arquivo.rename(invalido)
+        registrar(url, sucesso=False, arquivo=invalido,
+                  segundos=(datetime.now() - comeco).total_seconds(),
+                  mensagem="O arquivo gerado não passou na conferência de "
+                           "restauração — as contagens não bateram com a origem.")
         raise SystemExit(
             f"!! O backup não passou na conferência e foi marcado como\n"
             f"   {invalido.name}. O backup bom anterior NÃO foi apagado.")
 
     rotacionar()
+    registrar(url, sucesso=True, arquivo=arquivo,
+              tabelas=len(contagem), linhas=sum(contagem.values()),
+              segundos=(datetime.now() - comeco).total_seconds())
     print("[BACKUP] Pronto.")
 
 

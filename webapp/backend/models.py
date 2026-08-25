@@ -829,3 +829,39 @@ class Convite(Base):
         if self.expira_em and datetime.utcnow() > self.expira_em:
             return "EXPIRADO"
         return "DISPONIVEL"
+
+
+# ==============================================================================
+# EXECUÇÃO DE BACKUP — para o sistema saber se está protegido
+# ==============================================================================
+# O backup já se verifica sozinho: restaura num banco descartável e conta as
+# linhas. O que faltava era guardar o veredito onde a APLICAÇÃO enxergue.
+#
+# Sem isto, uma falha vira uma linha no log do container — e log de container
+# é coisa que ninguém abre sem motivo. Descobre-se que o backup parou há três
+# semanas justamente no dia em que ele faria falta, que é o único dia em que
+# essa descoberta não serve para nada.
+#
+# O ALERTA OLHA A AUSÊNCIA DE SUCESSO, NÃO A PRESENÇA DE FALHA
+#
+# É a diferença que faz o aviso ser confiável. Se dependesse de alguém
+# registrar o erro, o pior caso — o serviço morto, o banco fora do ar, o
+# container que nunca subiu — não registraria nada, e o silêncio pareceria
+# calmaria. Perguntando "houve sucesso nas últimas 24 h?", todos esses casos
+# acendem a luz do mesmo jeito.
+class ExecucaoBackup(Base):
+    __tablename__ = "execucoes_backup"
+
+    id = Column(Integer, primary_key=True)
+    quando = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    sucesso = Column(Boolean, nullable=False)
+
+    arquivo = Column(String(120), nullable=True)
+    bytes = Column(Integer, nullable=True)
+    tabelas = Column(Integer, nullable=True)
+    linhas = Column(Integer, nullable=True)
+    segundos = Column(Float, nullable=True)
+
+    # Em caso de falha, o que aconteceu — para quem abrir não precisar ir
+    # atrás do log para descobrir se foi disco cheio ou banco fora do ar.
+    mensagem = Column(Text, nullable=True)

@@ -39,6 +39,7 @@ from calculo_estoque import saldos_por_produto, ultimos_custos, data_ultima_cont
 from servicos import cmv as motor
 from servicos import metas as servico_metas
 from servicos.memoria import lembrar
+from servicos import protecao as servico_protecao
 from servicos.perda import ROTULOS_MOTIVO
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -285,6 +286,17 @@ def _pendencias(db: Session, unidade_id: Optional[int], periodo: Periodo,
                    f"CMV por família sem meta definida em {sem_meta} de {familias} famílias",
                    "metas", sem_meta)
 
+        # Proteção dos dados — só para a diretoria, pelo mesmo critério das
+        # metas: é informação de quem responde pelo negócio, e quem lança
+        # compra não tem o que fazer com ela.
+        #
+        # Custa uma linha lida de uma tabela com noventa registros. A
+        # verificação de verdade (restaurar o dump e conferir) roda uma vez
+        # por dia no serviço de backup, longe de qualquer usuário.
+        atraso = servico_protecao.pendencia(db)
+        if atraso:
+            itens.append(atraso)
+
     ordem = {"urgente": 0, "atencao": 1}
     return sorted(itens, key=lambda i: ordem.get(i["gravidade"], 9))
 
@@ -505,6 +517,10 @@ def montar(db: Session, unidade_id: Optional[int] = None,
             "encaixado_no_ciclo": periodo.encaixado,
             "sem_ciclo": periodo.sem_ciclo,
         },
+        # A situação da proteção acompanha o painel inteiro: com backup em
+        # dia não vira pendência (nada a fazer), mas a diretoria merece poder
+        # confirmar que está protegida sem precisar de um alerta para isso.
+        "protecao": servico_protecao.situacao(db) if pode_ver_metas else None,
         "pendencias": _pendencias(db, unidade_id, periodo, resumo_estoque,
                                   avisos, pode_ver_metas),
         "kpis": {chave: kpi.dict() for chave, kpi in kpis.items()},

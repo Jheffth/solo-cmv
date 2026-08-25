@@ -101,12 +101,40 @@ window.Paginas.dashboard = (function () {
     if (!pendencias.length) return '';
     return `
       <div class="pendencias">
-        ${pendencias.map((p) => `
-          <button class="pendencia ${p.gravidade}" type="button" data-ir="${p.rota}">
-            ${icone(p.gravidade === 'urgente' ? 'alerta' : 'alerta')}
-            <span class="pendencia-texto">${p.texto}</span>
-            <span class="pendencia-rota">${p.rota} &rarr;</span>
-          </button>`).join('')}
+        ${pendencias.map((p) => {
+          // Sem rota, não é botão. O aviso de backup se resolve no servidor,
+          // não numa tela — e um botão que leva a lugar nenhum ensina a
+          // desconfiar de todos os outros.
+          if (!p.rota) {
+            return `
+              <div class="pendencia ${p.gravidade} sem-rota">
+                ${icone('alerta')}
+                <span class="pendencia-texto">${p.texto}</span>
+              </div>`;
+          }
+          return `
+            <button class="pendencia ${p.gravidade}" type="button" data-ir="${p.rota}">
+              ${icone('alerta')}
+              <span class="pendencia-texto">${p.texto}</span>
+              <span class="pendencia-rota">${p.rota} &rarr;</span>
+            </button>`;
+        }).join('')}
+      </div>`;
+  }
+
+  /* O selo de proteção. Aparece só para a diretoria, e só quando o backup
+     está EM DIA — quando não está, a pendência acima já grita, e repetir a
+     mesma coisa em dois lugares dilui as duas.
+
+     Existir mesmo estando tudo certo é o ponto: saber que se está protegido
+     não deveria depender de um alerta. É a única informação do painel que
+     vale justamente por ser silenciosa. */
+  function seloProtecao(p) {
+    if (!p || p.estado !== 'ok') return '';
+    return `
+      <div class="selo-protecao" title="${p.detalhe}">
+        ${icone('cadeado') || ''}
+        <span><strong>${p.titulo}</strong> · ${p.detalhe}</span>
       </div>`;
   }
 
@@ -545,6 +573,7 @@ window.Paginas.dashboard = (function () {
 
         <!-- Faixa 1 · o que exige ação -->
         ${faixaPendencias(d.pendencias)}
+        ${seloProtecao(d.protecao)}
 
         <!-- Faixa 2 · como estamos -->
         <div class="kpi-grid">
