@@ -49,6 +49,7 @@ from models import (Convite, Empresa, EscopoUnidades, PapelUsuario,
                     PAPEIS_IRRESTRITOS, Unidade, Usuario)
 from auth.security import hash_senha
 from servicos import escopo as servico_escopo
+from servicos import hierarquia
 
 # Sem 0/O e sem 1/I/L. O código é ditado por telefone e colado de WhatsApp,
 # onde esses pares viram chamado de suporte. Ideia emprestada do Solo Rotinas.
@@ -71,19 +72,23 @@ def _gerar_codigo(db: Session) -> str:
     raise HTTPException(500, "Não foi possível gerar um código único.")
 
 
+# A régua é a de `servicos/hierarquia.py`, e só ela. Estas duas funções
+# continuam existindo porque o router e os testes já as chamam — mas
+# delegam, para não haver duas respostas para a mesma pergunta.
+#
+# Antes daqui viviam regras próprias: "só a diretoria convida" e "Diretor
+# concede tudo menos Arquiteto". Funcionavam, e teriam divergido no dia em
+# que a hierarquia mudasse num arquivo só. Foi o que aconteceu com "quais
+# unidades esta pessoa vê", que tinha três implementações.
 def pode_convidar(usuario: Usuario) -> bool:
-    """Só a diretoria convida. Admin administra quem já entrou."""
-    return usuario.papel in PAPEIS_IRRESTRITOS
+    return hierarquia.pode_convidar(usuario)
 
 
 def papeis_concedidos(usuario: Usuario) -> List[PapelUsuario]:
-    """Os papéis que este usuário pode entregar num convite."""
-    if usuario.papel == PapelUsuario.ARQUITETO:
-        return list(PapelUsuario)
-    if usuario.papel == PapelUsuario.DIRETOR:
-        # Tudo menos Arquiteto: o Diretor é o topo da empresa, não do produto.
-        return [p for p in PapelUsuario if p != PapelUsuario.ARQUITETO]
-    return []
+    """Os papéis que este usuário pode entregar num convite — até o próprio."""
+    if not hierarquia.pode_convidar(usuario):
+        return []
+    return hierarquia.papeis_concedidos(usuario)
 
 
 def _resolver_empresa(db: Session, autor: Usuario, empresa_id: Optional[int]) -> int:
@@ -118,12 +123,13 @@ def gerar(db: Session, autor: Usuario, papel: PapelUsuario,
           validade_dias: Optional[int] = VALIDADE_PADRAO_DIAS) -> Convite:
     """Emite um convite. Levanta 403 quando o autor concede além do que tem."""
     if not pode_convidar(autor):
-        raise HTTPException(403, "Somente Diretor e Arquiteto emitem convites.")
+        raise HTTPException(
+            403, "Operador não emite convites — convidar é ato de quem "
+                 "responde por alguém.")
 
-    if papel not in papeis_concedidos(autor):
-        if papel == PapelUsuario.ARQUITETO:
-            raise HTTPException(403, "Somente o Arquiteto concede o papel de Arquiteto.")
-        raise HTTPException(403, f"Você não pode conceder o papel {papel.value}.")
+    # A mesma régua da promoção: concede-se até o próprio nível. A mensagem
+    # de erro sai de lá, já explicando o porquê.
+    hierarquia.exigir_conceder(autor, papel)
 
     empresa = _resolver_empresa(db, autor, empresa_id)
 

@@ -26,7 +26,10 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise CREDENCIAIS_INVALIDAS
 
     usuario = db.query(Usuario).filter(Usuario.id == int(usuario_id)).first()
-    if usuario is None or not usuario.ativo:
+    # Suspender ou excluir precisa valer AGORA, não quando o token vencer.
+    # O token dura 8 horas; sem esta checagem, quem fosse desligado às 9h
+    # continuaria lançando compras até as 17h.
+    if usuario is None or not usuario.ativo or usuario.excluido_em is not None:
         raise CREDENCIAIS_INVALIDAS
     return usuario
 

@@ -291,10 +291,33 @@ class Usuario(Base):
 
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+    # EXCLUSÃO QUE NÃO APAGA A HISTÓRIA
+    #
+    # Apagar a linha do usuário deixaria órfão todo movimento que ele lançou:
+    # a compra continuaria no estoque, o inventário continuaria valendo, e
+    # ninguém saberia mais quem contou o quê. Relatório antigo perderia o
+    # autor retroativamente — o passado mudaria.
+    #
+    # Então "excluir" tira o acesso e some da lista de gente, mas a linha
+    # fica. O nome continua resolvendo nos lançamentos de antes.
+    #
+    # Diferente de `ativo`, que é suspensão: reversível, para afastamento
+    # temporário. A exclusão é definitiva e guarda quem a fez.
+    excluido_em = Column(DateTime, nullable=True)
+    excluido_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
     empresa = relationship("Empresa", back_populates="usuarios")
     # Unidades que o usuário pode ver. Lista vazia = nenhuma (para papéis
     # comuns); ARQUITETO e DIRETOR passam por cima disso.
     unidades = relationship("Unidade", secondary=usuario_unidade, back_populates="usuarios")
+    # Auto-referência: a chave estrangeira `excluido_por_id` aponta para a
+    # mesma tabela, então o SQLAlchemy precisa saber por qual coluna juntar.
+    excluido_por = relationship("Usuario", remote_side=[id],
+                                foreign_keys=[excluido_por_id])
+
+    @property
+    def excluido(self) -> bool:
+        return self.excluido_em is not None
 
 
 # ==============================================================================

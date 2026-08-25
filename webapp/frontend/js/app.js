@@ -16,12 +16,13 @@ window.NAV_ITEMS = [
   { chave: 'cmv',         rotulo: 'Motor de CMV',         icone: 'cmv',         emBreve: false },
   // Quem define o alvo é a diretoria; os demais papéis veem a meta nas telas
   { chave: 'metas',       rotulo: 'Metas',                icone: 'metas',       emBreve: false, papeis: ['ARQUITETO', 'DIRETOR'] },
-  // O cadastro é fechado: entra quem foi convidado. Só a diretoria convida.
-  { chave: 'convites',    rotulo: 'Convites',             icone: 'usuarios',    emBreve: false, papeis: ['ARQUITETO', 'DIRETOR'] },
+  // Convidar, promover, rebaixar, suspender e excluir num lugar só.
+  // Sem `papeis`: a própria tela recusa quem não administra ninguém —
+  // a regra vive no backend, não numa lista aqui.
+  { chave: 'equipe',      rotulo: 'Equipe',               icone: 'usuarios',    emBreve: false },
   { chave: 'relatorios',  rotulo: 'Relatórios',           icone: 'relatorios', emBreve: false },
   { chave: 'nfe',         rotulo: 'Notas Fiscais (NF-e)',  icone: 'nfe',        emBreve: true },
   { chave: 'unidades',    rotulo: 'Unidades',             icone: 'unidades',    emBreve: false, papeis: ['ARQUITETO', 'ADMIN'] },
-  { chave: 'usuarios',    rotulo: 'Usuários',             icone: 'usuarios',    emBreve: false, papeis: ['ARQUITETO', 'ADMIN'] },
 ];
 
 function montarMenuLateral() {

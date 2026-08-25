@@ -15,8 +15,17 @@ def login(dados: LoginRequest, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.login == dados.login).first()
     if not usuario or not verificar_senha(dados.senha, usuario.senha_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Login ou senha inválidos.")
+    # Exclusão vem antes de suspensão: são estados diferentes e a pessoa
+    # merece a mensagem certa. "Inativo" sugere que volta; excluído não volta
+    # sem alguém restaurar.
+    if usuario.excluido_em is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este acesso foi excluído. Fale com quem administra o sistema.")
     if not usuario.ativo:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso suspenso. Fale com quem administra o sistema.")
 
     token = criar_access_token({"sub": str(usuario.id), "papel": usuario.papel.value})
     return TokenResponse(access_token=token)

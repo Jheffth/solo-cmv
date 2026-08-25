@@ -193,3 +193,47 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
   text-align: center;
   text-transform: uppercase;
 }
+
+/* ------------------------------------------------------ tela Equipe */
+/* Dizer em voz alta o que a pessoa pode fazer, antes de ela tentar. */
+.faixa-poderes { border-left: 3px solid var(--primaria, #2563eb); border-radius: 0 12px 12px 0; }
+.badge-nivel { font-size: .8rem; padding: .2rem .6rem; }
+
+.abas-equipe { display: flex; gap: .4rem; margin: 1rem 0 .8rem; }
+.aba-equipe {
+  background: none;
+  border: 1px solid var(--borda, rgba(0, 0, 0, .12));
+  border-radius: 999px;
+  padding: .4rem .95rem;
+  cursor: pointer;
+  font-size: .9rem;
+}
+.aba-equipe.ativa {
+  border-color: var(--primaria, #2563eb);
+  color: var(--primaria, #2563eb);
+  font-weight: 600;
+}
+
+/* Sem permissão, aparece o MOTIVO no lugar dos botões. Botão morto não
+   ensina nada; "mesmo nível que o seu" ensina. */
+.motivo-bloqueio {
+  font-size: .82rem;
+  color: var(--texto-suave, #6b7280);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.sel-papel {
+  font-size: .82rem;
+  padding: .2rem .4rem;
+  max-width: 130px;
+  margin-right: .35rem;
+}
+
+/* Excluído continua na lista quando pedido, bem apagado: é registro do que
+   existiu, não algo a esconder. */
+tr.linha-excluida { opacity: .38; }
+tr.linha-excluida td { text-decoration: line-through; }
+tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: none; }
+
+.status-badge.status-pausado { background: #fef3c7; color: #854f0b; }

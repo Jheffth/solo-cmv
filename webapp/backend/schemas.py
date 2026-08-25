@@ -44,9 +44,14 @@ class UnidadeResumo(BaseModel):
 
 
 class UsuarioAtivo(BaseModel):
-    """Liga e desliga o acesso. Substitui apagar: o histórico de quem lançou
-    cada compra precisa continuar apontando para alguém."""
+    """Suspensão reversível — afastamento temporário, não exclusão."""
     ativo: bool
+
+
+class UsuarioPapel(BaseModel):
+    """Promoção ou rebaixamento. Quem pode dar o quê está em
+    servicos/hierarquia.py — cada um concede até o próprio nível."""
+    papel: PapelUsuario
 
 
 class UsuarioEscopo(BaseModel):

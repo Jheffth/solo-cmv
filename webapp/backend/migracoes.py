@@ -237,9 +237,34 @@ def _usuario_escopo_unidades(conexao):
     print("[MIGRACAO] usuarios: coluna 'escopo_unidades' adicionada (todos em LISTA).")
 
 
+def _usuario_exclusao(conexao):
+    """Exclusão que preserva o histórico.
+
+    A linha do usuário permanece — apagá-la deixaria órfão todo movimento
+    que ele lançou — mas a conta perde o acesso e sai da lista de gente.
+
+    Sem valor a preencher: quem já existe nunca foi excluído, e nulo é
+    exatamente isso.
+    """
+    if not _tabela_existe(conexao, "usuarios"):
+        return
+    colunas = _colunas(conexao, "usuarios")
+
+    if "excluido_em" not in colunas:
+        conexao.execute(text("ALTER TABLE usuarios ADD COLUMN excluido_em TIMESTAMP"))
+        print("[MIGRACAO] usuarios: coluna 'excluido_em' adicionada.")
+
+    if "excluido_por_id" not in colunas:
+        # Sem REFERENCES: o SQLite não aceita acrescentar chave estrangeira
+        # em tabela existente, e a integridade aqui é garantida no serviço.
+        conexao.execute(text("ALTER TABLE usuarios ADD COLUMN excluido_por_id INTEGER"))
+        print("[MIGRACAO] usuarios: coluna 'excluido_por_id' adicionada.")
+
+
 def aplicar_migracoes():
     with engine.begin() as conexao:
         _usuario_escopo_unidades(conexao)
+        _usuario_exclusao(conexao)
         _inventario_descricao(conexao)
         _inventario_status(conexao)
         _inventario_escopo(conexao)
