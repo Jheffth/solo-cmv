@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from auth.deps import get_current_user
+from servicos.permissoes import Capacidade, requer
 from servicos import relatorios as servico
 from servicos import regional as servico_regional
 from servicos import escopo as servico_escopo
@@ -30,7 +31,7 @@ router = APIRouter(prefix="/relatorios", tags=["relatórios"])
 
 
 @router.get("")
-def listar(usuario=Depends(get_current_user)):
+def listar(usuario=Depends(requer(Capacidade.VER_CMV))):
     """Catálogo, para a tela montar as abas sem hardcode."""
     return [
         {"chave": "fechamento", "nome": "Fechamento do período",
@@ -79,7 +80,8 @@ def obter(chave: str,
           data_inicio: Optional[date_type] = None,
           data_fim: Optional[date_type] = None,
           formato: str = Query("json", pattern="^(json|pdf)$"),
-          db: Session = Depends(get_db), usuario=Depends(get_current_user)):
+          db: Session = Depends(get_db),
+          usuario=Depends(requer(Capacidade.VER_CMV))):
     recorte = servico_escopo.resolver(db, usuario, unidade_id)
     dados = _gerar(chave, db, recorte, referencia, data_inicio, data_fim,
                    usuario.empresa_id)

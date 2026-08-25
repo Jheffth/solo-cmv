@@ -37,7 +37,9 @@ from servicos.requisicao import (
     ErroRequisicao, proximo_numero, lancar_item, remover_item,
     iniciar as servico_iniciar, atender as servico_atender,
     cancelar as servico_cancelar, resumo_requisicao, ORIGEM_WEB,
+    STATUS_ACEITA_ITENS,
 )
+from servicos.permissoes import Capacidade, requer
 
 router = APIRouter(prefix="/requisicoes", tags=["requisições"])
 
@@ -88,6 +90,7 @@ def _itens_out(db: Session, req: Requisicao) -> List[RequisicaoItemOut]:
 def listar(
     unidade_id: Optional[str] = None,
     status: Optional[StatusRequisicao] = None,
+    aceita_itens: bool = False,
     busca: Optional[str] = None,
     data_inicio: Optional[date] = None,
     data_fim: Optional[date] = None,
@@ -100,6 +103,11 @@ def listar(
     # é consolidada.
     recorte = _escopo.resolver(db, usuario, unidade_id)
     query = db.query(Requisicao).filter(Requisicao.unidade_id.in_(recorte.ids))
+    # Filtro por significado — "onde eu posso lançar itens agora". Ver a
+    # explicação em routers/inventario.py::listar_sessoes: a lista de status
+    # que serve mora no serviço, que é quem recusa.
+    if aceita_itens:
+        query = query.filter(Requisicao.status.in_(STATUS_ACEITA_ITENS))
     if status:
         query = query.filter(Requisicao.status == status)
     if busca:
@@ -163,7 +171,7 @@ def detalhe(requisicao_id: int, db: Session = Depends(get_db), usuario=Depends(g
 # ==============================================================================
 @router.post("", response_model=RequisicaoOut, status_code=201)
 def abrir(dados: RequisicaoAbrir, db: Session = Depends(get_db),
-          usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+          usuario=Depends(requer(Capacidade.ABRIR_REQUISICAO))):
     req = Requisicao(
         unidade_id=dados.unidade_id,
         numero=proximo_numero(db, dados.unidade_id),
@@ -182,7 +190,7 @@ def abrir(dados: RequisicaoAbrir, db: Session = Depends(get_db),
 
 @router.post("/{requisicao_id}/iniciar", response_model=RequisicaoOut)
 def iniciar(requisicao_id: int, db: Session = Depends(get_db),
-            usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+            usuario=Depends(requer(Capacidade.ABRIR_REQUISICAO))):
     try:
         return servico_iniciar(db, requisicao_id)
     except ErroRequisicao as e:
@@ -191,7 +199,7 @@ def iniciar(requisicao_id: int, db: Session = Depends(get_db),
 
 @router.post("/{requisicao_id}/atender", response_model=RequisicaoDetalheOut)
 def atender(requisicao_id: int, db: Session = Depends(get_db),
-            usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+            usuario=Depends(requer(Capacidade.ATENDER_REQUISICAO))):
     """Efetiva a requisição: os itens saem do estoque e vão para a produção."""
     try:
         req = servico_atender(db, requisicao_id, usuario_id=usuario.id)
@@ -203,7 +211,7 @@ def atender(requisicao_id: int, db: Session = Depends(get_db),
 
 @router.post("/{requisicao_id}/cancelar", response_model=RequisicaoOut)
 def cancelar(requisicao_id: int, db: Session = Depends(get_db),
-             usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+             usuario=Depends(requer(Capacidade.ATENDER_REQUISICAO))):
     try:
         return servico_cancelar(db, requisicao_id, usuario_id=usuario.id)
     except ErroRequisicao as e:
@@ -215,7 +223,7 @@ def cancelar(requisicao_id: int, db: Session = Depends(get_db),
 # ==============================================================================
 @router.post("/item", response_model=RequisicaoItemResultado)
 def lancar(dados: RequisicaoItemLancamento, db: Session = Depends(get_db),
-           usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+           usuario=Depends(requer(Capacidade.ABRIR_REQUISICAO))):
     """Lança um item na requisição.
 
     Identificação flexível (requisição por id ou número + unidade; produto por
@@ -259,7 +267,7 @@ def lancar(dados: RequisicaoItemLancamento, db: Session = Depends(get_db),
 
 @router.delete("/{requisicao_id}/item/{item_id}", response_model=RequisicaoDetalheOut)
 def remover(requisicao_id: int, item_id: int, db: Session = Depends(get_db),
-            usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+            usuario=Depends(requer(Capacidade.ABRIR_REQUISICAO))):
     try:
         req = remover_item(db, requisicao_id, item_id)
     except ErroRequisicao as e:

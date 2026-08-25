@@ -6,6 +6,7 @@ from database import get_db
 from models import Produto, Categoria, PapelUsuario
 from schemas import ProdutoOut, ProdutoCreate
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer
 from codigos import gerar_codigo
 from unidades_medida import normalizar as normalizar_unidade, SUGERIDAS
 
@@ -34,7 +35,7 @@ def listar(categoria_id: Optional[int] = None, busca: Optional[str] = None,
 
 @router.post("", response_model=ProdutoOut, status_code=201)
 def criar(dados: ProdutoCreate, db: Session = Depends(get_db),
-          usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+          usuario=Depends(requer(Capacidade.CADASTRAR))):
     campos = dados.model_dump()
 
     # Grafia única da unidade: o cadastro é o único lugar onde "kg" e "Kg"

@@ -16,6 +16,7 @@ from models import (
     Categoria, ConfiguracaoCMV, MetodoCusto, ModoApuracao, PapelUsuario,
 )
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer
 from servicos.cmv import apurar, obter_configuracao
 
 router = APIRouter(prefix="/cmv", tags=["cmv"])
@@ -54,7 +55,7 @@ def ler_configuracao(unidade_id: int, db: Session = Depends(get_db), usuario=Dep
 @router.put("/configuracao", response_model=ConfiguracaoCMVOut)
 def salvar_configuracao(unidade_id: int, dados: ConfiguracaoCMVUpdate,
                         db: Session = Depends(get_db),
-                        usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+                        usuario=Depends(requer(Capacidade.CONFIGURAR_CMV))):
     cfg = obter_configuracao(db, unidade_id, usuario.empresa_id)
 
     if dados.metodo_custo is not None:
@@ -83,7 +84,7 @@ def apuracao(
     metodo_custo: Optional[MetodoCusto] = None,
     limite_linhas: int = 100,
     db: Session = Depends(get_db),
-    usuario=Depends(get_current_user),
+    usuario=Depends(requer(Capacidade.VER_CMV)),
 ):
     """Apura o CMV do período.
 

@@ -26,6 +26,7 @@ from auth.deps import get_current_user
 from servicos import painel as servico_painel
 from servicos import regional as servico_regional
 from servicos import escopo as servico_escopo
+from servicos import permissoes
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -42,6 +43,14 @@ def painel(unidade_id: Optional[str] = Query(
            db: Session = Depends(get_db), usuario=Depends(get_current_user)):
     """Painel de uma unidade, ou da rede inteira quando unidade_id=REGIONAL."""
     recorte = servico_escopo.resolver(db, usuario, unidade_id)
+
+    # Quem não vê dinheiro recebe a fila de trabalho, não o painel de CMV com
+    # os números apagados. Recusar seria pior: esta é a tela inicial, e um 403
+    # ao entrar no sistema ensina que ele está quebrado.
+    if not permissoes.ve_dinheiro(usuario):
+        return servico_painel.montar_operacional(
+            db, unidade_id=recorte.unidade_id if not recorte.regional else None,
+            usuario_id=usuario.id)
 
     if recorte.regional:
         return servico_regional.painel(

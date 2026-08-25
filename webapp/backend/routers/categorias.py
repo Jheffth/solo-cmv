@@ -6,6 +6,7 @@ from database import get_db
 from models import Categoria, PapelUsuario
 from schemas import CategoriaOut, CategoriaCreate
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer
 
 router = APIRouter(prefix="/categorias", tags=["categorias"])
 
@@ -21,7 +22,7 @@ def listar(db: Session = Depends(get_db), usuario=Depends(get_current_user)):
 
 @router.post("", response_model=CategoriaOut, status_code=201)
 def criar(dados: CategoriaCreate, db: Session = Depends(get_db),
-          usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+          usuario=Depends(requer(Capacidade.CADASTRAR))):
     categoria = Categoria(empresa_id=usuario.empresa_id, nome=dados.nome)
     db.add(categoria)
     db.commit()

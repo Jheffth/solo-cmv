@@ -502,6 +502,51 @@ window.Paginas.dashboard = (function () {
       [CORES.vermelho, '#EF9F27', CORES.cinza, CORES.azul, CORES.verde, CORES.gold, CORES.navy]);
   }
 
+  /* A tela inicial de quem lança.
+
+     Não é o painel de CMV sem os números: é outra pergunta. "O que está
+     esperando por mim?" — inventário congelado com itens por contar,
+     requisição aberta. Cada cartão leva direto ao lugar de fazer.
+
+     O bloco de "aguardando congelamento" existe para responder antes da
+     pergunta: o inventário foi aberto, a pessoa não consegue contar, e sem
+     explicação isso parece defeito do sistema. Dizer que falta o gerente
+     congelar transforma um bug aparente em um recado para outra pessoa. */
+  function renderOperacional(container, d) {
+    const tarefas = d.tarefas || [];
+    const espera = d.aguardando_congelamento || [];
+
+    const cartoes = tarefas.length ? tarefas.map((t) => `
+      <button class="cartao-tarefa ${t.gravidade}" type="button" data-rota="${t.rota}">
+        ${icone(t.rota)}
+        <div>
+          <strong>${t.titulo}</strong>
+          <small>${t.detalhe}</small>
+        </div>
+      </button>`).join('')
+      : `<div class="estado-vazio">Nada esperando por você agora.</div>`;
+
+    const aviso = espera.length ? `
+      <div class="painel-aviso">
+        ${icone('inventario')}
+        <span>Inventário ${espera.map((s) => s.numero).join(', ')}
+        aberto, mas ainda não congelado — é o gerente quem faz isso.
+        A contagem libera depois.</span>
+      </div>` : '';
+
+    container.innerHTML = `
+      <div class="painel-contexto">
+        <span class="mes-atual">${(d.periodo && d.periodo.rotulo) || ''}</span>
+      </div>
+      <h2 class="titulo-seccao">O que está esperando por você</h2>
+      <div class="grade-tarefas">${cartoes}</div>
+      ${aviso}`;
+
+    container.querySelectorAll('.cartao-tarefa').forEach((b) => {
+      b.addEventListener('click', () => { location.hash = b.dataset.rota; });
+    });
+  }
+
   function esqueleto(container) {
     container.innerHTML = `
       <div class="painel-esqueleto">
@@ -540,6 +585,14 @@ window.Paginas.dashboard = (function () {
       } catch (erro) {
         container.innerHTML =
           `<div class="estado-vazio">Não foi possível carregar o painel: ${erro.message}</div>`;
+        return;
+      }
+
+      // Quem não vê dinheiro recebe a fila de trabalho. Estrutura própria,
+      // e não este painel com os números apagados — ver montar_operacional
+      // em servicos/painel.py.
+      if (d.operacional) {
+        renderOperacional(container, d);
         return;
       }
 

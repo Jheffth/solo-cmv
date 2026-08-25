@@ -33,8 +33,10 @@ from schemas import (
 )
 from auth.deps import get_current_user, exigir_papeis
 from calculo_estoque import saldos_por_produto, ultimos_custos
-from servicos.contagem import registrar_contagem, ErroContagem, ORIGEM_WEB
+from servicos.contagem import (registrar_contagem, ErroContagem, ORIGEM_WEB,
+                               STATUS_ACEITA_CONTAGEM)
 from servicos import escopo as _escopo
+from servicos.permissoes import Capacidade, requer, ve_dinheiro
 
 router = APIRouter(prefix="/inventario", tags=["inventário"])
 
@@ -44,11 +46,10 @@ STATUS_ATIVOS = (
     StatusSessaoInventario.CONGELADO,
     StatusSessaoInventario.EM_CONTAGEM,
 )
-# Status em que o inventário aceita contagem
-STATUS_ACEITA_CONTAGEM = (
-    StatusSessaoInventario.CONGELADO,
-    StatusSessaoInventario.EM_CONTAGEM,
-)
+# "Quais status aceitam contagem" tem UMA resposta, e ela mora no serviço —
+# que é quem recusa de verdade. Havia uma cópia idêntica aqui; idêntica hoje,
+# e a discordar no dia em que surgisse um status novo. O bot do Telegram vai
+# fazer a mesma pergunta, e vai fazê-la ao mesmo lugar.
 
 TRANSICOES = {
     StatusSessaoInventario.ABERTO: {StatusSessaoInventario.CONGELADO, StatusSessaoInventario.CANCELADO},
@@ -142,6 +143,28 @@ def _resumo(itens: List[InventarioItemOut]) -> dict:
     }
 
 
+def _sem_dinheiro(detalhe: InventarioDetalheOut) -> dict:
+    """O mesmo detalhe sem os valores em R$.
+
+    A tela de contagem é a que o operador mais usa, e ela vinha entregando
+    custo unitário item a item e a divergência em reais — de quebra, o
+    `valor_contado` do inventário inteiro, que é o estoque da casa somado.
+
+    Some o dinheiro, fica o trabalho: quantidade contada, quantidade do
+    sistema e a divergência em unidades continuam ali, que é o que serve a
+    quem está com a prancheta na mão.
+    """
+    dados = detalhe.model_dump()
+    for item in dados.get("itens", []):
+        item.pop("custo_unitario", None)
+        item.pop("valor_divergencia", None)
+    resumo = dados.get("resumo", {})
+    for chave in ("valor_perdas", "valor_sobras", "valor_liquido", "valor_contado"):
+        resumo.pop(chave, None)
+    dados["com_valores"] = False
+    return dados
+
+
 def _buscar_sessao(db: Session, sessao_id: int) -> SessaoInventario:
     sessao = db.query(SessaoInventario).filter(SessaoInventario.id == sessao_id).first()
     if not sessao:
@@ -156,6 +179,7 @@ def _buscar_sessao(db: Session, sessao_id: int) -> SessaoInventario:
 def listar_sessoes(
     unidade_id: Optional[str] = None,
     status: Optional[StatusSessaoInventario] = None,
+    aceita_contagem: bool = False,
     busca: Optional[str] = None,
     data_inicio: Optional[date] = None,
     data_fim: Optional[date] = None,
@@ -163,12 +187,24 @@ def listar_sessoes(
     db: Session = Depends(get_db),
     usuario=Depends(get_current_user),
 ):
+    """Histórico de inventários; com `aceita_contagem=true`, só os que servem.
+
+    O filtro por significado existe porque quem pergunta quer saber "onde eu
+    posso contar agora", não "quais estão no status X". Traduzir uma coisa na
+    outra exigiria que o cliente — a tela, o bot, um coletor futuro —
+    soubesse quais status aceitam contagem. Seria uma cópia da regra em cada
+    canal, envelhecendo em silêncio no dia em que surgisse um status novo.
+
+    Quem responde essa pergunta é `servicos/contagem.py`, que é quem recusa.
+    """
     # Aceita "REGIONAL": o histórico de inventários de todas as lojas, com a
     # coluna de unidade separando quem é quem. Abrir/congelar/finalizar
     # continua sendo ato de uma unidade — só a CONSULTA é consolidada.
     recorte = _escopo.resolver(db, usuario, unidade_id)
     query = db.query(SessaoInventario).filter(
         SessaoInventario.unidade_id.in_(recorte.ids))
+    if aceita_contagem:
+        query = query.filter(SessaoInventario.status.in_(STATUS_ACEITA_CONTAGEM))
     if status:
         query = query.filter(SessaoInventario.status == status)
     if busca:
@@ -225,11 +261,22 @@ def buscar_por_numero(numero: str, unidade_id: int,
     return sessao
 
 
-@router.get("/sessoes/{sessao_id}", response_model=InventarioDetalheOut)
+@router.get("/sessoes/{sessao_id}", response_model=None)
 def detalhe(sessao_id: int, db: Session = Depends(get_db), usuario=Depends(get_current_user)):
+    """Um inventário e seus itens.
+
+    Sem `response_model` de propósito: a forma da resposta muda conforme quem
+    pergunta — quem não vê dinheiro recebe as mesmas linhas sem as colunas de
+    R$ (ver `_sem_dinheiro`). Um modelo fixo obrigaria a mandar os campos
+    zerados, e zero mente: diria "custo R$ 0,00" onde o certo é "não é da sua
+    conta".
+    """
     sessao = _buscar_sessao(db, sessao_id)
     itens = _montar_itens_out(sessao)
-    return InventarioDetalheOut(sessao=sessao, itens=itens, resumo=_resumo(itens))
+    detalhe = InventarioDetalheOut(sessao=sessao, itens=itens, resumo=_resumo(itens))
+    if not ve_dinheiro(usuario):
+        return _sem_dinheiro(detalhe)
+    return detalhe
 
 
 # ==============================================================================
@@ -237,7 +284,10 @@ def detalhe(sessao_id: int, db: Session = Depends(get_db), usuario=Depends(get_c
 # ==============================================================================
 @router.post("/sessoes/abrir", response_model=SessaoInventarioOut, status_code=201)
 def abrir_sessao(dados: SessaoInventarioAbrir, db: Session = Depends(get_db),
-                 usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+                 usuario=Depends(requer(Capacidade.ABRIR_INVENTARIO))):
+    # Abrir escolhe quais famílias entram no fechamento — e o que fica de fora
+    # não é contado nem cobrado. É decisão de quem responde pelo CMV do
+    # período, não de quem vai contar.
     if not dados.geral and not dados.categoria_ids:
         raise HTTPException(
             status_code=400,
@@ -276,11 +326,16 @@ def abrir_sessao(dados: SessaoInventarioAbrir, db: Session = Depends(get_db),
 # ==============================================================================
 @router.post("/sessoes/{sessao_id}/congelar", response_model=InventarioDetalheOut)
 def congelar(sessao_id: int, db: Session = Depends(get_db),
-             usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+             usuario=Depends(requer(Capacidade.CONGELAR_INVENTARIO))):
     """Tira a fotografia do estoque de todos os itens do escopo.
 
     É esse retrato que, no fim, permite comparar o que o sistema dizia com o
     que foi realmente contado. Sem congelar, não há contagem.
+
+    Gerente para cima, e não por hierarquia decorativa: congelar no momento
+    errado — meio expediente, mercadoria na doca ainda não lançada — desloca
+    a referência de tudo que vem depois, e não há como desfazer sem descartar
+    o inventário. Quem conta lança o número; quem congela escolhe o instante.
     """
     sessao = _buscar_sessao(db, sessao_id)
     if sessao.status != StatusSessaoInventario.ABERTO:
@@ -317,9 +372,16 @@ def congelar(sessao_id: int, db: Session = Depends(get_db),
 # ==============================================================================
 # CONTAGEM
 # ==============================================================================
-def _item_para_saida(item: InventarioItem) -> InventarioItemOut:
+def _item_para_saida(item: InventarioItem, com_valores: bool = True):
+    """A linha do item, com ou sem os valores em R$.
+
+    A confirmação de cada contagem é a resposta que o operador mais recebe —
+    dezenas de vezes por inventário. Se ela devolvesse o custo, o dinheiro
+    sairia pela porta mais movimentada do sistema, e nenhuma auditoria de
+    telas repararia: não é tela, é um "ok" de gravação.
+    """
     p = item.produto
-    return InventarioItemOut(
+    saida = InventarioItemOut(
         id=item.id, produto_id=item.produto_id,
         codigo=p.codigo if p else None, produto=p.nome if p else None,
         categoria=p.categoria.nome if (p and p.categoria) else None,
@@ -329,11 +391,17 @@ def _item_para_saida(item: InventarioItem) -> InventarioItemOut:
         custo_unitario=item.custo_unitario,
         divergencia=item.divergencia, valor_divergencia=item.valor_divergencia,
     )
+    if com_valores:
+        return saida
+    dados = saida.model_dump()
+    dados.pop("custo_unitario", None)
+    dados.pop("valor_divergencia", None)
+    return dados
 
 
-@router.post("/contagem", response_model=ContagemResultado)
+@router.post("/contagem", response_model=None)
 def lancar_contagem_flexivel(dados: ContagemLancamento, db: Session = Depends(get_db),
-                             usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+                             usuario=Depends(requer(Capacidade.CONTAR))):
     """Registra uma contagem no inventário.
 
     Aceita identificação flexível (id ou número do inventário; id ou código do
@@ -364,7 +432,8 @@ def lancar_contagem_flexivel(dados: ContagemLancamento, db: Session = Depends(ge
         msg = (f"Contagem corrigida: {resultado.produto.nome} = {item.quantidade_contada} "
                f"(antes era {resultado.valor_anterior}).")
 
-    return ContagemResultado(
+    com_valores = ve_dinheiro(usuario)
+    resposta = ContagemResultado(
         item=_item_para_saida(item),
         numero_inventario=resultado.sessao.numero_documento,
         status_inventario=resultado.sessao.status,
@@ -372,11 +441,16 @@ def lancar_contagem_flexivel(dados: ContagemLancamento, db: Session = Depends(ge
         valor_anterior=resultado.valor_anterior,
         mensagem=msg,
     )
+    if com_valores:
+        return resposta
+    dados = resposta.model_dump()
+    dados["item"] = _item_para_saida(item, com_valores=False)
+    return dados
 
 
-@router.post("/sessoes/{sessao_id}/contagem", response_model=InventarioItemOut)
+@router.post("/sessoes/{sessao_id}/contagem", response_model=None)
 def lancar_contagem(sessao_id: int, dados: ContagemItem, db: Session = Depends(get_db),
-                    usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+                    usuario=Depends(requer(Capacidade.CONTAR))):
     """Atalho por sessão — mesma regra, usando o serviço compartilhado."""
     try:
         resultado = registrar_contagem(
@@ -390,7 +464,7 @@ def lancar_contagem(sessao_id: int, dados: ContagemItem, db: Session = Depends(g
         )
     except ErroContagem as erro:
         raise HTTPException(status_code=erro.http, detail=erro.mensagem)
-    return _item_para_saida(resultado.item)
+    return _item_para_saida(resultado.item, com_valores=ve_dinheiro(usuario))
 
 
 # ==============================================================================
@@ -398,7 +472,7 @@ def lancar_contagem(sessao_id: int, dados: ContagemItem, db: Session = Depends(g
 # ==============================================================================
 @router.post("/sessoes/{sessao_id}/finalizar", response_model=InventarioDetalheOut)
 def finalizar(sessao_id: int, db: Session = Depends(get_db),
-              usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+              usuario=Depends(requer(Capacidade.FINALIZAR_INVENTARIO))):
     """Encerra o inventário e passa as quantidades contadas para o estoque.
 
     Cada item contado gera um movimento de CONTAGEM_FINAL na data de hoje —
@@ -449,7 +523,7 @@ def finalizar(sessao_id: int, db: Session = Depends(get_db),
 # ==============================================================================
 @router.post("/sessoes/{sessao_id}/cancelar", response_model=SessaoInventarioOut)
 def cancelar(sessao_id: int, db: Session = Depends(get_db),
-             usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+             usuario=Depends(requer(Capacidade.FINALIZAR_INVENTARIO))):
     """Cancela o inventário. Ele continua consultável para análise, e o número
     dele segue consumido (a sequência nunca reaproveita)."""
     sessao = _buscar_sessao(db, sessao_id)
@@ -466,7 +540,7 @@ def cancelar(sessao_id: int, db: Session = Depends(get_db),
 
 @router.post("/sessoes/{sessao_id}/status", response_model=SessaoInventarioOut)
 def mudar_status(sessao_id: int, novo_status: StatusSessaoInventario, db: Session = Depends(get_db),
-                 usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+                 usuario=Depends(requer(Capacidade.FINALIZAR_INVENTARIO))):
     """Transição manual de status, respeitando o ciclo de vida."""
     sessao = _buscar_sessao(db, sessao_id)
     if novo_status not in TRANSICOES.get(sessao.status, set()):

@@ -6,6 +6,7 @@ from database import get_db
 from models import Unidade, PapelUsuario
 from schemas import UnidadeOut, UnidadeCreate
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer
 from servicos import escopo as servico_escopo
 
 router = APIRouter(prefix="/unidades", tags=["unidades"])
@@ -36,7 +37,7 @@ def escopo(db: Session = Depends(get_db), usuario=Depends(get_current_user)):
 
 @router.post("", response_model=UnidadeOut, status_code=201)
 def criar(dados: UnidadeCreate, db: Session = Depends(get_db),
-          usuario=Depends(exigir_papeis(PapelUsuario.ADMIN))):
+          usuario=Depends(requer(Capacidade.CRIAR_UNIDADE))):
     unidade = Unidade(**dados.model_dump())
     db.add(unidade)
     db.commit()

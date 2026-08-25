@@ -42,6 +42,7 @@ from database import get_db
 from models import Usuario
 from auth.deps import get_current_user
 from servicos import escopo as servico_escopo
+from servicos import permissoes
 from routers.dashboard import painel as rota_do_painel
 
 router = APIRouter(prefix="/sessao", tags=["sessão"])
@@ -114,6 +115,12 @@ def abrir(
             "papel": usuario.papel.value if hasattr(usuario.papel, "value") else usuario.papel,
             "irrestrito": servico_escopo.irrestrito(usuario),
         },
+        # O que esta pessoa pode fazer, para o menu se montar sem repetir a
+        # régua em JavaScript. Vem na abertura porque é aqui que a barra
+        # lateral é desenhada — pedir depois faria o menu piscar itens que
+        # somem, que é como o usuário aprende a não confiar na tela.
+        "capacidades": permissoes.concedidas(usuario),
+        "ve_dinheiro": permissoes.ve_dinheiro(usuario),
         "unidade": unidade,
         "painel": None,
     }

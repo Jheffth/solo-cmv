@@ -8,6 +8,17 @@
    alcançar o estado por referência (teste, futuro módulo, console) não
    enxerga nada. Declarando em `window` os dois caminhos funcionam. */
 window.USUARIO_ATUAL = null;
+
+/* Preenchidas pela abertura (/sessao). Vazias até lá, e o `pode()` abaixo
+   trata isso negando: antes de saber, não se mostra. Um menu que aparece
+   completo e encolhe meio segundo depois ensina a não confiar na tela. */
+window.CAPACIDADES = new Set();
+window.VE_DINHEIRO = true;
+
+/* A pergunta única do frontend sobre permissão. */
+window.pode = function (capacidade) {
+  return window.CAPACIDADES.has(capacidade);
+};
 window.UNIDADES_DISPONIVEIS = [];
 window.UNIDADE_SELECIONADA = null;
 
@@ -61,6 +72,12 @@ async function carregarSessaoExistente() {
 
     const dados = await api.get('/sessao?' + params.toString());
     USUARIO_ATUAL = dados.usuario;
+    // O que esta pessoa pode fazer, dito pelo servidor. O menu se monta
+    // daqui em vez de repetir a régua em JavaScript — cópia da regra é
+    // regra que diverge, e a do navegador é a que mente primeiro porque
+    // ninguém a testa.
+    window.CAPACIDADES = new Set(dados.capacidades || []);
+    window.VE_DINHEIRO = dados.ve_dinheiro !== false;
     ABERTURA.escopo = dados.escopo;
     ABERTURA.painel = dados.painel;
     ABERTURA.unidade = dados.unidade;

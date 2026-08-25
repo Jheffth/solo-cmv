@@ -19,6 +19,7 @@ from schemas import (
     MovimentoOut, MovimentoCreate, NotaFiscalLancamento, NotaFiscalResultado,
 )
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer
 from servicos import escopo as servico_escopo
 
 router = APIRouter(prefix="/movimentos", tags=["movimentos"])
@@ -117,7 +118,7 @@ def listar(unidade_id: Optional[str] = None, produto_id: Optional[int] = None,
 
 @router.post("", response_model=MovimentoOut, status_code=201)
 def registrar(dados: MovimentoCreate, db: Session = Depends(get_db),
-              usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+              usuario=Depends(requer(Capacidade.LANCAR_COMPRA))):
     # Contagem não é lançamento avulso: ela nasce de um inventário. Permitir
     # os dois caminhos criaria duas fontes de verdade para o mesmo número —
     # exatamente o problema que o inventário veio resolver.
@@ -166,7 +167,7 @@ def registrar(dados: MovimentoCreate, db: Session = Depends(get_db),
 
 @router.post("/nota-fiscal", response_model=NotaFiscalResultado, status_code=201)
 def registrar_nota_fiscal(dados: NotaFiscalLancamento, db: Session = Depends(get_db),
-                          usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE, PapelUsuario.OPERADOR))):
+                          usuario=Depends(requer(Capacidade.LANCAR_COMPRA))):
     """Lança uma nota fiscal inteira de uma vez: cada item vira um Movimento
     de COMPRA, todos com o mesmo nº de documento, fornecedor e data — do jeito
     que a compra chega na prática (uma nota com vários produtos)."""

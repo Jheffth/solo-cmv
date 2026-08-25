@@ -16,7 +16,10 @@ window.Paginas.estoque = (function () {
   const brl = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
   const qtd = (v) => Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
 
-  function linhas(itens, regional) {
+  /* `comValores` vem do servidor (campo `com_valores`), não de uma checagem
+     de papel aqui. A tela não decide quem vê dinheiro — ela desenha o que
+     chegou. Se a régua mudar no backend, esta tela acompanha sem edição. */
+  function linhas(itens, regional, comValores) {
     if (!itens.length) {
       return `<div class="estado-vazio">Nenhum item encontrado com os filtros atuais.</div>`;
     }
@@ -31,8 +34,8 @@ window.Paginas.estoque = (function () {
             <th>Família</th>
             <th>Un.</th>
             <th class="num">Estoque</th>
-            <th class="num">Último custo</th>
-            <th class="num">Valor em estoque</th>
+            ${comValores ? '<th class="num">Último custo</th>' : ''}
+            ${comValores ? '<th class="num">Valor em estoque</th>' : ''}
           </tr>
         </thead>
         <tbody>
@@ -44,8 +47,8 @@ window.Paginas.estoque = (function () {
               <td>${i.categoria || '—'}</td>
               <td>${i.unidade_medida || '—'}</td>
               <td class="num ${i.quantidade > 0 ? '' : 'zerado'}">${qtd(i.quantidade)}</td>
-              <td class="num">${i.ultimo_custo != null ? brl(i.ultimo_custo) : '<span class="zerado">sem custo</span>'}</td>
-              <td class="num">${i.valor_em_estoque ? brl(i.valor_em_estoque) : '<span class="zerado">—</span>'}</td>
+              ${comValores ? `<td class="num">${i.ultimo_custo != null ? brl(i.ultimo_custo) : '<span class="zerado">sem custo</span>'}</td>` : ''}
+              ${comValores ? `<td class="num">${i.valor_em_estoque ? brl(i.valor_em_estoque) : '<span class="zerado">—</span>'}</td>` : ''}
             </tr>`).join('')}
         </tbody>
       </table>
@@ -62,7 +65,7 @@ window.Paginas.estoque = (function () {
         ${dados.por_unidade.map((u) => `
           <div class="faixa-unidade">
             <span class="marca-unidade">${u.unidade}</span>
-            <strong>${brl(u.valor)}</strong>
+            ${u.valor != null ? `<strong>${brl(u.valor)}</strong>` : ''}
             <small>${u.itens_com_saldo} itens com saldo</small>
           </div>`).join('')}
       </div>`;
@@ -80,7 +83,8 @@ window.Paginas.estoque = (function () {
     let itens = dados.itens;
     if (somenteComSaldo) itens = itens.filter((i) => i.quantidade > 0);
 
-    alvo.innerHTML = resumoPorUnidade(dados) + linhas(itens, dados.regional);
+    alvo.innerHTML = resumoPorUnidade(dados)
+      + linhas(itens, dados.regional, dados.com_valores !== false);
     container.querySelector('#estoque-contagem').textContent =
       `${itens.length} item(ns)` + (somenteComSaldo ? ' com saldo' : '')
       + (dados.regional ? ` em ${dados.resumo.unidades} unidades` : '');
@@ -91,7 +95,18 @@ window.Paginas.estoque = (function () {
     container.querySelector('#kpi-total').textContent = resumo.total_itens;
     container.querySelector('#kpi-com-saldo').textContent = resumo.itens_com_saldo;
     container.querySelector('#kpi-zerados').textContent = resumo.itens_zerados;
-    container.querySelector('#kpi-valor').textContent = brl(resumo.valor_total);
+    // O cartão de valor não vira "R$ 0,00" para quem não vê dinheiro: zero
+    // mente. Ele sai da tela inteiro — e o CSS reacomoda os outros três.
+    const cartaoValor = container.querySelector('#kpi-valor');
+    if (cartaoValor) {
+      const bloco = cartaoValor.closest('.kpi') || cartaoValor.parentElement;
+      if (resumo.valor_total == null) {
+        if (bloco) bloco.style.display = 'none';
+      } else {
+        if (bloco) bloco.style.display = '';
+        cartaoValor.textContent = brl(resumo.valor_total);
+      }
+    }
   }
 
   return {

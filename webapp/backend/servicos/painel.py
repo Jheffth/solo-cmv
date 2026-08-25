@@ -302,6 +302,83 @@ def _pendencias(db: Session, unidade_id: Optional[int], periodo: Periodo,
 
 
 # ==============================================================================
+# O PAINEL DE QUEM NÃO VÊ DINHEIRO
+# ==============================================================================
+def montar_operacional(db: Session, unidade_id: Optional[int],
+                       usuario_id: Optional[int] = None) -> dict:
+    """A tela inicial de quem lança, e não de quem apura.
+
+    POR QUE NÃO É O PAINEL NORMAL COM OS NÚMEROS APAGADOS
+    -----------------------------------------------------
+    Tirar o R$ do painel de CMV deixaria uma tela de esqueletos: KPIs sem
+    valor, gráfico sem eixo, "itens que mais custam" sem custo. A pessoa
+    entenderia que falta alguma coisa — e estaria certa.
+
+    O operador tem uma pergunta diferente, e ela é melhor: **o que está
+    esperando por mim?** Inventário congelado sem contagem, requisição
+    aberta. É a mesma informação que o bot do Telegram vai dar no /ajuda e
+    no /resumo, e por isso vive aqui, num serviço, e não na tela.
+
+    Custa três consultas contadas. O painel completo custa trinta.
+    """
+    tarefas = []
+    hoje = date_type.today()
+
+    contagens = db.query(SessaoInventario).filter(
+        SessaoInventario.status.in_((StatusSessaoInventario.CONGELADO,
+                                     StatusSessaoInventario.EM_CONTAGEM)))
+    if unidade_id:
+        contagens = contagens.filter(SessaoInventario.unidade_id == unidade_id)
+    for sessao in contagens.all():
+        total = len(sessao.itens)
+        contados = sum(1 for i in sessao.itens if i.quantidade_contada is not None)
+        faltam = total - contados
+        tarefas.append({
+            "chave": "contagem", "rota": "inventario", "id": sessao.id,
+            "titulo": f"Inventário {sessao.numero_documento}",
+            "detalhe": (f"{faltam} de {total} itens sem contagem"
+                        if faltam else f"{total} itens contados — pronto para finalizar"),
+            "gravidade": "atencao" if faltam else "ok",
+            "quantidade": faltam,
+        })
+
+    abertas = db.query(Requisicao).filter(
+        Requisicao.status.in_((StatusRequisicao.ABERTA, StatusRequisicao.INICIADA)))
+    if unidade_id:
+        abertas = abertas.filter(Requisicao.unidade_id == unidade_id)
+    for req in abertas.all():
+        tarefas.append({
+            "chave": "requisicao", "rota": "requisicoes", "id": req.id,
+            "titulo": f"Requisição {req.numero}",
+            "detalhe": ("aberta — inicie para lançar itens"
+                        if req.status == StatusRequisicao.ABERTA
+                        else "em preenchimento"),
+            "gravidade": "atencao", "quantidade": None,
+        })
+
+    # Inventário só ABERTO aparece como informação, não como tarefa: o
+    # operador não tem o que fazer com ele além de saber que existe e que
+    # depende de outra pessoa. Dizer isso evita a pergunta "cadê o meu
+    # inventário?" e evita a suspeita de que o sistema esqueceu.
+    aguardando = db.query(SessaoInventario).filter(
+        SessaoInventario.status == StatusSessaoInventario.ABERTO)
+    if unidade_id:
+        aguardando = aguardando.filter(SessaoInventario.unidade_id == unidade_id)
+    espera = [
+        {"numero": s.numero_documento,
+         "dias": (hoje - s.data_abertura.date()).days}
+        for s in aguardando.all()
+    ]
+
+    return {
+        "operacional": True,
+        "periodo": {"rotulo": f"{MESES[hoje.month - 1]}/{hoje.year}"},
+        "tarefas": sorted(tarefas, key=lambda t: 0 if t["gravidade"] == "atencao" else 1),
+        "aguardando_congelamento": espera,
+    }
+
+
+# ==============================================================================
 # MONTAGEM
 # ==============================================================================
 def montar(db: Session, unidade_id: Optional[int] = None,

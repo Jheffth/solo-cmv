@@ -173,6 +173,67 @@ Isso reorganiza o desenho inteiro em torno de três modos, do mais guiado ao mai
 
 ---
 
+#### A regra vale para todo identificador, não só para o produto
+
+O mesmo raciocínio que elimina o código do produto elimina o número do
+inventário, o número da requisição e o nome do fornecedor. **Nenhum comando
+começa perguntando um número.** Ele começa mostrando o que existe.
+
+```
+Operador:  /contar
+Bot:       Inventários prontos para contagem · Josefina
+           [nº 03 · Hortifruti · 42 itens]
+           [nº 04 · Bar · 8 itens]
+
+Operador:  /requisicao
+Bot:       [REQ-07 · aberta hoje, 4 itens]
+           [+ abrir nova requisição]
+```
+
+Três decisões dentro disso:
+
+**Uma opção só não vira pergunta.** Se existe um único inventário aceitando
+contagem, `/contar` entra nele direto e avisa qual é — "Inventário 03 ·
+Hortifruti · vou passar item por item". Fazer alguém escolher entre uma coisa
+é um toque cobrado por nada, e é o caso mais comum na operação real.
+
+**A lista mostra só o que aceita a ação.** Inventário `ABERTO` não recebe
+contagem — a fotografia do estoque precisa existir antes —, então não aparece
+em `/contar`. Oferecer para depois recusar é o pior dos dois mundos.
+
+**Lista vazia é a resposta mais importante.** É o momento em que a pessoa está
+na câmara fria com a prancheta e nada acontece. Não pode ser "nenhum
+resultado":
+
+```
+Operador:  /contar
+Bot:       Nenhum inventário congelado na Josefina.
+           O inventário nº 05 está aberto, mas ainda não foi congelado —
+           é o gerente quem faz isso. Avise a Marina.
+```
+
+Diz o que há, por que não serve, e quem resolve. É a mesma escolha da tela
+Equipe, onde o motivo do bloqueio aparece no lugar do botão morto.
+
+**No backend, isso precisa de um ajuste pequeno e importante.**
+`GET /inventario/sessoes?status=` aceita **um** status. A pergunta do bot é
+"o que aceita contagem", que hoje são dois — `CONGELADO` e `EM_CONTAGEM`.
+Filtrar por status obrigaria o bot a saber quais são, e essa lista já existe
+no backend como `STATUS_ACEITA_CONTAGEM`. Duas cópias, e a segunda envelhece
+no dia em que surgir um status novo.
+
+Então o filtro é pelo **significado**, não pelo estado:
+
+```
+GET /inventario/sessoes?aceita_contagem=true
+GET /requisicoes?aceita_itens=true          # hoje: INICIADA
+```
+
+O bot pergunta o que quer fazer; o backend responde o que serve. Mesma
+disciplina do `/ajuda` (4.12) e da hierarquia: uma fonte por pergunta.
+
+---
+
 ### 4.2 Modo guiado — o padrão, e o mínimo teórico de esforço
 
 O inventário tem escopo definido: 42 itens de Hortifruti. É uma lista **conhecida e curta**. Então o bot conduz, e a pessoa só responde o número.
@@ -401,7 +462,112 @@ Bot:       ✓ Batata Doce · 50 Kg × R$ 10,48 = R$ 524,00
 /inventarios        →  os cinco últimos, com status
 ```
 
-### 4.12 Onde o Mini App entra — e onde não entra
+### 4.12 `/ajuda` — a lista que não pode mentir
+
+Um bot sem ajuda é um bot com manual: a pessoa pergunta ao colega qual é o
+comando, o colega lembra errado, e o canal ganha fama de complicado. `/ajuda`
+existe para que ninguém precise decorar nada.
+
+Mas há uma armadilha específica aqui, e ela é a razão desta seção existir.
+
+**Ajuda escrita à mão envelhece em silêncio.** O jeito óbvio — um texto por
+papel, guardado no código do bot — cria uma segunda descrição das permissões,
+paralela à que autoriza de verdade. No dia em que `congelar` subir para
+Gerente, quem lembrar de mudar a rota vai esquecer do texto. E o resultado é
+pior do que não ter ajuda: o operador lê que pode congelar, tenta, e leva um
+403. A ajuda passa a ensinar o errado com toda a autoridade de ter vindo do
+sistema.
+
+É exatamente o defeito que `servicos/hierarquia.py` veio corrigir quando a
+pergunta "posso dar este papel?" tinha duas respostas. A solução aqui é a
+mesma:
+
+**Um registro só, que autoriza e explica.**
+
+```python
+# servicos/comandos.py
+COMANDOS = [
+    Comando("/contar",     "Lançar contagem do inventário",
+            papel_minimo=OPERADOR, exemplo="/contar"),
+    Comando("/perda",      "Registrar perda com motivo",
+            papel_minimo=OPERADOR, exemplo="/perda batata doce 3 validade"),
+    Comando("/requisicao", "Pedir itens para a produção",
+            papel_minimo=OPERADOR),
+    Comando("/estoque",    "Consultar saldo de um item",
+            papel_minimo=OPERADOR),
+    Comando("/congelar",   "Fotografar o estoque e liberar a contagem",
+            papel_minimo=GERENTE),
+    Comando("/atender",    "Baixar do estoque os itens da requisição",
+            papel_minimo=GERENTE),
+    Comando("/cmv",        "CMV do período contra a meta",
+            papel_minimo=GERENTE),
+    Comando("/faturamento", "Lançar o faturamento do período",
+            papel_minimo=DIRETOR),
+]
+```
+
+O despachante do bot recusa o que não estiver liberado **neste mesmo
+registro**. Então a ajuda não descreve a regra: ela *é* a regra, exibida.
+Divergir deixa de ser possível.
+
+Serve por `GET /api/telegram/comandos`, no mesmo espírito de
+`GET /api/usuarios/poderes` — que já existe e é de onde a tela Equipe se
+monta. Um lugar para perguntar "o que esta pessoa pode?", três canais
+perguntando.
+
+**O que o operador vê:**
+
+```
+Operador:  /ajuda
+Bot:       Você é Operador · Josefina
+
+           LANÇAR
+           /contar       contagem do inventário
+           /perda        registrar perda        ex: /perda batata doce 3 validade
+           /requisicao   pedir itens para a produção
+
+           CONSULTAR
+           /estoque      saldo de um item       ex: /estoque batata
+
+           DURANTE A CONTAGEM
+           faltam · pular · não tem · /desfazer · /resumo
+
+           /unidade  trocar de loja      /sair  encerrar
+
+           Congelar inventário, atender requisição e ver CMV são do
+           gerente para cima.
+```
+
+**O que o gerente vê:** as mesmas três primeiras seções, mais `/congelar`,
+`/atender`, `/cmv` e `/painel`. Nenhum comando aparece para quem vai levar um
+403 ao tentar.
+
+Quatro decisões dentro dessa tela:
+
+1. **Agrupado por verbo, não por papel.** "Lançar" e "Consultar" é como a
+   pessoa pensa. "Comandos de Operador" seria como o sistema pensa.
+
+2. **A última linha diz o que falta — e é uma linha, não uma segunda lista.**
+   O princípio é o mesmo da tela Equipe: botão morto não ensina, mas o motivo
+   ensina. Quem lê sabe a quem pedir em vez de concluir que o sistema está
+   quebrado. Duas listas do mesmo tamanho, porém, transformariam a ajuda numa
+   rolagem — e a metade útil ficaria no fim.
+
+3. **Exemplo real onde o formato não é óbvio.** `/perda batata doce 3 validade`
+   ensina mais que qualquer descrição da sintaxe. Comandos sem argumento não
+   levam exemplo: ruído.
+
+4. **A ajuda muda conforme o momento.** Dentro de uma contagem, `/ajuda`
+   abre pelo bloco "durante a contagem" — é o que a pessoa procura estando
+   ali. A `SessaoTelegram` já guarda o `modo`; é ele que decide a ordem.
+
+E `/start`, `/ajuda` e qualquer coisa que o bot não entenda caem no mesmo
+lugar. Quem digita `/contagem` em vez de `/contar` recebe a lista, não um
+"comando inválido" — a correção custa o mesmo e o desamparo, não.
+
+---
+
+### 4.13 Onde o Mini App entra — e onde não entra
 
 A pesquisa confirma o que a prática sugere: **bot para conversa e comando; Mini App para interface rica**. O padrão recomendado é híbrido — bot como porta de entrada, Mini App para o que precisa de tela.
 
@@ -499,8 +665,8 @@ O `fator` resolve o segundo gargalo, que já discutimos: a nota vem em caixa, o 
 | # | Entrega | Verificação |
 |---|---|---|
 | 1 | Vínculo de identidade: modelo, código de pareamento, `/vincular`, token de canal, tela de vínculo em Usuários | Chat não vinculado não faz nada; vínculo revogado para de valer na hora; token com `canal=TELEGRAM` é recusado ao finalizar inventário |
-| 2 | Esqueleto do bot: polling, sessão de chat, idempotência, `/unidade`, `/ajuda` | Update reentregue não duplica lançamento |
-| 3 | **Busca tolerante** — `GET /produtos/buscar` e `SinonimoProduto`, sem acento, sem caixa, parcial, com escopo | "mucarela", "MUÇARELA" e "bata doce" acham o produto certo; apelido confirmado é lembrado |
+| 2 | Esqueleto do bot: polling, sessão de chat, idempotência, `/unidade`, **registro único de comandos + `/ajuda`** | Update reentregue não duplica lançamento; a ajuda do operador não lista nenhum comando que ele leve 403 ao usar — verificado papel a papel, contra o registro |
+| 3 | **Busca tolerante** — `GET /produtos/buscar` e `SinonimoProduto`, sem acento, sem caixa, parcial, com escopo; **e os filtros por significado** (`aceita_contagem`, `aceita_itens`) que alimentam as listas de escolha | "mucarela", "MUÇARELA" e "bata doce" acham o produto certo; apelido confirmado é lembrado |
 | 4 | **Contagem** — modo guiado (item a item), busca por nome, lista de botões, código como atalho | A pessoa conta 42 itens digitando só números; contagem aparece no relatório com origem TELEGRAM |
 | 5 | **Perda e requisição** — sempre por nome, motivo em botões | Perda sem motivo é recusada; requisição baixa o estoque igual à tela |
 | 6 | **Consulta** — `/estoque`, `/cmv`, `/painel` | Números idênticos aos da tela, no mesmo período |

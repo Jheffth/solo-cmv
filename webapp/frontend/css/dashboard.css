@@ -226,3 +226,53 @@ table.tabela-simples tr.fora em { font-style: italic; }
 /* Pendência sem tela para onde ir não finge ser botão. */
 .pendencia.sem-rota { cursor: default; text-align: left; }
 .pendencia.sem-rota:hover { transform: none; }
+
+/* ------------------------------------------------- painel do operador
+   A tela inicial de quem lança. Cartões grandes porque a maior parte
+   deste uso é em celular, no meio do serviço, com a mão ocupada. */
+.titulo-seccao {
+  margin: 1.4rem 0 .8rem;
+  font-size: 1.05rem;
+  color: var(--texto-suave, #6b7280);
+  font-weight: 600;
+}
+
+.grade-tarefas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: .9rem;
+}
+
+.cartao-tarefa {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  text-align: left;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--borda, rgba(0, 0, 0, .1));
+  border-left: 4px solid var(--borda, rgba(0, 0, 0, .1));
+  border-radius: 12px;
+  background: var(--fundo-cartao, #fff);
+  cursor: pointer;
+  transition: border-color .15s, transform .1s;
+}
+.cartao-tarefa:hover { transform: translateY(-1px); }
+.cartao-tarefa.atencao { border-left-color: #EF9F27; }
+.cartao-tarefa.ok { border-left-color: var(--verde, #1C7A3C); }
+.cartao-tarefa strong { display: block; }
+.cartao-tarefa small { color: var(--texto-suave, #6b7280); }
+.cartao-tarefa svg { flex: 0 0 auto; opacity: .7; }
+
+/* O recado de que falta alguém congelar. Sem ele, "abri o inventário e não
+   consigo contar" parece defeito do sistema em vez de fila de trabalho. */
+.painel-aviso {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  margin-top: 1.2rem;
+  padding: .9rem 1.1rem;
+  border-radius: 10px;
+  background: rgba(239, 159, 39, .1);
+  border-left: 3px solid #EF9F27;
+  font-size: .9rem;
+}

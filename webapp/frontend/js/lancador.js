@@ -95,12 +95,15 @@ window.Lancador = (function () {
     { chave: 'inventario', rotulo: 'Inventário', icone: 'inventario' },
     { chave: 'requisicao', rotulo: 'Requisição', icone: 'requisicoes' },
     { chave: 'perda',      rotulo: 'Perda',      icone: 'perdas' },
-    { chave: 'vendas',     rotulo: 'Vendas',     icone: 'vendas', papeis: ['ARQUITETO', 'ADMIN', 'GERENTE'] },
+    { chave: 'vendas',     rotulo: 'Vendas',     icone: 'vendas', exige: 'LANCAR_FATURAMENTO' },
   ];
 
+  /* Pela capacidade, não pelo papel — mesma razão do menu lateral (app.js):
+     a lista de papéis aqui era uma segunda régua, que só descobriria estar
+     errada quando alguém levasse um 403 depois de clicar. */
   function abasPermitidas() {
-    const papel = (typeof USUARIO_ATUAL !== 'undefined' && USUARIO_ATUAL) ? USUARIO_ATUAL.papel : null;
-    return ABAS.filter((a) => !a.papeis || papel === 'ARQUITETO' || a.papeis.includes(papel));
+    const pode = (typeof window.pode === 'function') ? window.pode : () => true;
+    return ABAS.filter((a) => !a.exige || pode(a.exige));
   }
 
   function montarAbas() {

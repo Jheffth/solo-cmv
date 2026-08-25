@@ -1,5 +1,15 @@
 /* Bootstrap da aplicação: monta o menu lateral, liga os formulários e decide
    se mostra a tela de login ou o painel, ao carregar a página. */
+/* `exige` é uma CAPACIDADE, não uma lista de papéis.
+
+   Antes cada item carregava `papeis: ['ARQUITETO', 'DIRETOR']` — uma cópia
+   da régua do backend, escrita em JavaScript e nunca testada contra ela. As
+   duas concordavam até o dia em que uma mudasse; e a que muda por último é
+   sempre esta, porque quem mexe na permissão mexe no servidor.
+
+   Agora o servidor manda a lista do que a pessoa pode (em /sessao) e o menu
+   só consulta. Uma capacidade nova aparece no menu sozinha; uma que troque
+   de piso acompanha sem ninguém tocar aqui. */
 window.NAV_ITEMS = [
   { chave: 'dashboard',   rotulo: 'Painel',              icone: 'dashboard',   emBreve: false },
   // "acao" em vez de rota: abre a janela flutuante do Lançador, sem trocar de página
@@ -12,28 +22,21 @@ window.NAV_ITEMS = [
   { chave: 'movimentos',  rotulo: 'Movimentações',        icone: 'movimentos',  emBreve: false },
   { chave: 'inventario',  rotulo: 'Inventários',          icone: 'inventario',  emBreve: false },
   { chave: 'requisicoes', rotulo: 'Requisições',          icone: 'requisicoes', emBreve: false },
-  { chave: 'vendas',      rotulo: 'Faturamento por Período', icone: 'vendas',   emBreve: false },
-  { chave: 'cmv',         rotulo: 'Motor de CMV',         icone: 'cmv',         emBreve: false },
+  { chave: 'vendas',      rotulo: 'Faturamento por Período', icone: 'vendas',   emBreve: false, exige: 'VER_FATURAMENTO' },
+  { chave: 'cmv',         rotulo: 'Motor de CMV',         icone: 'cmv',         emBreve: false, exige: 'VER_CMV' },
   // Quem define o alvo é a diretoria; os demais papéis veem a meta nas telas
-  { chave: 'metas',       rotulo: 'Metas',                icone: 'metas',       emBreve: false, papeis: ['ARQUITETO', 'DIRETOR'] },
+  { chave: 'metas',       rotulo: 'Metas',                icone: 'metas',       emBreve: false, exige: 'DEFINIR_META' },
   // Convidar, promover, rebaixar, suspender e excluir num lugar só.
-  // Sem `papeis`: a própria tela recusa quem não administra ninguém —
-  // a regra vive no backend, não numa lista aqui.
-  { chave: 'equipe',      rotulo: 'Equipe',               icone: 'usuarios',    emBreve: false },
-  { chave: 'relatorios',  rotulo: 'Relatórios',           icone: 'relatorios', emBreve: false },
+  { chave: 'equipe',      rotulo: 'Equipe',               icone: 'usuarios',    emBreve: false, exige: 'ADMINISTRAR_ACESSO' },
+  { chave: 'relatorios',  rotulo: 'Relatórios',           icone: 'relatorios', emBreve: false, exige: 'VER_CMV' },
   { chave: 'nfe',         rotulo: 'Notas Fiscais (NF-e)',  icone: 'nfe',        emBreve: true },
-  { chave: 'unidades',    rotulo: 'Unidades',             icone: 'unidades',    emBreve: false, papeis: ['ARQUITETO', 'ADMIN'] },
+  { chave: 'unidades',    rotulo: 'Unidades',             icone: 'unidades',    emBreve: false, exige: 'CRIAR_UNIDADE' },
 ];
 
 function montarMenuLateral() {
   const menu = document.getElementById('menu-lateral');
-  const papel = USUARIO_ATUAL ? USUARIO_ATUAL.papel : null;
-
-  // ARQUITETO e DIRETOR são os níveis irrestritos — a mesma regra que o
-  // backend aplica em exigir_papeis(), para menu e API não discordarem.
-  const irrestrito = papel === 'ARQUITETO' || papel === 'DIRETOR';
   const visiveis = window.NAV_ITEMS
-    .filter(item => !item.papeis || irrestrito || item.papeis.includes(papel));
+    .filter(item => !item.exige || window.pode(item.exige));
 
   menu.innerHTML = visiveis.map(item => `
       <button class="nav-item" data-pagina="${item.chave}"${item.acao ? ` data-acao="${item.acao}"` : ''}>

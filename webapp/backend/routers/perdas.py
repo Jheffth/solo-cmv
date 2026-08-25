@@ -20,6 +20,7 @@ from schemas import (
     PerdaLancamento, PerdaOut, PerdaResultado, PerdaResumo, PerdaResumoMotivo,
 )
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer, ve_dinheiro
 from servicos.perda import (
     ErroPerda, registrar as servico_registrar, estornar as servico_estornar,
     ROTULOS_MOTIVO, ORIGEM_WEB,
@@ -81,8 +82,15 @@ def listar(unidade_id: int,
 def resumo(unidade_id: int,
            data_inicio: Optional[date_type] = None,
            data_fim: Optional[date_type] = None,
-           db: Session = Depends(get_db), usuario=Depends(get_current_user)):
-    """Perda agrupada por motivo — é aqui que a informação vira ação."""
+           db: Session = Depends(get_db),
+           usuario=Depends(requer(Capacidade.VER_DINHEIRO))):
+    """Perda agrupada por motivo — é aqui que a informação vira ação.
+
+    Agregado, e por isso fechado para quem não vê dinheiro. Registrar a
+    perda de 3 kg continua sendo do operador; saber que a casa jogou fora
+    R$ 4.000 de hortifruti no mês é leitura de quem decide o que fazer a
+    respeito.
+    """
     query = db.query(Movimento).filter(
         Movimento.unidade_id == unidade_id,
         Movimento.tipo == TipoMovimento.PERDA,
@@ -120,8 +128,7 @@ def resumo(unidade_id: int,
 
 @router.post("", response_model=PerdaResultado, status_code=201)
 def lancar(dados: PerdaLancamento, db: Session = Depends(get_db),
-           usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE,
-                                         PapelUsuario.OPERADOR))):
+           usuario=Depends(requer(Capacidade.LANCAR_PERDA))):
     try:
         r = servico_registrar(
             db,
@@ -149,7 +156,7 @@ def lancar(dados: PerdaLancamento, db: Session = Depends(get_db),
 
 @router.delete("/{perda_id}", status_code=204)
 def estornar(perda_id: int, db: Session = Depends(get_db),
-             usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+             usuario=Depends(requer(Capacidade.ESTORNAR_PERDA))):
     """Apaga uma perda lançada por engano e devolve a quantidade ao estoque."""
     try:
         servico_estornar(db, perda_id)

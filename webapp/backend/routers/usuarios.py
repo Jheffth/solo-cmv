@@ -27,6 +27,7 @@ from schemas import UsuarioOut, UsuarioEscopo, UsuarioAtivo, UsuarioPapel
 from auth.deps import get_current_user
 from servicos import escopo as servico_escopo
 from servicos import hierarquia
+from servicos import permissoes
 
 router = APIRouter(prefix="/usuarios", tags=["usuários"])
 
@@ -43,8 +44,16 @@ def _buscar(db: Session, usuario_id: int) -> Usuario:
 # ==============================================================================
 @router.get("/poderes")
 def poderes(usuario: Usuario = Depends(get_current_user)):
-    """O que ESTE usuário pode fazer. A tela se monta a partir daqui."""
-    return hierarquia.descrever_poderes(usuario)
+    """O que ESTE usuário pode fazer. A tela e o bot se montam a partir daqui.
+
+    Duas perguntas diferentes, na mesma resposta porque quem lê precisa das
+    duas: `hierarquia` responde o que ele pode fazer COM ALGUÉM (promover,
+    suspender), `permissoes` responde o que ele pode fazer, ponto (congelar,
+    ver dinheiro). Separadas no código, juntas aqui.
+    """
+    saida = hierarquia.descrever_poderes(usuario)
+    saida["capacidades"] = permissoes.descrever(usuario)
+    return saida
 
 
 @router.get("")

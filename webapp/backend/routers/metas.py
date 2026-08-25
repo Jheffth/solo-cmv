@@ -26,6 +26,7 @@ from schemas import (
     MetaPainel, MetaLinha, MetaDefinicao, MetaHistoricoItem, MetaDistribuicao,
 )
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer
 from servicos import metas as servico
 from servicos import cmv as motor_cmv
 from servicos.metas import ErroMeta, ROTULOS_TIPO
@@ -74,7 +75,8 @@ def _linha(resolvida, rotulo: str, realizado: Optional[float] = None,
 def painel(unidade_id: Optional[int] = None,
            data_inicio: Optional[date_type] = None,
            data_fim: Optional[date_type] = None,
-           db: Session = Depends(get_db), usuario=Depends(get_current_user)):
+           db: Session = Depends(get_db),
+           usuario=Depends(requer(Capacidade.VER_CMV))):
     """Todas as metas vigentes ao lado do que a operação realizou no período."""
     if not data_inicio or not data_fim:
         data_inicio, data_fim = _mes_corrente()
@@ -155,7 +157,7 @@ def painel(unidade_id: Optional[int] = None,
 
 @router.post("", response_model=MetaHistoricoItem, status_code=201)
 def definir(dados: MetaDefinicao, db: Session = Depends(get_db),
-            usuario=Depends(exigir_papeis(*PODE_DEFINIR))):
+            usuario=Depends(requer(Capacidade.DEFINIR_META))):
     """Abre uma vigência nova. A anterior é fechada, nunca apagada."""
     if usuario.papel not in PODE_DEFINIR:
         raise HTTPException(403, "Apenas Diretor e Arquiteto definem metas.")
@@ -209,7 +211,7 @@ def previa_distribuicao(meta_geral: float,
 
 @router.post("/distribuir")
 def distribuir(dados: MetaDistribuicao, db: Session = Depends(get_db),
-               usuario=Depends(exigir_papeis(*PODE_DEFINIR))):
+               usuario=Depends(requer(Capacidade.DEFINIR_META))):
     """Define a meta geral e reparte entre as famílias, proporcional ao custo."""
     if dados.meta_geral <= 0 or dados.meta_geral >= 1:
         raise HTTPException(400, "Meta geral deve ficar entre 0 e 1 (ex.: 0.29).")

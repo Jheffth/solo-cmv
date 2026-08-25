@@ -10,13 +10,22 @@ from database import get_db
 from models import VendaPeriodo, PapelUsuario
 from schemas import VendaPeriodoOut, VendaPeriodoCreate
 from auth.deps import get_current_user, exigir_papeis
+from servicos.permissoes import Capacidade, requer
 
 router = APIRouter(prefix="/vendas", tags=["vendas"])
 
 
 @router.get("", response_model=List[VendaPeriodoOut])
 def listar(unidade_id: Optional[int] = None,
-           db: Session = Depends(get_db), usuario=Depends(get_current_user)):
+           db: Session = Depends(get_db),
+           usuario=Depends(requer(Capacidade.VER_FATURAMENTO))):
+    """Faturamento lançado por período.
+
+    Esta rota exigia apenas estar logado enquanto o POST logo abaixo exigia
+    Gerente — e era por aqui que o faturamento vazava. Guardar a escrita e
+    deixar a leitura aberta é o descuido mais fácil de cometer, porque
+    gravar assusta e ler não.
+    """
     query = db.query(VendaPeriodo)
     if unidade_id:
         query = query.filter(VendaPeriodo.unidade_id == unidade_id)
@@ -25,7 +34,7 @@ def listar(unidade_id: Optional[int] = None,
 
 @router.post("", response_model=VendaPeriodoOut, status_code=201)
 def registrar(dados: VendaPeriodoCreate, db: Session = Depends(get_db),
-              usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+              usuario=Depends(requer(Capacidade.LANCAR_FATURAMENTO))):
     if dados.data_fim < dados.data_inicio:
         raise HTTPException(status_code=400, detail="A data final não pode ser anterior à inicial.")
 
@@ -53,7 +62,7 @@ def registrar(dados: VendaPeriodoCreate, db: Session = Depends(get_db),
 
 @router.delete("/{venda_id}", status_code=204)
 def excluir(venda_id: int, db: Session = Depends(get_db),
-            usuario=Depends(exigir_papeis(PapelUsuario.ADMIN, PapelUsuario.GERENTE))):
+            usuario=Depends(requer(Capacidade.LANCAR_FATURAMENTO))):
     """Remove um faturamento lançado por engano."""
     venda = db.query(VendaPeriodo).filter(VendaPeriodo.id == venda_id).first()
     if not venda:
