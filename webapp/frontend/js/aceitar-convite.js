@@ -13,10 +13,29 @@
 (function () {
   const PREFIXO = 'convite';
 
-  function codigoDaUrl() {
+  /* Três situações, e a do meio é a que costuma faltar:
+
+       #convite/SOLO-XXXX-XXXX  → veio pelo link, confere direto
+       #convite                 → veio pelo botão do login, precisa digitar
+       qualquer outra coisa     → não é assunto nosso
+
+     O caso do meio existe porque o link quebra. O código é feito para ser
+     ditado por telefone e colado de WhatsApp — por isso o alfabeto não tem
+     0/O nem 1/I/L. Sem um lugar para digitar, todo esse cuidado seria
+     inútil: quem tem só o código ficaria de fora. */
+  function situacao() {
     const hash = (location.hash || '').replace('#', '').trim();
-    if (!hash.startsWith(PREFIXO + '/')) return null;
-    return decodeURIComponent(hash.slice(PREFIXO.length + 1)).trim().toUpperCase();
+    if (hash === PREFIXO) return { nossa: true, codigo: null };
+    if (hash.startsWith(PREFIXO + '/')) {
+      const codigo = decodeURIComponent(hash.slice(PREFIXO.length + 1))
+        .trim().toUpperCase();
+      return { nossa: true, codigo: codigo || null };
+    }
+    return { nossa: false, codigo: null };
+  }
+
+  function codigoDaUrl() {
+    return situacao().codigo;
   }
 
   function esconderTudo() {
@@ -40,8 +59,18 @@
       <img class="login-logo" src="/assets/logos/josefina-logo.jpg" alt="">
       <h1>Convite indisponível</h1>
       <p class="convite-motivo">${escapar(motivo)}</p>
-      <p class="login-subtitulo">Peça um convite novo a quem administra o sistema.</p>
-      <a class="btn btn-login" href="/#dashboard" onclick="location.reload()">Ir para o login</a>`;
+      <p class="login-subtitulo">Confira o código ou peça um convite novo a quem
+         administra o sistema.</p>
+      <button class="btn btn-login" type="button" id="tentar-outro">Digitar outro código</button>
+      <p class="login-subtitulo" style="margin-top:1rem">
+        <a href="/" id="voltar-login">Voltar para o login</a>
+      </p>`;
+    // Errar o código é o caso comum — dar só a saída para o login obrigaria a
+    // recomeçar do zero por causa de uma letra.
+    document.getElementById('tentar-outro')
+      .addEventListener('click', () => { location.hash = PREFIXO; pedirCodigo(); });
+    document.getElementById('voltar-login')
+      .addEventListener('click', (ev) => { ev.preventDefault(); location.href = '/'; });
   }
 
   function desenhar(d) {
@@ -128,10 +157,66 @@
       .addEventListener('click', () => { location.href = '/'; });
   }
 
-  async function abrir() {
-    const codigo = codigoDaUrl();
-    if (!codigo) return false;
-    esconderTudo();
+  /* Formata enquanto digita: SOLOK3M9P7QR vira SOLO-K3M9-P7QR.
+     Quem copia de uma mensagem cola de qualquer jeito, e recusar por causa
+     de um hífen faltando seria implicância. */
+  function normalizar(bruto) {
+    const limpo = (bruto || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+      .replace(/^SOLO/, '').slice(0, 8);
+    if (!limpo) return '';
+    const partes = ['SOLO'];
+    if (limpo.length > 0) partes.push(limpo.slice(0, 4));
+    if (limpo.length > 4) partes.push(limpo.slice(4, 8));
+    return partes.join('-');
+  }
+
+  function pedirCodigo(erro) {
+    alvo().innerHTML = `
+      <img class="login-logo" src="/assets/logos/josefina-logo.jpg" alt="">
+      <h1>Tenho um convite</h1>
+      <p class="login-subtitulo">Digite o código que você recebeu.</p>
+      <form id="form-codigo">
+        <div class="form-group">
+          <label for="convite-codigo">Código do convite</label>
+          <input id="convite-codigo" type="text" inputmode="latin"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false"
+                 placeholder="SOLO-XXXX-XXXX" class="campo-codigo" required>
+        </div>
+        <button type="submit" class="btn btn-login" id="codigo-enviar">Continuar</button>
+        <p id="codigo-erro" class="login-erro"${erro ? '' : ' hidden'}>${escapar(erro || '')}</p>
+        <p class="login-subtitulo" style="margin-top:1rem">
+          <a href="/" id="voltar-login">Voltar para o login</a>
+        </p>
+      </form>`;
+
+    const campo = document.getElementById('convite-codigo');
+    campo.addEventListener('input', () => {
+      const posicaoNoFim = campo.selectionStart === campo.value.length;
+      campo.value = normalizar(campo.value);
+      if (posicaoNoFim) campo.selectionStart = campo.selectionEnd = campo.value.length;
+    });
+    campo.focus();
+
+    document.getElementById('voltar-login')
+      .addEventListener('click', (ev) => { ev.preventDefault(); location.href = '/'; });
+
+    document.getElementById('form-codigo').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const codigo = normalizar(campo.value);
+      if (codigo.length !== 14) {
+        const el = document.getElementById('codigo-erro');
+        el.textContent = 'O código tem o formato SOLO-XXXX-XXXX.';
+        el.hidden = false;
+        return;
+      }
+      // Vai pela URL, e não direto para a conferência: assim a pessoa pode
+      // recarregar a página, e o link fica igual ao que teria recebido.
+      location.hash = PREFIXO + '/' + codigo;
+      conferir(codigo);
+    });
+  }
+
+  async function conferir(codigo) {
     alvo().innerHTML = '<p class="login-subtitulo">Conferindo o convite…</p>';
     try {
       const d = await api.get('/convites/validar/' + encodeURIComponent(codigo));
@@ -140,8 +225,32 @@
     } catch (erro) {
       recusar(erro.message || 'Não foi possível conferir o convite agora.');
     }
+  }
+
+  async function abrir() {
+    const { nossa, codigo } = situacao();
+    if (!nossa) return false;
+    esconderTudo();
+    if (codigo) await conferir(codigo);
+    else pedirCodigo();
     return true;
   }
 
-  window.AceitarConvite = { abrir, codigoDaUrl };
+  /* O link "Criar meu acesso" na tela de login só muda o hash. Nesse momento
+     o roteador do app ainda não existe — ele só começa depois do login —,
+     então ninguém estaria ouvindo. Sem isto, o link não faria nada. */
+  window.addEventListener('hashchange', () => {
+    const { nossa } = situacao();
+    const telaConvite = document.getElementById('tela-convite');
+    if (nossa) {
+      // Já estando na tela com um código conferido, não redesenhar por cima.
+      if (telaConvite && !telaConvite.hidden && document.getElementById('form-convite')) return;
+      abrir();
+    } else if (telaConvite && !telaConvite.hidden) {
+      // Saiu do convite sem ter entrado: volta para o login limpo.
+      location.reload();
+    }
+  });
+
+  window.AceitarConvite = { abrir, codigoDaUrl, normalizar, pedirCodigo };
 })();

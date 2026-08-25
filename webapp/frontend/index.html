@@ -65,6 +65,16 @@
         <button type="submit" class="btn btn-login">Entrar</button>
         <p id="login-erro" class="login-erro" hidden></p>
       </form>
+
+      <!-- O cadastro é fechado: só entra quem foi convidado. O link existe
+           para quem recebeu o código sem o link — ditado por telefone ou com
+           a URL quebrada na mensagem. Sem ele, todo o cuidado de fazer um
+           código legível não serviria de nada. -->
+      <p class="login-rodape">
+        Recebeu um convite?
+        <a href="#convite" id="link-convite">Criar meu acesso</a>
+      </p>
+
       <p id="erro-tecnico" class="erro-tecnico" hidden></p>
     </div>
   </div>

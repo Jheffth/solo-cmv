@@ -166,3 +166,30 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
 .tabela-simples .acoes .btn-acao + .btn-acao { margin-left: .35rem; }
 .btn-acao.btn-perigo { color: var(--perigo, #a6231f); }
 .btn-acao.btn-perigo:hover { border-color: var(--perigo, #a6231f); }
+
+/* ------------------------------------------------------ entrada pelo login */
+.login-rodape {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--borda, rgba(0, 0, 0, .08));
+  text-align: center;
+  font-size: .88rem;
+  color: var(--texto-suave, #6b7280);
+}
+.login-rodape a {
+  color: var(--primaria, #2563eb);
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: .25rem;
+}
+.login-rodape a:hover { text-decoration: underline; }
+
+/* O código é digitado, não lido: espaçamento maior e monoespaçado reduzem a
+   chance de trocar 5 por S na conferência visual. */
+.campo-codigo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  letter-spacing: .12em;
+  text-align: center;
+  text-transform: uppercase;
+}
