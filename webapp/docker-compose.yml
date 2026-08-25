@@ -40,6 +40,44 @@ services:
       - solo_cmv_net
       - solo-network
 
+  # ==========================================================================
+  # BACKUP DIÁRIO, VERIFICADO
+  # ==========================================================================
+  # Serviço próprio, e não um cron no host, por dois motivos: sobe junto com
+  # o resto no `docker compose up`, e ninguém precisa lembrar de configurar
+  # nada num servidor novo — que é justamente quando o backup costuma ficar
+  # para trás.
+  #
+  # Usa a mesma imagem da aplicação porque a verificação precisa de Python e
+  # SQLAlchemy: gerar o arquivo é fácil, provar que ele restaura é o que
+  # importa. Ver o cabeçalho de backend/backup.py.
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solo_cmv_backup
+    restart: always
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BACKUP_DIR: /backups
+      BACKUP_MANTER_DIAS: ${BACKUP_MANTER_DIAS:-30}
+    volumes:
+      - backups:/backups
+    depends_on:
+      - db
+    networks:
+      - solo_cmv_net
+    # Um backup ao acordar (para o servidor novo já nascer com um) e depois
+    # a cada 24 h. `sleep` em vez de cron: uma linha, sem daemon, e o
+    # `restart: always` cuida de reerguer se cair.
+    command: >
+      sh -c "while true; do
+               python backup.py || echo '[BACKUP] FALHOU — ver acima';
+               sleep 86400;
+             done"
+
 networks:
   solo_cmv_net:
   solo-network:
@@ -47,3 +85,10 @@ networks:
 
 volumes:
   pgdata:
+  # O backup PRECISA de volume próprio. Escrito no sistema de arquivos do
+  # container, sumiria no próximo `docker compose up --build` — a mesma
+  # armadilha da foto de perfil, e aqui infinitamente mais cara.
+  #
+  # Atenção: volume no MESMO servidor é meio backup. Se a máquina morrer,
+  # morrem os dois. A cópia externa está em MIGRAR_SERVIDOR.md.
+  backups:
