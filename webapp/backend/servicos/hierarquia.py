@@ -72,14 +72,16 @@ def nivel(papel: PapelUsuario) -> int:
 def papeis_concedidos(autor: Usuario) -> List[PapelUsuario]:
     """Os papéis que este usuário pode entregar — até o próprio nível.
 
-    Ordenado do mais alto para o mais baixo, que é como a tela lista.
+    O papel de ARQUITETO é único no sistema e não pode ser concedido por convite.
     """
     teto = nivel(autor.papel)
-    return sorted((p for p in PapelUsuario if nivel(p) <= teto),
+    return sorted((p for p in PapelUsuario if nivel(p) <= teto and p != PapelUsuario.ARQUITETO),
                   key=nivel, reverse=True)
 
 
 def pode_conceder(autor: Usuario, papel: PapelUsuario) -> bool:
+    if papel == PapelUsuario.ARQUITETO:
+        return False
     return nivel(papel) <= nivel(autor.papel)
 
 
@@ -97,6 +99,8 @@ def pode_gerenciar(autor: Usuario, alvo: Usuario) -> bool:
     """Se `autor` pode promover, rebaixar, suspender ou excluir `alvo`."""
     if autor.id == alvo.id:
         return False
+    if alvo.papel == PapelUsuario.ARQUITETO:
+        return False
     if nivel(alvo.papel) >= nivel(autor.papel):
         return False
     # O Arquiteto atravessa empresas; qualquer outro para na própria.
@@ -110,6 +114,11 @@ def pode_gerenciar(autor: Usuario, alvo: Usuario) -> bool:
 # As mesmas regras, agora levantando o erro certo
 # ==============================================================================
 def exigir_conceder(autor: Usuario, papel: PapelUsuario) -> None:
+    if papel == PapelUsuario.ARQUITETO:
+        raise HTTPException(
+            400,
+            "Não é permitido convidar ou promover para Arquiteto. O papel de Arquiteto é único no sistema."
+        )
     if pode_conceder(autor, papel):
         return
     raise HTTPException(

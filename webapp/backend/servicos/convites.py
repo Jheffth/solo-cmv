@@ -295,6 +295,8 @@ def aceitar(db: Session, codigo: str, nome: str, login: str, senha: str) -> Usua
     escrever a própria permissão. Tudo vem do convite.
     """
     convite = buscar_valido(db, codigo)
+    if convite.papel == PapelUsuario.ARQUITETO:
+        raise HTTPException(400, "Não é permitido criar contas com o papel de Arquiteto. O papel de Arquiteto é único no sistema.")
 
     nome = (nome or "").strip()
     login = (login or "").strip()
