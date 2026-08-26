@@ -209,14 +209,16 @@ window.Paginas.perfil = (function () {
         try {
           const res = await api.get('/whatsapp/qrcode');
           if (res.base64) {
+            const srcImg = res.base64.startsWith('data:') ? res.base64 : 'data:image/png;base64,' + res.base64;
             qrc.innerHTML = `
               <div class="qrcode-box">
                 <p style="margin-bottom:.8rem; font-weight:600;">Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho:</p>
-                <img src="${res.base64}" alt="QR Code WhatsApp">
+                <img src="${srcImg}" alt="QR Code WhatsApp" style="max-width:240px; margin:0 auto; display:block; border-radius:8px;">
+                ${res.pairing_code ? `<p style="margin-top:.6rem; font-size:.9rem;">Código de Pareamento: <strong>${escapar(res.pairing_code)}</strong></p>` : ''}
                 <p style="margin-top:.8rem; font-size:.85rem; color:#6b7280;">Após escanear, o status mudará para Conectado automaticamente.</p>
               </div>`;
           } else {
-            qrc.innerHTML = `<div class="qrcode-box"><p>${res.erro || 'Instância já está conectada ou aguardando.'}</p></div>`;
+            qrc.innerHTML = `<div class="qrcode-box"><p>${res.erro || 'Instância já está conectada ou aguardando conexão.'}</p></div>`;
           }
         } catch (e) {
           qrc.innerHTML = `<div class="qrcode-box"><p class="login-erro">${e.message || 'Erro ao carregar QR Code.'}</p></div>`;
