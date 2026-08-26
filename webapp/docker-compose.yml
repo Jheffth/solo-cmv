@@ -126,13 +126,23 @@ services:
     restart: always
     env_file:
       - .env
+    depends_on:
+      - db
     environment:
       SERVER_TYPE: http
       SERVER_PORT: 8080
       SERVER_URL: http://whatsapp:8080
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-solo-cmv-evolution-key-2026}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
-      DATABASE_ENABLED: "false"
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: "postgresql"
+      DATABASE_CONNECTION_URI: "postgresql://solo_cmv:${DB_PASSWORD:-1601Jcs332503}@db:5432/solo_cmv?schema=evolution"
+      DATABASE_CONNECTION_CLIENT_NAME: "solo_cmv_evolution"
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
       WEBHOOK_GLOBAL_ENABLED: "true"
       WEBHOOK_GLOBAL_URL: http://app:8095/api/whatsapp/webhook
       WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
