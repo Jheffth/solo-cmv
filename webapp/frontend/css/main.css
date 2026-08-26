@@ -54,7 +54,7 @@ p { margin: 0 0 .6rem 0; }
 .login-card .form-group label { font-size: .78rem; color: var(--muted); margin-bottom: .25rem; display: block; }
 .input-com-olho { position: relative; display: flex; align-items: center; width: 100%; }
 .input-com-olho input { width: 100%; padding-right: 2.6rem; }
-.btn-toggle-senha { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%); background: none; border: none; padding: .3rem; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: color .15s ease; }
+.btn-toggle-senha { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%); background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; padding: .3rem; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: color .15s ease; }
 .btn-toggle-senha:hover { color: var(--navy); }
 .btn-login { margin-top: .4rem; }
 .login-erro { color: var(--red); font-size: .84rem; margin-top: .4rem; }
