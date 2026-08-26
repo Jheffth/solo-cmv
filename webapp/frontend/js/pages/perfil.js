@@ -152,9 +152,16 @@ window.Paginas.perfil = (function () {
             <small class="form-dica">
               WhatsApp Central da Empresa: <strong id="wpp-badge-status">${w.instancia_conectada ? '🟢 Conectado' : '🔴 Desconectado'}</strong>
             </small>
-            <button type="button" class="btn-acao" id="wpp-abrir-qrcode">
-              ${w.instancia_conectada ? 'Reconectar / QR Code' : 'Escanear QR Code do Sistema'}
-            </button>
+            <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+              <button type="button" class="btn-acao" id="wpp-abrir-qrcode">
+                ${w.instancia_conectada ? 'Reconectar / QR Code' : 'Escanear QR Code do Sistema'}
+              </button>
+              ${w.instancia_conectada ? `
+                <button type="button" class="btn-acao btn-perigo" id="wpp-desconectar-central" title="Desconecta o WhatsApp da empresa no servidor">
+                  🔌 Desconectar Central
+                </button>
+              ` : ''}
+            </div>
           </div>
           <div id="wpp-qrcode-container" hidden></div>
         </div>
@@ -196,6 +203,24 @@ window.Paginas.perfil = (function () {
         if (!confirm('Desvincular o WhatsApp? O bot para de responder agora.')) return;
         await api.del('/whatsapp/vinculo');
         await window.Paginas.perfil.render(container);
+      });
+    }
+
+    const desconectarCentral = container.querySelector('#wpp-desconectar-central');
+    if (desconectarCentral) {
+      desconectarCentral.addEventListener('click', async () => {
+        if (!confirm('Tem certeza que deseja desconectar o WhatsApp central da empresa no servidor? O bot deixará de responder até que um novo aparelho seja conectado.')) return;
+        desconectarCentral.disabled = true;
+        desconectarCentral.textContent = 'Desconectando...';
+        try {
+          await api.post('/whatsapp/desconectar');
+          await window.Paginas.perfil.render(container);
+          avisar(container, 'WhatsApp Central da empresa desconectado com sucesso.', false);
+        } catch (e) {
+          avisar(container, e.message || 'Erro ao desconectar central.', true);
+          desconectarCentral.disabled = false;
+          desconectarCentral.textContent = '🔌 Desconectar Central';
+        }
       });
     }
 
