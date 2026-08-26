@@ -7,6 +7,7 @@ A arquitetura espelha a proteção do Telegram:
 - Validação de capacidades e restrições por cargo na execução dos comandos.
 - Idempotência de mensagens para evitar contagens ou comandos duplicados.
 """
+import json
 import logging
 import secrets
 from datetime import datetime, timedelta
@@ -287,6 +288,7 @@ def formatar_ajuda(usuario: Usuario) -> str:
     linhas.extend([
         "",
         "📦 *Operação e Estoque:*",
+        "• `/contar` — Contar produtos do inventário congelado",
         "• `/perda` — Registrar perda de mercadoria",
         "• `/requisicao` — Registrar requisição entre lojas",
         "• `/compra` — Registrar compra de insumos",
@@ -305,7 +307,8 @@ def formatar_ajuda(usuario: Usuario) -> str:
     return "\n".join(linhas)
 
 
-def processar_comando(db: Session, usuario: Usuario, comando: str, texto_completo: str) -> str:
+def processar_comando(db: Session, usuario: Usuario, comando: str, texto_completo: str,
+                      sessao_wpp: Optional[SessaoWhatsApp] = None) -> str:
     partes = (texto_completo or comando).strip().split()
     cmd = partes[0].lower() if partes else comando.lower().strip()
     eh_diretoria = usuario.papel.value in ("ARQUITETO", "DIRETOR")
@@ -471,6 +474,12 @@ def processar_comando(db: Session, usuario: Usuario, comando: str, texto_complet
             f"Envie `/congelar <numero>` para escolher qual congelar."
         )
 
+    elif cmd == "/contar":
+        if sessao_wpp is None:
+            sessao_wpp = _obter_sessao_conversa(db, usuario.whatsapp_jid, usuario)
+        param = partes[1] if len(partes) > 1 else None
+        return _iniciar_contagem(db, usuario, sessao_wpp, param)
+
     elif cmd in ("/perda", "/requisicao", "/compra"):
         operacoes = {
             "/perda": ("Perda de Estoque", "motivo e produto"),
@@ -495,6 +504,257 @@ def processar_comando(db: Session, usuario: Usuario, comando: str, texto_complet
     )
 
 
+def _obter_sessao_conversa(db: Session, remote_jid: str, usuario: Usuario) -> SessaoWhatsApp:
+    sessao = db.query(SessaoWhatsApp).filter(SessaoWhatsApp.whatsapp_jid == remote_jid).first()
+    if not sessao:
+        sessao = SessaoWhatsApp(
+            whatsapp_jid=remote_jid,
+            usuario_id=usuario.id,
+            unidade_id=usuario.unidades[0].id if usuario.unidades else None,
+            modo=ModoTelegram.LIVRE
+        )
+        db.add(sessao)
+        db.commit()
+        db.refresh(sessao)
+    return sessao
+
+
+def _iniciar_contagem(db: Session, usuario: Usuario, sessao_wpp: SessaoWhatsApp, param: Optional[str] = None) -> str:
+    from models import Unidade, SessaoInventario, StatusSessaoInventario, InventarioItem
+    eh_diretoria = usuario.papel.value in ("ARQUITETO", "DIRETOR")
+    unidade_ids = None if (usuario.acesso_regional or eh_diretoria) else ([u.id for u in usuario.unidades] if usuario.unidades else None)
+
+    q = db.query(SessaoInventario).join(Unidade).filter(
+        Unidade.empresa_id == usuario.empresa_id,
+        SessaoInventario.status.in_([StatusSessaoInventario.CONGELADO, StatusSessaoInventario.EM_CONTAGEM])
+    )
+    if unidade_ids:
+        q = q.filter(SessaoInventario.unidade_id.in_(unidade_ids))
+
+    prontos = q.all()
+
+    if param and prontos:
+        alvo = next((s for s in prontos if str(s.id) == param or s.numero_documento.lower() == param.lower() or str(s.unidade_id) == param), None)
+        if alvo:
+            prontos = [alvo]
+
+    if not prontos:
+        q_abertos = db.query(SessaoInventario).join(Unidade).filter(
+            Unidade.empresa_id == usuario.empresa_id,
+            SessaoInventario.status == StatusSessaoInventario.ABERTO
+        )
+        if unidade_ids:
+            q_abertos = q_abertos.filter(SessaoInventario.unidade_id.in_(unidade_ids))
+        abertos = q_abertos.all()
+
+        if abertos:
+            doc_str = ", ".join(f"nº {s.numero_documento} ({s.unidade.nome})" for s in abertos)
+            return (
+                f"⚠️ *Inventário Ainda Não Congelado*\n\n"
+                f"O inventário {doc_str} está aberto, mas ainda não foi congelado.\n\n"
+                f"Envie `/congelar` primeiro para tirar a fotografia do estoque e liberar a contagem."
+            )
+
+        return (
+            "📋 *Nenhum Inventário Pronto para Contagem*\n\n"
+            "Não há nenhum inventário congelado nesta loja no momento.\n\n"
+            "Quem abre na tela e congela é o gerente. Assim que congelar, mande `/contar` novamente."
+        )
+
+    if len(prontos) > 1 and not param:
+        linhas = "\n".join([f"• `/contar {s.id}` — Nº {s.numero_documento} ({s.unidade.nome})" for s in prontos])
+        return (
+            f"📦 *Mais de um inventário pronto para contagem:*\n\n"
+            f"{linhas}\n\n"
+            f"Envie `/contar <numero>` escolhendo um deles."
+        )
+
+    sessao_inv = prontos[0]
+    itens_todos = db.query(InventarioItem).filter(InventarioItem.sessao_inventario_id == sessao_inv.id).all()
+    itens_pendentes = [i for i in itens_todos if i.quantidade_contada is None]
+
+    fila_ids = [i.produto_id for i in itens_pendentes]
+    catalogo = {str(i.produto_id): [i.produto.nome, i.produto.unidade_medida or "UN"] for i in itens_todos}
+
+    ctx = {
+        "inventario_id": sessao_inv.id,
+        "numero": sessao_inv.numero_documento,
+        "unidade_nome": sessao_inv.unidade.nome,
+        "fila": fila_ids,
+        "total": len(itens_todos),
+        "catalogo": catalogo,
+        "aguardando_id": fila_ids[0] if fila_ids else None
+    }
+
+    sessao_wpp.modo = ModoTelegram.CONTAGEM
+    sessao_wpp.contexto = json.dumps(ctx)
+    db.commit()
+
+    if not fila_ids:
+        sessao_wpp.modo = ModoTelegram.LIVRE
+        db.commit()
+        return (
+            f"🎉 *Inventário Nº {sessao_inv.numero_documento} Concluído!*\n\n"
+            f"Todos os {len(itens_todos)} itens desta loja já foram contados.\n"
+            f"O gerente/diretor já pode conferir e finalizar no painel web."
+        )
+
+    primeiro = catalogo.get(str(fila_ids[0]))
+    nome_prod, un_prod = primeiro[0], primeiro[1]
+    pos = len(itens_todos) - len(fila_ids) + 1
+
+    return (
+        f"📝 *Iniciando Contagem — Inventário Nº {sessao_inv.numero_documento}*\n"
+        f"Loja: *{sessao_inv.unidade.nome}* ({len(itens_todos) - len(fila_ids)}/{len(itens_todos)} já contados)\n\n"
+        f"Vou passar item por item. Responda apenas a quantidade.\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 *Item {pos}/{len(itens_todos)}:*\n"
+        f"*{nome_prod}*\n"
+        f"Unidade de medida: *{un_prod}*\n\n"
+        f"👉 Envie a *quantidade contada* (ex: `15` ou `12,5`):\n"
+        f"• Digite `0` ou `zero` se não houver estoque\n"
+        f"• Digite `pular` para contar depois\n"
+        f"• Digite `/sair` para pausar a contagem"
+    )
+
+
+def _processar_texto_contagem(db: Session, usuario: Usuario, sessao_wpp: SessaoWhatsApp, texto: str) -> str:
+    from servicos.contagem import registrar_contagem
+
+    txt = texto.strip()
+    if txt.lower() in ("/sair", "sair", "/cancelar", "cancelar", "/parar", "parar"):
+        sessao_wpp.modo = ModoTelegram.LIVRE
+        sessao_wpp.contexto = None
+        db.commit()
+        return "⏸️ *Contagem pausada.* Você pode retomar a qualquer momento enviando `/contar`."
+
+    try:
+        ctx = json.loads(sessao_wpp.contexto or "{}")
+    except Exception:
+        sessao_wpp.modo = ModoTelegram.LIVRE
+        db.commit()
+        return "⚠️ Sessão de contagem expirada. Envie `/contar` para recomeçar."
+
+    inv_id = ctx.get("inventario_id")
+    fila = ctx.get("fila") or []
+    catalogo = ctx.get("catalogo") or {}
+    total = ctx.get("total") or len(fila)
+    aguardando_id = ctx.get("aguardando_id")
+
+    if not inv_id or not fila or not aguardando_id:
+        sessao_wpp.modo = ModoTelegram.LIVRE
+        db.commit()
+        return "Todos os itens deste inventário já foram contados! Envie `/ajuda` para outros comandos."
+
+    # 1. Comando Pular
+    if txt.lower() in ("pular", "pula", "skip", "proximo", "próximo"):
+        pulado = fila.pop(0)
+        fila.append(pulado)
+        ctx["fila"] = fila
+        ctx["aguardando_id"] = fila[0]
+        sessao_wpp.contexto = json.dumps(ctx)
+        db.commit()
+
+        prox = catalogo.get(str(fila[0]))
+        pos = total - len(fila) + 1
+        return (
+            f"⏭️ *Item pulado.*\n\n"
+            f"📦 *Item {pos}/{total}:*\n"
+            f"*{prox[0]}* (em {prox[1]})\n\n"
+            f"👉 Envie a quantidade (ou `pular` / `0`):"
+        )
+
+    # 2. Número ou Zero digitado
+    num_str = txt.replace(",", ".").lower()
+    if num_str in ("zero", "nenhum", "nao tem", "não tem", "sem estoque", "zerado"):
+        num_str = "0"
+
+    try:
+        qtd = float(num_str)
+        if qtd < 0:
+            return "❌ A quantidade contada não pode ser negativa. Digite novamente:"
+    except ValueError:
+        # Se digitou Nome + Quantidade, ex: "Gengibre 8"
+        partes = txt.rsplit(maxsplit=1)
+        if len(partes) == 2:
+            nome_busca, val_str = partes[0].lower(), partes[1].replace(",", ".")
+            try:
+                qtd_busca = float(val_str)
+                prod_encontrado_id = None
+                for pid_s, dados in catalogo.items():
+                    if nome_busca in dados[0].lower():
+                        prod_encontrado_id = int(pid_s)
+                        break
+                if prod_encontrado_id:
+                    registrar_contagem(
+                        db,
+                        sessao_id=inv_id,
+                        produto_id=prod_encontrado_id,
+                        quantidade=qtd_busca,
+                        usuario_id=usuario.id,
+                        empresa_id=usuario.empresa_id,
+                        origem="WHATSAPP"
+                    )
+                    if prod_encontrado_id in fila:
+                        fila.remove(prod_encontrado_id)
+                    ctx["fila"] = fila
+                    ctx["aguardando_id"] = fila[0] if fila else None
+                    sessao_wpp.contexto = json.dumps(ctx)
+                    db.commit()
+
+                    prod_info = catalogo[str(prod_encontrado_id)]
+                    resp = f"✓ *{prod_info[0]}:* {qtd_busca:g} {prod_info[1]} lançado com sucesso!\n\n"
+                    if not fila:
+                        sessao_wpp.modo = ModoTelegram.LIVRE
+                        db.commit()
+                        return resp + f"🎉 *Todos os {total} itens foram contados!*\nO gerente já pode conferir e finalizar no painel web."
+
+                    prox = catalogo.get(str(fila[0]))
+                    pos = total - len(fila) + 1
+                    return resp + (
+                        f"📦 *Item {pos}/{total}:*\n"
+                        f"*{prox[0]}* (em {prox[1]})\n\n"
+                        f"👉 Envie a quantidade:"
+                    )
+            except ValueError:
+                pass
+        return "🤔 Não entendi a quantidade. Digite apenas o número (ex: `10` ou `12,5`), `0` para zerado, ou `pular`."
+
+    # Registra o item da vez
+    prod_id = aguardando_id
+    prod_info = catalogo.get(str(prod_id))
+
+    registrar_contagem(
+        db,
+        sessao_id=inv_id,
+        produto_id=prod_id,
+        quantidade=qtd,
+        usuario_id=usuario.id,
+        empresa_id=usuario.empresa_id,
+        origem="WHATSAPP"
+    )
+
+    fila.pop(0)
+    ctx["fila"] = fila
+    ctx["aguardando_id"] = fila[0] if fila else None
+    sessao_wpp.contexto = json.dumps(ctx)
+    db.commit()
+
+    resp_item = f"✓ *{prod_info[0]}:* {qtd:g} {prod_info[1]} gravado.\n\n"
+    if not fila:
+        sessao_wpp.modo = ModoTelegram.LIVRE
+        db.commit()
+        return resp_item + f"🎉 *Parabéns! Todos os {total} itens foram contados com sucesso!*\n\nO inventário está pronto para ser conferido e finalizado no painel web."
+
+    prox = catalogo.get(str(fila[0]))
+    pos = total - len(fila) + 1
+    return resp_item + (
+        f"📦 *Item {pos}/{total}:*\n"
+        f"*{prox[0]}* (em {prox[1]})\n\n"
+        f"👉 Envie a quantidade:"
+    )
+
+
 def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
     """
     Recebe eventos da Evolution API (messages.upsert) e despacha a resposta.
@@ -514,13 +774,27 @@ def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
 
     # Tratamento de fromMe:
     # Se a mensagem foi enviada pelo próprio aparelho (fromMe),
-    # só processamos se for um comando explícito (inicia com '/') ou código de 6 dígitos,
-    # permitindo que a pessoa use o próprio WhatsApp como bot e operador no mesmo número.
+    # só processamos se for um comando explícito (inicia com '/') ou resposta no modo contagem ou código de 6 dígitos.
     key = data.get("key") or {}
     from_me = bool(key.get("fromMe"))
     eh_comando_ou_codigo = texto.startswith("/") or (len(texto) == 6 and texto.isdigit())
 
-    if from_me and not eh_comando_ou_codigo:
+    remote_jid = key.get("remoteJid") or ""
+    if not remote_jid or "@s.whatsapp.net" not in remote_jid:
+        # Ignora grupos por enquanto para privacidade e segurança
+        return
+
+    # Verifica se já está em contagem ativa antes de descartar fromMe
+    usuario_previo = db.query(Usuario).filter(
+        Usuario.whatsapp_jid == remote_jid,
+        Usuario.excluido_em.is_(None),
+        Usuario.ativo.is_(True)
+    ).first()
+
+    sessao_wpp_previa = _obter_sessao_conversa(db, remote_jid, usuario_previo) if usuario_previo else None
+    em_contagem = sessao_wpp_previa and sessao_wpp_previa.modo == ModoTelegram.CONTAGEM
+
+    if from_me and not (eh_comando_ou_codigo or em_contagem):
         return
 
     mensagem_id = key.get("id")
@@ -537,11 +811,6 @@ def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
 
     db.add(MensagemProcessadaWhatsApp(mensagem_id=mensagem_id))
     db.commit()
-
-    remote_jid = key.get("remoteJid") or ""
-    if not remote_jid or "@s.whatsapp.net" not in remote_jid:
-        # Ignora grupos por enquanto para privacidade e segurança
-        return
 
     push_name = data.get("pushName") or ""
     log.info("Mensagem WhatsApp recebida de %s (fromMe=%s): %s", remote_jid, from_me, texto)
@@ -563,11 +832,7 @@ def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
         return
 
     # 2. Localiza o usuário vinculado
-    usuario = db.query(Usuario).filter(
-        Usuario.whatsapp_jid == remote_jid,
-        Usuario.excluido_em.is_(None),
-        Usuario.ativo.is_(True)
-    ).first()
+    usuario = usuario_previo
 
     if not usuario:
         # Se mandou apenas 6 dígitos, tenta vincular automaticamente
@@ -596,10 +861,17 @@ def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
         cliente_evolution.enviar_texto(remote_jid, resposta)
         return
 
-    # 3. Usuário autenticado: processa comando
-    primeira_palavra = partes[0] if partes else ""
+    # 3. Usuário autenticado: verifica se está no modo de contagem
+    sessao_wpp = sessao_wpp_previa or _obter_sessao_conversa(db, remote_jid, usuario)
+    primeira_palavra = partes[0].lower() if partes else ""
+
+    if sessao_wpp.modo == ModoTelegram.CONTAGEM and not (texto.startswith("/") and primeira_palavra not in ("/sair", "/cancelar", "/contar")):
+        resposta = _processar_texto_contagem(db, usuario, sessao_wpp, texto)
+        cliente_evolution.enviar_texto(remote_jid, resposta)
+        return
+
     try:
-        resposta = processar_comando(db, usuario, primeira_palavra, texto)
+        resposta = processar_comando(db, usuario, primeira_palavra, texto, sessao_wpp)
     except Exception as e:
         log.exception("Erro ao processar comando WhatsApp: %s", e)
         resposta = f"❌ Erro ao executar `{primeira_palavra}`: {e}"
