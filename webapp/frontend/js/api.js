@@ -13,16 +13,20 @@ async function apiFetch(caminho, opcoes = {}) {
 
   const resp = await fetch(API_BASE + caminho, Object.assign({}, opcoes, { headers }));
 
-  if (resp.status === 401) {
-    limparToken();
-    mostrarTelaLogin();
-    throw new Error('Sessão expirada. Faça login novamente.');
-  }
-
   let corpo = null;
   const texto = await resp.text();
   if (texto) {
     try { corpo = JSON.parse(texto); } catch (e) { corpo = texto; }
+  }
+
+  if (resp.status === 401) {
+    if (caminho === '/auth/login') {
+      const detalhe = (corpo && corpo.detail) ? corpo.detail : 'Usuário ou senha incorretos.';
+      throw new Error(detalhe);
+    }
+    limparToken();
+    mostrarTelaLogin();
+    throw new Error('Sessão expirada. Faça login novamente.');
   }
 
   if (!resp.ok) {
