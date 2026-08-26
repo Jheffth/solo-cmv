@@ -34,6 +34,7 @@ services:
       HOST: ${HOST:-0.0.0.0}
       AMBIENTE: ${AMBIENTE:-prod}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://solocmv.duckdns.org,http://localhost:8095,http://127.0.0.1:8095}
+      BOT_SEGREDO: ${BOT_SEGREDO}
     depends_on:
       - db
     networks:
