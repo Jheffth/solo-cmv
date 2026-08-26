@@ -219,9 +219,9 @@ window.Paginas.perfil = (function () {
           <div class="qrcode-box" id="wpp-box-content">
             <p id="wpp-box-instrucao" style="margin-bottom:.8rem; font-weight:600;">Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho:</p>
             
-            <div id="wpp-img-wrapper" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
+            <div id="wpp-img-wrapper" style="min-height: 290px; display: flex; align-items: center; justify-content: center;">
               <p id="wpp-loading-txt" style="color: #6b7280;">Carregando QR Code da Evolution API...</p>
-              <img id="wpp-qrcode-img" alt="QR Code WhatsApp" style="display:none; max-width:240px; margin:0 auto; border-radius:8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1);">
+              <img id="wpp-qrcode-img" alt="QR Code WhatsApp" style="display:none; max-width:320px; width:100%; margin:0 auto; padding:14px; background:#ffffff; border:2px solid #cbd5e1; border-radius:12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1);">
             </div>
             
             <div style="display:flex; justify-content:center; gap:.5rem; margin-top:.8rem;">
