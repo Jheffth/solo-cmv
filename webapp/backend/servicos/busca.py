@@ -168,10 +168,13 @@ def buscar(db: Session, termo: str, empresa_id: Optional[int] = None,
             no_escopo=no_escopo,
         ))
 
-    # Já contado vai para o fim: recontar existe, mas é a exceção. Empate
-    # resolve por nome, para a lista não dançar entre duas chamadas iguais —
-    # ordem instável no celular é o que faz tocar no botão errado.
-    saida.sort(key=lambda c: (c.ja_contado, not c.no_escopo, -c.pontos, c.nome))
+    # Relevância forte (>= 80 pts: exato ou prefixo) sempre ganha primeiro.
+    # Em buscas soltas parciais, itens não contados aparecem antes dos já contados.
+    saida.sort(key=lambda c: (
+        0 if c.pontos >= 80.0 else (1 if not c.ja_contado else 2),
+        -c.pontos,
+        c.nome
+    ))
     return saida[:limite]
 
 
