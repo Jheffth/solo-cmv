@@ -56,13 +56,13 @@
 
   function recusar(motivo) {
     alvo().innerHTML = `
-      <img class="login-logo" src="/assets/logos/josefina-logo.jpg" alt="">
+      <img class="auth-logo-topo" src="/assets/logos/casa-josefina.svg" alt="">
       <h1>Convite indisponível</h1>
-      <p class="convite-motivo">${escapar(motivo)}</p>
-      <p class="login-subtitulo">Confira o código ou peça um convite novo a quem
+      <p class="auth-erro">${escapar(motivo)}</p>
+      <p class="auth-sub">Confira o código ou peça um convite novo a quem
          administra o sistema.</p>
-      <button class="btn btn-login" type="button" id="tentar-outro">Digitar outro código</button>
-      <p class="login-subtitulo" style="margin-top:1rem">
+      <button class="btn-marca" type="button" id="tentar-outro">Digitar outro código</button>
+      <p class="auth-sub" style="margin-top:1rem">
         <a href="/" id="voltar-login">Voltar para o login</a>
       </p>`;
     // Errar o código é o caso comum — dar só a saída para o login obrigaria a
@@ -81,15 +81,15 @@
       : (d.unidades || []).map((u) => escapar(u.nome)).join(', ') || '—';
 
     alvo().innerHTML = `
-      <img class="login-logo" src="/assets/logos/josefina-logo.jpg" alt="">
+      <img class="auth-logo-topo" src="/assets/logos/casa-josefina.svg" alt="">
       <h1>Você foi convidado</h1>
-      <p class="login-subtitulo">
+      <p class="auth-sub">
         ${d.convidado_por ? escapar(d.convidado_por) + ' criou um acesso para você' : 'Crie seu acesso'}
         ${d.empresa ? ' — ' + escapar(d.empresa) : ''}
       </p>
 
       <div class="convite-resumo">
-        <div class="convite-linha"><span>Cargo</span><strong>${escapar(d.papel)}</strong></div>
+        <div class="convite-linha"><span>Cargo</span><strong class="selo-cargo">${escapar(d.papel)}</strong></div>
         <div class="convite-linha"><span>Lojas</span><strong>${lojas}</strong></div>
         ${d.acesso_regional
           ? '<div class="convite-linha"><span>Regional</span><strong>Vê o consolidado da rede</strong></div>'
@@ -98,24 +98,24 @@
       </div>
 
       <form id="form-convite">
-        <div class="form-group">
+        <div class="campo">
+          <input id="convite-nome" type="text" autocomplete="name" placeholder=" " required>
           <label for="convite-nome">Seu nome</label>
-          <input id="convite-nome" type="text" autocomplete="name" required>
         </div>
-        <div class="form-group">
-          <label for="convite-login">Usuário para entrar</label>
-          <input id="convite-login" type="text" autocomplete="username" required
+        <div class="campo">
+          <input id="convite-login" type="text" autocomplete="username" placeholder=" " required
                  pattern="[A-Za-z0-9._-]{3,60}"
                  title="De 3 a 60 caracteres: letras, números, ponto, hífen ou sublinhado">
+          <label for="convite-login">Usuário para entrar</label>
         </div>
-        <div class="form-group">
-          <label for="convite-senha">Senha</label>
-          <input id="convite-senha" type="password" autocomplete="new-password" required
+        <div class="campo">
+          <input id="convite-senha" type="password" autocomplete="new-password" placeholder=" " required
                  minlength="${d.senha_minima || 10}">
-          <small class="form-dica">Ao menos ${d.senha_minima || 10} caracteres.</small>
+          <label for="convite-senha">Senha</label>
         </div>
-        <button type="submit" class="btn btn-login" id="convite-enviar">Criar meu acesso</button>
-        <p id="convite-erro" class="login-erro" hidden></p>
+        <small class="form-dica">Ao menos ${d.senha_minima || 10} caracteres.</small>
+        <button type="submit" class="btn-marca" id="convite-enviar">Criar meu acesso</button>
+        <p id="convite-erro" class="auth-erro" hidden></p>
       </form>`;
 
     document.getElementById('form-convite').addEventListener('submit', async (ev) => {
@@ -147,10 +147,10 @@
 
   function sucesso(login) {
     alvo().innerHTML = `
-      <img class="login-logo" src="/assets/logos/josefina-logo.jpg" alt="">
+      <img class="auth-logo-topo" src="/assets/logos/casa-josefina.svg" alt="">
       <h1>Acesso criado</h1>
-      <p class="login-subtitulo">Entre com <strong>${escapar(login)}</strong> e a senha que você escolheu.</p>
-      <a class="btn btn-login" href="/" id="convite-ir-login">Entrar agora</a>`;
+      <p class="auth-sub">Entre com <strong>${escapar(login)}</strong> e a senha que você escolheu.</p>
+      <a class="btn-marca" href="/" id="convite-ir-login">Entrar agora</a>`;
     // Recarrega em vez de trocar o hash: assim a página volta limpa, sem o
     // código do convite na barra de endereço.
     document.getElementById('convite-ir-login')
@@ -172,19 +172,18 @@
 
   function pedirCodigo(erro) {
     alvo().innerHTML = `
-      <img class="login-logo" src="/assets/logos/josefina-logo.jpg" alt="">
+      <img class="auth-logo-topo" src="/assets/logos/casa-josefina.svg" alt="">
       <h1>Tenho um convite</h1>
-      <p class="login-subtitulo">Digite o código que você recebeu.</p>
+      <p class="auth-sub">Digite o código que você recebeu.</p>
       <form id="form-codigo">
-        <div class="form-group">
-          <label for="convite-codigo">Código do convite</label>
+        <div class="campo">
           <input id="convite-codigo" type="text" inputmode="latin"
                  autocomplete="off" autocapitalize="characters" spellcheck="false"
                  placeholder="SOLO-XXXX-XXXX" class="campo-codigo" required>
         </div>
-        <button type="submit" class="btn btn-login" id="codigo-enviar">Continuar</button>
-        <p id="codigo-erro" class="login-erro"${erro ? '' : ' hidden'}>${escapar(erro || '')}</p>
-        <p class="login-subtitulo" style="margin-top:1rem">
+        <button type="submit" class="btn-marca" id="codigo-enviar">Continuar</button>
+        <p id="codigo-erro" class="auth-erro"${erro ? '' : ' hidden'}>${escapar(erro || '')}</p>
+        <p class="auth-sub" style="margin-top:1rem">
           <a href="/" id="voltar-login">Voltar para o login</a>
         </p>
       </form>`;
@@ -217,7 +216,7 @@
   }
 
   async function conferir(codigo) {
-    alvo().innerHTML = '<p class="login-subtitulo">Conferindo o convite…</p>';
+    alvo().innerHTML = '<p class="auth-sub">Conferindo o convite…</p>';
     try {
       const d = await api.get('/convites/validar/' + encodeURIComponent(codigo));
       if (d && d.valido) desenhar(d);

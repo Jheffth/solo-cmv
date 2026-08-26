@@ -1,0 +1,435 @@
+/* ==========================================================================
+   MARCA CASA JOSEFINA — telas de entrada (login, convite, cadastro)
+   ==========================================================================
+
+   AS CORES SÃO DO MANUAL, NÃO DE GOSTO
+   ------------------------------------
+   Todas amostradas do PDF `MIV-CasaJosefina-Expresso` (Estúdio Las, out/2024),
+   pixel a pixel, e não escolhidas por parecerem bonitas juntas. Isso importa:
+   marca é uma promessa de consistência, e um azul "quase igual" na tela de
+   login é a primeira rachadura nela.
+
+   POR QUE ESTAS TELAS TÊM CSS PRÓPRIO
+   -----------------------------------
+   Login, aceite de convite e cadastro são as únicas telas que uma pessoa vê
+   ANTES de ter conta. São também as únicas em que a marca fala sozinha —
+   depois do login, quem manda é a informação, e enfeite ali atrapalha
+   trabalho. Separar o arquivo deixa essa fronteira explícita.
+
+   O LOGO É SVG, E É POR ISSO QUE ELE MUDA DE COR
+   ----------------------------------------------
+   Extraído em vetor do próprio manual (as curvas, não uma foto do logo).
+   Todos os caminhos herdam `currentColor`, então a mesma arte serve creme
+   sobre vinho e carmim sobre creme, sem um segundo arquivo — e sem aquele
+   halo branco que JPG de logo sempre carrega.
+   ========================================================================== */
+
+:root {
+  /* ---- paleta oficial, amostrada do manual ---- */
+  --cj-carmim:    #A6183B;   /* a cor do logotipo */
+  --cj-vinho:     #64111C;   /* profundidade, fundos */
+  --cj-tijolo:    #B63421;
+  --cj-terra:     #753017;
+  --cj-coral:     #EC6E45;
+  --cj-creme:     #EED5B4;
+  --cj-petroleo:  #466178;
+  --cj-azul:      #83ABC1;
+
+  /* ---- derivadas, só para superfície ---- */
+  --cj-papel:     #FDFBF7;   /* creme lavado: fundo de formulário */
+  --cj-tinta:     #2A1A1C;   /* preto amarronzado — preto puro brigaria
+                                com a paleta quente inteira */
+  --cj-tinta-2:   #7A6A6C;
+  --cj-linha:     #E6DCD2;
+}
+
+/* ==========================================================================
+   TIPOGRAFIA
+   ==========================================================================
+   `Tanker` é a fonte de títulos que o manual especifica, servida pela
+   Fontshare. Vem só nas telas de entrada, e com `swap`: se a rede do
+   restaurante estiver ruim ou a Fontshare fora do ar, o texto aparece na
+   fonte reserva e ninguém fica olhando para um retângulo em branco.
+
+   A reserva é condensada de propósito — Tanker é estreita, e cair numa
+   fonte larga faria o título quebrar de linha só nesse caso.
+
+   Para trazer a fonte para dentro do servidor (uma dependência a menos),
+   baixe em fontshare.com/fonts/tanker e troque este @import por @font-face.
+   ========================================================================== */
+@import url('https://api.fontshare.com/v2/css?f[]=tanker@400&display=swap');
+
+.marca-titulo {
+  font-family: "Tanker", "Oswald", "Archivo Narrow", "Arial Narrow", sans-serif;
+  font-weight: 400;
+  letter-spacing: .1em;      /* o manual pede 100 pts de espaçamento */
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   O PALCO
+   ==========================================================================
+   Duas colunas no desktop: a marca à esquerda, o trabalho à direita.
+   No celular vira uma coluna só — e a marca encolhe para uma faixa, porque
+   quem abre o sistema no meio do serviço quer o campo de senha à vista, não
+   uma capa bonita para rolar.
+   ========================================================================== */
+.auth {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  background: var(--cj-papel);
+}
+
+/* ---- lado da marca ---- */
+.auth-marca {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.6rem;
+  padding: 3rem;
+  background: var(--cj-vinho);
+  color: var(--cj-creme);
+  overflow: hidden;
+}
+
+/* Trama diagonal discreta. Existe para o vinho não virar um bloco chapado
+   de cor — a 0.05 de opacidade ela não é vista, é sentida. */
+.auth-marca::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background-image:
+    repeating-linear-gradient(45deg,
+      rgba(238, 213, 180, .05) 0 2px,
+      transparent 2px 22px);
+  pointer-events: none;
+}
+
+/* Um brilho quente atrás do logo, puxando o carmim da própria marca. */
+.auth-marca::after {
+  content: "";
+  position: absolute;
+  width: 70vmin;
+  height: 70vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(166, 24, 59, .55) 0%,
+    rgba(166, 24, 59, 0) 68%);
+  pointer-events: none;
+}
+
+.auth-marca > * { position: relative; z-index: 1; }
+
+.auth-logo {
+  width: min(340px, 62%);
+  height: auto;
+  color: var(--cj-creme);   /* o SVG inteiro herda daqui */
+}
+
+.auth-assinatura {
+  font-size: .82rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(238, 213, 180, .62);
+  text-align: center;
+  margin: 0;
+}
+
+/* A régua de cores do manual, no rodapé do painel. É a marca se apresentando
+   inteira — e some no celular, onde seria só mais um item para rolar. */
+.auth-paleta {
+  position: absolute;
+  bottom: 2.2rem;
+  display: flex;
+  gap: 6px;
+  z-index: 1;
+}
+.auth-paleta span {
+  width: 26px;
+  height: 5px;
+  border-radius: 3px;
+  opacity: .85;
+}
+
+/* ---- lado do trabalho ---- */
+.auth-painel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+}
+
+.auth-caixa {
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-caixa h1 {
+  font-family: "Tanker", "Oswald", "Archivo Narrow", "Arial Narrow", sans-serif;
+  font-weight: 400;
+  font-size: 2.6rem;
+  line-height: 1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--cj-vinho);
+  margin: 0 0 .35rem;
+}
+
+.auth-caixa .auth-sub {
+  color: var(--cj-tinta-2);
+  font-size: .92rem;
+  margin: 0 0 2.2rem;
+}
+
+/* O logo aparece em cima só no celular, onde o painel da marca sumiu. */
+.auth-logo-topo { display: none; }
+
+/* ==========================================================================
+   CAMPOS
+   ==========================================================================
+   Rótulo flutuante: o campo nasce com o nome dentro e ele sobe quando há
+   foco ou conteúdo. Some a linha de rótulo acima de cada campo, e a coluna
+   fica mais curta — o que importa num formulário aberto no celular, de pé,
+   com uma mão.
+
+   `placeholder=" "` (um espaço) é o que faz `:placeholder-shown` funcionar.
+   Sem ele o seletor nunca casa e o rótulo fica preso em cima.
+   ========================================================================== */
+.campo {
+  position: relative;
+  margin-bottom: 1.1rem;
+}
+
+.campo input {
+  width: 100%;
+  height: 56px;
+  padding: 1.35rem .95rem .5rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--cj-tinta);
+  background: #fff;
+  border: 1.5px solid var(--cj-linha);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.campo input:hover { border-color: #D8C8BC; }
+
+.campo input:focus {
+  border-color: var(--cj-carmim);
+  box-shadow: 0 0 0 4px rgba(166, 24, 59, .12);
+}
+
+.campo label {
+  position: absolute;
+  left: 1rem;
+  top: 1.05rem;
+  font-size: 1rem;
+  color: var(--cj-tinta-2);
+  pointer-events: none;
+  transform-origin: left top;
+  transition: transform .16s ease, color .16s ease;
+}
+
+.campo input:focus + label,
+.campo input:not(:placeholder-shown) + label {
+  transform: translateY(-.68rem) scale(.74);
+  color: var(--cj-carmim);
+}
+
+/* O olho de mostrar senha fica DENTRO do campo, e o padding à direita
+   existe para o texto da senha não passar por baixo dele. */
+.campo--senha input { padding-right: 3rem; }
+
+.campo-olho {
+  position: absolute;
+  right: .75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  padding: .35rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--cj-tinta-2);
+  cursor: pointer;
+  transition: color .15s ease;
+}
+.campo-olho:hover { color: var(--cj-carmim); }
+.campo-olho:focus-visible {
+  outline: 2px solid var(--cj-carmim);
+  outline-offset: 1px;
+}
+
+/* O código do convite não tem rótulo flutuante — ele já vem com a máscara
+   SOLO-XXXX-XXXX no placeholder, que ensina o formato melhor que um rótulo.
+   Sem rótulo, o texto volta ao centro vertical do campo.
+   Monoespaçado e espaçado porque este código é DIGITADO a partir de uma
+   mensagem: em fonte normal, 5 e S trocam de lugar na leitura. */
+.campo .campo-codigo {
+  padding: .5rem .95rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.15rem;
+  letter-spacing: .14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.form-dica {
+  display: block;
+  margin: -.6rem 0 1.1rem;
+  font-size: .78rem;
+  color: var(--cj-tinta-2);
+}
+
+/* ==========================================================================
+   BOTÃO
+   ========================================================================== */
+.btn-marca {
+  width: 100%;
+  height: 54px;
+  margin-top: .5rem;
+  font-family: "Tanker", "Oswald", "Archivo Narrow", "Arial Narrow", sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cj-creme);
+  background: var(--cj-carmim);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .16s ease, transform .1s ease, box-shadow .16s ease;
+}
+.btn-marca:hover {
+  background: #8E1432;
+  box-shadow: 0 8px 20px -8px rgba(166, 24, 59, .7);
+}
+.btn-marca:active { transform: translateY(1px); }
+.btn-marca:disabled {
+  background: #C9A3AC;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.btn-marca:focus-visible {
+  outline: 3px solid rgba(166, 24, 59, .35);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   RECADOS
+   ========================================================================== */
+.auth-erro {
+  margin: .9rem 0 0;
+  padding: .7rem .9rem;
+  font-size: .87rem;
+  color: var(--cj-vinho);
+  background: rgba(236, 110, 69, .13);
+  border-left: 3px solid var(--cj-coral);
+  border-radius: 0 8px 8px 0;   /* borda de um lado só não leva canto
+                                   arredondado do lado oposto */
+}
+
+.auth-rodape {
+  margin-top: 2rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--cj-linha);
+  font-size: .88rem;
+  color: var(--cj-tinta-2);
+  text-align: center;
+}
+.auth-rodape a {
+  color: var(--cj-carmim);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1.5px solid rgba(166, 24, 59, .28);
+  transition: border-color .15s ease;
+}
+.auth-rodape a:hover { border-bottom-color: var(--cj-carmim); }
+
+.auth-tecnico {
+  margin-top: 1.4rem;
+  padding-top: .8rem;
+  border-top: 1px dashed var(--cj-linha);
+  font-size: .74rem;
+  color: var(--cj-tinta-2);
+  text-align: left;
+}
+
+/* ==========================================================================
+   CONVITE
+   ==========================================================================
+   Quem chega aqui ainda não é ninguém no sistema. A tela mostra o que o
+   convite concede ANTES de pedir senha — cargo e lojas — porque aceitar
+   sem saber o que se está aceitando é como se cria gente com acesso que
+   ninguém queria dar.
+   ========================================================================== */
+.convite-resumo {
+  margin: 0 0 1.6rem;
+  padding: 1.1rem 1.2rem;
+  background: rgba(238, 213, 180, .38);
+  border: 1px solid var(--cj-creme);
+  border-radius: 12px;
+}
+.convite-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: .4rem 0;
+  font-size: .9rem;
+}
+.convite-linha + .convite-linha { border-top: 1px solid rgba(117, 48, 23, .12); }
+.convite-linha span { color: var(--cj-terra); }
+.convite-linha strong { color: var(--cj-vinho); text-align: right; }
+
+.selo-cargo {
+  display: inline-block;
+  padding: .18rem .6rem;
+  font-size: .74rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--cj-creme);
+  background: var(--cj-carmim);
+  border-radius: 999px;
+}
+
+/* ==========================================================================
+   CELULAR
+   ==========================================================================
+   Abaixo de 860px o painel da marca sai da tela. Não é só encolher: uma
+   capa de meia tela empurraria o formulário para baixo da dobra, e a
+   primeira coisa que a pessoa faria seria rolar. A marca vira o logo no
+   topo, em carmim sobre o papel.
+   ========================================================================== */
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-marca { display: none; }
+  .auth-painel { padding: 2.2rem 1.4rem; align-items: flex-start; }
+  .auth-caixa { max-width: 420px; margin: 0 auto; }
+
+  .auth-logo-topo {
+    display: block;
+    width: 190px;
+    height: auto;
+    margin: 0 auto 2rem;
+    color: var(--cj-carmim);
+  }
+  .auth-caixa h1 { font-size: 2.1rem; }
+  .auth-caixa .auth-sub { margin-bottom: 1.8rem; }
+}
+
+/* Telas baixas: o teclado do celular come metade da altura. */
+@media (max-height: 620px) {
+  .auth-logo-topo { width: 140px; margin-bottom: 1.2rem; }
+  .auth-caixa h1 { font-size: 1.8rem; }
+}
+
+/* Quem pediu menos movimento no sistema recebe menos movimento aqui. */
+@media (prefers-reduced-motion: reduce) {
+  .campo input, .campo label, .btn-marca { transition: none; }
+}
