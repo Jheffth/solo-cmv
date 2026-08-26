@@ -121,7 +121,7 @@ services:
   # GATEWAY WHATSAPP — EVOLUTION API v2 (Baileys)
   # ==========================================================================
   whatsapp:
-    image: atendai/evolution-api:v2.2.3
+    image: evoapicloud/evolution-api:latest
     container_name: solo_cmv_whatsapp
     restart: always
     env_file:
