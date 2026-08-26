@@ -25,11 +25,14 @@ COMO ISTO RODA SEM A EVOLUTION API
     A Evolution vira um dublê que grava o que recebeu. O que se testa aqui é
     o que MANDAMOS e QUANDO — que é exatamente onde estavam os dois erros.
 """
+import os
+import re
+import pathlib
 import sys
 import time
 from datetime import datetime, timedelta
 
-BACKEND = '/sessions/peaceful-youthful-lovelace/mnt/SOLO CMV/webapp/backend'
+BACKEND = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BACKEND)
 
 from servicos import evolution_cliente as ec                 # noqa: E402
@@ -155,12 +158,7 @@ ok(servico.SEGUNDOS_CACHE_QRCODE < VIDA_DO_QR,
 # A conta que importa é a SOMA: idade máxima do cache + intervalo da tela.
 # Era 30 + 30 = 60, o triplo da validade. Nenhuma das duas metades parecia
 # absurda sozinha, e é por isso que passou.
-import re                                                    # noqa: E402
-import pathlib                                               # noqa: E402
-
-perfil = pathlib.Path(
-    '/sessions/peaceful-youthful-lovelace/mnt/SOLO CMV/webapp/frontend/js/pages/perfil.js'
-).read_text(encoding='utf-8')
+perfil = (pathlib.Path(__file__).resolve().parent.parent / 'frontend' / 'js' / 'pages' / 'perfil.js').read_text(encoding='utf-8')
 m = re.search(r'setInterval\(carregarQr,\s*(\d+)\)', perfil)
 ok(m is not None, 'a tela tem um intervalo de recarga do QR')
 if m:

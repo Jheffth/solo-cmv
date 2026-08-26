@@ -26,8 +26,8 @@ import shutil
 import sys
 import tempfile
 
-BACKEND = '/sessions/peaceful-youthful-lovelace/mnt/SOLO CMV/webapp/backend'
-BOT = '/sessions/peaceful-youthful-lovelace/mnt/SOLO CMV/webapp/bot'
+BACKEND = os.path.dirname(os.path.abspath(__file__))
+BOT = os.path.join(os.path.dirname(BACKEND), 'bot')
 sys.path.insert(0, BACKEND)
 sys.path.insert(0, BOT)
 
@@ -38,7 +38,9 @@ _copia = os.path.join(tempfile.mkdtemp(), 'bot.db')
 if os.environ.get('DATABASE_URL_TESTE'):
     os.environ['DATABASE_URL'] = os.environ['DATABASE_URL_TESTE']
 else:
-    shutil.copy(os.path.join(BACKEND, 'solo_cmv.db'), _copia)
+    src_db = os.path.join(BACKEND, 'solo_cmv.db')
+    if os.path.exists(src_db):
+        shutil.copy(src_db, _copia)
     os.environ['DATABASE_URL'] = 'sqlite:///' + _copia
 
 from fastapi.testclient import TestClient                  # noqa: E402
