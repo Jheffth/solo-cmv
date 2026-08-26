@@ -392,13 +392,13 @@ def processar_comando(db: Session, usuario: Usuario, comando: str, texto_complet
 
         from calculo_estoque import saldos_por_produto, ultimos_custos
         from routers.inventario import _produtos_do_escopo
-        from models import SessaoInventario, StatusSessaoInventario, InventarioItem
+        from models import Unidade, SessaoInventario, StatusSessaoInventario, InventarioItem
 
         param = partes[1] if len(partes) > 1 else None
         unidade_ids = None if (usuario.acesso_regional or eh_diretoria) else ([u.id for u in usuario.unidades] if usuario.unidades else None)
 
-        q = db.query(SessaoInventario).filter(
-            SessaoInventario.empresa_id == usuario.empresa_id,
+        q = db.query(SessaoInventario).join(Unidade).filter(
+            Unidade.empresa_id == usuario.empresa_id,
             SessaoInventario.status == StatusSessaoInventario.ABERTO
         )
         if unidade_ids:
@@ -413,8 +413,8 @@ def processar_comando(db: Session, usuario: Usuario, comando: str, texto_complet
                 abertos = [alvo]
 
         if not abertos:
-            q_prontos = db.query(SessaoInventario).filter(
-                SessaoInventario.empresa_id == usuario.empresa_id,
+            q_prontos = db.query(SessaoInventario).join(Unidade).filter(
+                Unidade.empresa_id == usuario.empresa_id,
                 SessaoInventario.status.in_([StatusSessaoInventario.CONGELADO, StatusSessaoInventario.EM_CONTAGEM])
             )
             if unidade_ids:
