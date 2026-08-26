@@ -421,6 +421,7 @@ def lancar_contagem_flexivel(dados: ContagemLancamento, db: Session = Depends(ge
             usuario_id=usuario.id,
             empresa_id=usuario.empresa_id,
             origem=dados.origem or ORIGEM_WEB,
+            acumular=dados.acumular,
         )
     except ErroContagem as erro:
         raise HTTPException(status_code=erro.http, detail=erro.mensagem)
@@ -428,6 +429,8 @@ def lancar_contagem_flexivel(dados: ContagemLancamento, db: Session = Depends(ge
     item = resultado.item
     if resultado.primeira_contagem:
         msg = f"Contagem registrada: {resultado.produto.nome} = {item.quantidade_contada}."
+    elif resultado.foi_acumulado:
+        msg = f"Contagem somada: +{resultado.valor_adicionado} {resultado.produto.nome} (Total: {item.quantidade_contada})."
     else:
         msg = (f"Contagem corrigida: {resultado.produto.nome} = {item.quantidade_contada} "
                f"(antes era {resultado.valor_anterior}).")
@@ -461,6 +464,7 @@ def lancar_contagem(sessao_id: int, dados: ContagemItem, db: Session = Depends(g
             usuario_id=usuario.id,
             empresa_id=usuario.empresa_id,
             origem=ORIGEM_WEB,
+            acumular=dados.acumular,
         )
     except ErroContagem as erro:
         raise HTTPException(status_code=erro.http, detail=erro.mensagem)

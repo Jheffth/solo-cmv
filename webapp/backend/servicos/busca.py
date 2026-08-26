@@ -157,8 +157,7 @@ def buscar(db: Session, termo: str, empresa_id: Optional[int] = None,
 
         no_escopo = ids_escopo is None or p.id in ids_escopo
         if ids_escopo is not None and not no_escopo:
-            if not sessao_inventario.geral:
-                continue      # fora do escopo: nem oferece
+            continue      # fora do escopo do inventário: nem oferece
 
         saida.append(Candidato(
             produto_id=p.id, codigo=p.codigo, nome=p.nome,
@@ -228,3 +227,89 @@ def como_dicionario(candidatos: Sequence[Candidato]) -> List[dict]:
          "exato": c.produto_id == unico_perfeito}
         for c in candidatos
     ]
+
+
+def extrair_intencao_contagem(texto: str) -> tuple[Optional[str], Optional[float], str]:
+    """
+    Analisa a mensagem do usuário no fluxo de contagem.
+    Retorna: (termo_busca, quantidade, modo)
+    onde modo pode ser:
+      - "SOMAR": acumula quantidade (padrão)
+      - "SUBSTITUIR": sobrescreve a contagem (usando '=', 'corrigir', 'zero', 'zerar', '0')
+      - "CONSULTAR": apenas digitou o nome do produto sem quantidade
+    """
+    txt = (texto or "").strip()
+    if not txt:
+        return None, None, "CONSULTAR"
+
+    # Se começa com '='
+    if txt.startswith("="):
+        val_str = txt[1:].strip().replace(",", ".")
+        try:
+            return None, float(val_str), "SUBSTITUIR"
+        except ValueError:
+            pass
+
+    # Termos de zero / zerado
+    if txt.lower() in ("0", "zero", "zerar", "zerado", "nenhum", "nao tem", "não tem", "sem estoque"):
+        return None, 0.0, "SUBSTITUIR"
+
+    # Apenas número: "15", "+5", "12.5", "12,5"
+    num_puro = txt.replace(",", ".").strip()
+    if num_puro.startswith("+"):
+        num_puro = num_puro[1:].strip()
+    try:
+        val = float(num_puro)
+        return None, val, "SOMAR"
+    except ValueError:
+        pass
+
+    # Nome com '=' (ex: "tomate = 12" ou "tomate=12" ou "tomate 12 =")
+    if "=" in txt:
+        partes = txt.split("=", 1)
+        termo = partes[0].strip()
+        val_str = partes[1].strip().replace(",", ".")
+        try:
+            val = float(val_str)
+            return termo or None, val, "SUBSTITUIR"
+        except ValueError:
+            try:
+                val = float(partes[0].strip().replace(",", "."))
+                return partes[1].strip() or None, val, "SUBSTITUIR"
+            except ValueError:
+                pass
+
+    # Nome com prefixo 'corrigir' (ex: "corrigir tomate 12")
+    if txt.lower().startswith("corrigir ") or txt.lower().startswith("correcao ") or txt.lower().startswith("correção "):
+        resto = txt.split(maxsplit=1)[1].strip()
+        partes = resto.rsplit(maxsplit=1)
+        if len(partes) == 2:
+            termo = partes[0].strip()
+            val_str = partes[1].replace(",", ".").strip()
+            try:
+                val = float(val_str)
+                return termo, val, "SUBSTITUIR"
+            except ValueError:
+                pass
+
+    # Nome com sufixo zero (ex: "tomate zero", "tomate 0")
+    for z in (" zero", " 0", " zerar", " nao tem", " não tem"):
+        if txt.lower().endswith(z):
+            termo = txt[: -len(z)].strip()
+            return termo, 0.0, "SUBSTITUIR"
+
+    # Nome + Quantidade no final: "tomate 10", "batata doce +5", "cerveja 24"
+    partes = txt.rsplit(maxsplit=1)
+    if len(partes) == 2:
+        val_str = partes[1].replace(",", ".").strip()
+        eh_soma_explicita = val_str.startswith("+")
+        if eh_soma_explicita:
+            val_str = val_str[1:].strip()
+        try:
+            val = float(val_str)
+            return partes[0].strip(), val, "SOMAR"
+        except ValueError:
+            pass
+
+    # Se não identificou número, trata como consulta de produto
+    return txt, None, "CONSULTAR"

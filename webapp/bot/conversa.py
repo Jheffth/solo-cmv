@@ -65,17 +65,27 @@ def ler_quantidade(texto: str) -> Optional[float]:
 
 
 def separar_nome_e_numero(texto: str):
-    """"gengibre 8" → ("gengibre", 8.0). "gengibre" → ("gengibre", None).
-
-    É o atalho de quem tem pressa: resolve o item numa mensagem só, sem
-    esperar a pergunta da quantidade.
-    """
-    partes = str(texto or "").strip().rsplit(" ", 1)
+    """"gengibre 8" → ("gengibre", 8.0, "SOMAR"). "gengibre = 12" → ("gengibre", 12.0, "SUBSTITUIR")."""
+    txt = str(texto or "").strip()
+    if "=" in txt:
+        partes = txt.split("=", 1)
+        termo = partes[0].strip()
+        qtd = ler_quantidade(partes[1])
+        if qtd is not None:
+            return termo, qtd, "SUBSTITUIR"
+    if txt.lower().startswith("corrigir "):
+        resto = txt.split(maxsplit=1)[1].strip()
+        partes = resto.rsplit(" ", 1)
+        if len(partes) == 2:
+            qtd = ler_quantidade(partes[1])
+            if qtd is not None:
+                return partes[0].strip(), qtd, "SUBSTITUIR"
+    partes = txt.rsplit(" ", 1)
     if len(partes) == 2:
-        quantidade = ler_quantidade(partes[1])
-        if quantidade is not None:
-            return partes[0].strip(), quantidade
-    return str(texto or "").strip(), None
+        qtd = ler_quantidade(partes[1])
+        if qtd is not None:
+            return partes[0].strip(), qtd, "SOMAR"
+    return txt, None, "CONSULTAR"
 
 
 # ==============================================================================
@@ -489,15 +499,13 @@ class Conversa:
         if not contexto.get("inventario_id"):
             return self.tg.enviar(chat_id, "Mande /contar para começar.")
 
-        # Só um número: é a quantidade do item da vez. Este é o caminho de
-        # menor esforço que existe — a pessoa digita "12,5" e nada mais.
-        quantidade = ler_quantidade(texto)
-        if quantidade is not None and contexto.get("aguardando"):
+        # Só um número: é a quantidade do item da vez.
+        nome, quantidade, modo = separar_nome_e_numero(texto)
+        if not nome and quantidade is not None and contexto.get("aguardando"):
             return self._registrar(chat_id, contexto["aguardando"], quantidade,
-                                   contexto, estado, api)
+                                   contexto, estado, api, modo=modo)
 
-        # Nome + número numa linha só: "gengibre 8".
-        nome, quantidade = separar_nome_e_numero(texto)
+        # Nome + número numa linha só: "gengibre 8" ou "tomate = 12".
         candidatos = self._buscar(api, nome, contexto["inventario_id"])
 
         if not candidatos:
@@ -511,7 +519,7 @@ class Conversa:
         if escolhido is not None:
             if quantidade is not None:
                 return self._registrar(chat_id, escolhido["produto_id"],
-                                       quantidade, contexto, estado, api)
+                                       quantidade, contexto, estado, api, modo=modo)
             contexto["aguardando"] = escolhido["produto_id"]
             self._gravar(chat_id, contexto=contexto)
             return self.tg.enviar(
@@ -525,21 +533,12 @@ class Conversa:
                   for c in candidatos[:MAX_CANDIDATOS]]
         contexto["termo"] = nome
         contexto["pendente_quantidade"] = quantidade
+        contexto["pendente_modo"] = modo
         self._gravar(chat_id, contexto=contexto)
         return self.tg.enviar(chat_id, f"Qual deles?", teclado(botoes, por_linha=1))
 
     def _aprender(self, api, produto_id, termo):
-        """Grava que ESTE texto significa ESTE produto — depois da escolha.
-
-        A tabela de apelidos existia e nada a preenchia: o sistema oferecia
-        as mesmas três opções toda vez, para sempre. Aqui o laço fecha.
-
-        Só aprende de ESCOLHA CONFIRMADA — nunca do que a busca achou
-        provável. Guardar o palpite faria o erro se reforçar sozinho, e um
-        dia "batata" passaria a significar Batata Baroa sem ninguém saber por
-        quê. E falhar em aprender não pode derrubar o lançamento: o apelido é
-        conforto, o lançamento é o trabalho.
-        """
+        """Grava que ESTE texto significa ESTE produto — depois da escolha."""
         if not termo or len(termo.strip()) < 2:
             return
         try:
@@ -550,16 +549,7 @@ class Conversa:
 
     @staticmethod
     def _resolvido(candidatos):
-        """O candidato a usar sem perguntar, ou None se houver dúvida real.
-
-        Um resultado só: é ele. Vários, mas um com o nome IDÊNTICO ao que foi
-        digitado: também é ele — quem escreveu "batata doce" por inteiro já
-        respondeu a pergunta, e devolver um menu com Batata Doce, Batata
-        Baroa e Batata Inglesa transforma uma resposta certa em mais um toque.
-
-        O `exato` vem do servidor, que é quem pontua. Recalcular aqui seria a
-        segunda implementação de "o que a pessoa quis dizer".
-        """
+        """O candidato a usar sem perguntar, ou None se houver dúvida real."""
         if not candidatos:
             return None
         if len(candidatos) == 1:
@@ -575,34 +565,36 @@ class Conversa:
             return []
         return r.get("itens") or []
 
-    def _registrar(self, chat_id, produto_id, quantidade, contexto, estado, api):
-        """Grava a contagem e confirma COM O NOME.
-
-        A confirmação pelo nome é a checagem de que a pessoa lançou no item
-        certo — vale ainda mais quando ela chegou por botão, onde "Batata
-        Doce" e "Batata Baroa" ficam a um dedo de distância.
-        """
+    def _registrar(self, chat_id, produto_id, quantidade, contexto, estado, api, modo="SOMAR"):
+        """Grava a contagem e confirma COM O NOME."""
+        acumular = (modo == "SOMAR")
         resultado = api.post("/api/inventario/contagem", {
             "sessao_id": contexto["inventario_id"],
             "produto_id": produto_id,
             "quantidade": quantidade,
             "origem": "TELEGRAM",
+            "acumular": acumular,
         })
         item = resultado.get("item") or {}
         nome = item.get("produto") or "item"
         unidade = item.get("unidade_medida") or ""
+        msg = resultado.get("mensagem")
 
         contexto["fila"] = [p for p in (contexto.get("fila") or [])
                             if p != produto_id]
         contexto["aguardando"] = None
         contexto.pop("pendente_quantidade", None)
+        contexto.pop("pendente_modo", None)
         self._gravar(chat_id, contexto=contexto,
                      ultimo_lancamento={"produto_id": produto_id,
                                         "nome": nome,
                                         "inventario_id": contexto["inventario_id"],
                                         "anterior": resultado.get("valor_anterior")})
 
-        self.tg.enviar(chat_id, f"✓ {nome} · {_numero(quantidade)} {unidade}".strip())
+        if msg:
+            self.tg.enviar(chat_id, msg)
+        else:
+            self.tg.enviar(chat_id, f"✓ {nome} · {_numero(item.get('quantidade_contada', quantidade))} {unidade}".strip())
         return self._proximo_item(chat_id, contexto, api)
 
     # ------------------------------------------------------------------ botões

@@ -78,6 +78,9 @@ class ResultadoContagem:
     produto: Produto
     primeira_contagem: bool     # True se este item ainda não tinha contagem
     valor_anterior: Optional[float]
+    valor_adicionado: float
+    valor_final: float
+    foi_acumulado: bool = False
 
 
 # ==============================================================================
@@ -129,7 +132,7 @@ def localizar_produto(db: Session, *, produto_id: Optional[int] = None,
         produto = query.filter(Produto.codigo == str(codigo).strip()).first()
         if not produto:
             raise ErroContagem(
-                f"Nenhum produto com o código {codigo}.",
+                f"Produto {codigo} não encontrado.",
                 "PRODUTO_NAO_ENCONTRADO", 404,
             )
         return produto
@@ -141,20 +144,14 @@ def localizar_produto(db: Session, *, produto_id: Optional[int] = None,
 # VALIDAÇÕES
 # ==============================================================================
 def validar_sessao_aceita_contagem(sessao: SessaoInventario) -> None:
-    if sessao.status in STATUS_ACEITA_CONTAGEM:
-        return
-
-    if sessao.status == StatusSessaoInventario.ABERTO:
+    """Garante que o inventário está em estado que aceita contagem."""
+    if sessao.status not in STATUS_ACEITA_CONTAGEM:
+        rotulo = ROTULOS_STATUS.get(sessao.status, sessao.status.value)
         raise ErroContagem(
-            f"Inventário nº {sessao.numero_documento} está apenas aberto. "
-            f"Congele o inventário para poder lançar contagens.",
-            "SESSAO_NAO_CONGELADA",
+            f"O inventário nº {sessao.numero_documento} está {rotulo} e não aceita contagens.",
+            "STATUS_INVALIDO",
+            409,
         )
-    raise ErroContagem(
-        f"Inventário nº {sessao.numero_documento} está "
-        f"{ROTULOS_STATUS.get(sessao.status, sessao.status.value)} e não aceita contagem.",
-        "SESSAO_ENCERRADA",
-    )
 
 
 def descrever_escopo(sessao: SessaoInventario) -> str:
@@ -165,26 +162,22 @@ def descrever_escopo(sessao: SessaoInventario) -> str:
 
 
 def validar_produto_no_escopo(sessao: SessaoInventario, produto: Produto) -> InventarioItem:
-    """O produto precisa fazer parte do escopo congelado deste inventário.
-
-    Um inventário do Bar não pode receber contagem de Hortifruti: a linha
-    simplesmente não existe no inventário, e aceitar isso corromperia a
-    apuração de divergência.
-    """
+    """Garante que o produto pertence a este inventário e retorna a linha correspondente."""
     item = next((i for i in sessao.itens if i.produto_id == produto.id), None)
-    if item:
-        return item
-
-    familia = produto.categoria.nome.replace("Família - ", "") if produto.categoria else "sem família"
-    raise ErroContagem(
-        f"O produto {produto.codigo or ''} — {produto.nome} (família {familia}) não faz parte "
-        f"do inventário nº {sessao.numero_documento}, cujo escopo é: {descrever_escopo(sessao)}.",
-        "PRODUTO_FORA_DO_ESCOPO",
-    )
+    if not item:
+        raise ErroContagem(
+            f"O produto {produto.nome} não pertence ao escopo do inventário nº {sessao.numero_documento}.",
+            "PRODUTO_FORA_DO_ESCOPO",
+            409,
+        )
+    return item
 
 
 def validar_quantidade(quantidade) -> float:
+    """Converte e valida a quantidade contada."""
     try:
+        if isinstance(quantidade, str):
+            quantidade = quantidade.replace(",", ".").strip()
         valor = float(quantidade)
     except (TypeError, ValueError):
         raise ErroContagem("Quantidade inválida.", "QUANTIDADE_INVALIDA", 400)
@@ -208,11 +201,12 @@ def registrar_contagem(
     usuario_id: Optional[int] = None,
     empresa_id: Optional[int] = None,
     origem: str = ORIGEM_WEB,
+    acumular: bool = False,
 ) -> ResultadoContagem:
-    """Registra (ou corrige) a quantidade contada de um produto no inventário.
+    """Registra (ou corrige/acumula) a quantidade contada de um produto no inventário.
 
-    Recontar o mesmo produto sobrescreve o valor anterior — é o comportamento
-    esperado quando alguém confere de novo e acha um número diferente.
+    - Se acumular=True e já havia contagem anterior: soma o valor novo à anterior.
+    - Se acumular=False: define o valor exato (sobrescreve).
     """
     sessao = localizar_sessao(db, sessao_id=sessao_id, numero=numero_inventario, unidade_id=unidade_id)
     validar_sessao_aceita_contagem(sessao)
@@ -222,7 +216,14 @@ def registrar_contagem(
     valor = validar_quantidade(quantidade)
 
     anterior = item.quantidade_contada
-    item.quantidade_contada = valor
+    foi_acumulado = False
+    if acumular and anterior is not None:
+        novo_valor = round(anterior + valor, 4)
+        foi_acumulado = True
+    else:
+        novo_valor = valor
+
+    item.quantidade_contada = novo_valor
     item.contado_em = datetime.utcnow()
     item.usuario_contagem_id = usuario_id
     item.origem = origem
@@ -240,4 +241,31 @@ def registrar_contagem(
         produto=produto,
         primeira_contagem=anterior is None,
         valor_anterior=anterior,
+        valor_adicionado=valor,
+        valor_final=novo_valor,
+        foi_acumulado=foi_acumulado,
     )
+
+
+def desfazer_contagem(
+    db: Session,
+    *,
+    sessao_id: int,
+    produto_id: int,
+    valor_anterior: Optional[float],
+    usuario_id: Optional[int] = None,
+    origem: str = ORIGEM_WEB,
+) -> InventarioItem:
+    """Restaura a quantidade contada anterior de um produto no inventário."""
+    sessao = localizar_sessao(db, sessao_id=sessao_id)
+    validar_sessao_aceita_contagem(sessao)
+    produto = localizar_produto(db, produto_id=produto_id)
+    item = validar_produto_no_escopo(sessao, produto)
+
+    item.quantidade_contada = valor_anterior
+    item.contado_em = datetime.utcnow()
+    item.usuario_contagem_id = usuario_id
+    item.origem = origem
+    db.commit()
+    db.refresh(item)
+    return item

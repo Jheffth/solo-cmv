@@ -246,6 +246,7 @@ class InventarioDetalheOut(BaseModel):
 class ContagemItem(BaseModel):
     produto_id: int
     quantidade: float
+    acumular: bool = False
 
 
 class ContagemLancamento(BaseModel):
@@ -261,6 +262,7 @@ class ContagemLancamento(BaseModel):
     produto_id: Optional[int] = None
     codigo_produto: Optional[str] = None
     origem: Optional[str] = None
+    acumular: bool = False
 
 
 # ---------- Requisições ----------
