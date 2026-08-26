@@ -97,12 +97,17 @@ class EvolutionCliente:
             return res.get("dados") or {}
         return {"status": "resultado", "detalhes": res.get("erro")}
 
-    def obter_qrcode(self, instancia: str = None) -> Dict[str, Any]:
+    def obter_qrcode(self, instancia: str = None, numero_telefone: str = None) -> Dict[str, Any]:
         """Obtém o QR Code em Base64 ou pairing code para conectar o WhatsApp."""
         inst = instancia or self.instancia
         self.criar_instancia_se_necessario(inst)
 
-        res = self._fazer_requisicao("GET", f"/instance/connect/{inst}", timeout=10)
+        caminho = f"/instance/connect/{inst}"
+        if numero_telefone:
+            num_limpo = "".join(c for c in str(numero_telefone) if c.isdigit())
+            caminho += f"?number={num_limpo}"
+
+        res = self._fazer_requisicao("GET", caminho, timeout=12)
         if res.get("status_code") in (200, 201):
             dados = res.get("dados") or {}
             qrcode_base64 = dados.get("base64") or (dados.get("qrcode") or {}).get("base64")

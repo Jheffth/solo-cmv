@@ -38,13 +38,14 @@ def desvincular(db: Session = Depends(get_db),
 
 
 @router.get("/qrcode")
-def obter_qrcode(db: Session = Depends(get_db),
+def obter_qrcode(numero: Optional[str] = None,
+                 db: Session = Depends(get_db),
                  usuario: Usuario = Depends(exigir_papeis(["ARQUITETO", "DIRETOR"]))):
     """
-    Obtém o QR Code atual para conexão do WhatsApp da empresa.
+    Obtém o QR Code atual ou código de pareamento para o número fornecido.
     Exclusivo para Arquiteto e Diretores.
     """
-    res = cliente_evolution.obter_qrcode()
+    res = cliente_evolution.obter_qrcode(numero_telefone=numero)
     if not res.get("sucesso"):
         raise HTTPException(502, f"Erro ao conectar com Evolution API: {res.get('erro')}")
     return res

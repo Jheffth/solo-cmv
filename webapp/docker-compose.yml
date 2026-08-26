@@ -118,6 +118,16 @@ services:
       - solo_cmv_net
 
   # ==========================================================================
+  # CACHE & REDIS PARA EVOLUTION API
+  # ==========================================================================
+  redis:
+    image: redis:alpine
+    container_name: solo_cmv_redis
+    restart: always
+    networks:
+      - solo_cmv_net
+
+  # ==========================================================================
   # GATEWAY WHATSAPP — EVOLUTION API v2 (Baileys)
   # ==========================================================================
   whatsapp:
@@ -128,6 +138,7 @@ services:
       - .env
     depends_on:
       - db
+      - redis
     environment:
       SERVER_TYPE: http
       SERVER_PORT: 8080
@@ -143,6 +154,10 @@ services:
       DATABASE_SAVE_MESSAGE_UPDATE: "false"
       DATABASE_SAVE_DATA_CONTACTS: "false"
       DATABASE_SAVE_DATA_CHATS: "false"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: "redis://redis:6379/1"
+      CACHE_REDIS_PREFIX_KEY: "evolution"
+      CACHE_LOCAL_ENABLED: "false"
       WEBHOOK_GLOBAL_ENABLED: "true"
       WEBHOOK_GLOBAL_URL: http://app:8095/api/whatsapp/webhook
       WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"

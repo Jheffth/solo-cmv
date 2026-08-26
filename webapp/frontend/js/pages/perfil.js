@@ -199,32 +199,90 @@ window.Paginas.perfil = (function () {
       });
     }
 
+    let intervaloQr = null;
+
     const abrirQr = container.querySelector('#wpp-abrir-qrcode');
     if (abrirQr) {
       abrirQr.addEventListener('click', async () => {
-        abrirQr.disabled = true;
         const qrc = container.querySelector('#wpp-qrcode-container');
-        qrc.hidden = false;
-        qrc.innerHTML = '<div class="qrcode-box"><p>Carregando QR Code da Evolution API...</p></div>';
-        try {
-          const res = await api.get('/whatsapp/qrcode');
-          if (res.base64) {
-            const srcImg = res.base64.startsWith('data:') ? res.base64 : 'data:image/png;base64,' + res.base64;
-            qrc.innerHTML = `
-              <div class="qrcode-box">
-                <p style="margin-bottom:.8rem; font-weight:600;">Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho:</p>
-                <img src="${srcImg}" alt="QR Code WhatsApp" style="max-width:240px; margin:0 auto; display:block; border-radius:8px;">
-                ${res.pairing_code ? `<p style="margin-top:.6rem; font-size:.9rem;">Código de Pareamento: <strong>${escapar(res.pairing_code)}</strong></p>` : ''}
-                <p style="margin-top:.8rem; font-size:.85rem; color:#6b7280;">Após escanear, o status mudará para Conectado automaticamente.</p>
-              </div>`;
-          } else {
-            qrc.innerHTML = `<div class="qrcode-box"><p>${res.erro || 'Instância já está conectada ou aguardando conexão.'}</p></div>`;
-          }
-        } catch (e) {
-          qrc.innerHTML = `<div class="qrcode-box"><p class="login-erro">${e.message || 'Erro ao carregar QR Code.'}</p></div>`;
-        } finally {
-          abrirQr.disabled = false;
+        if (!qrc.hidden && intervaloQr) {
+          clearInterval(intervaloQr);
+          intervaloQr = null;
+          qrc.hidden = true;
+          return;
         }
+
+        qrc.hidden = false;
+        qrc.innerHTML = '<div class="qrcode-box"><p>Carregando conexão com a Evolution API...</p></div>';
+
+        async function carregarQr() {
+          try {
+            const res = await api.get('/whatsapp/qrcode');
+            if (res.base64) {
+              const srcImg = res.base64.startsWith('data:') ? res.base64 : 'data:image/png;base64,' + res.base64;
+              qrc.innerHTML = `
+                <div class="qrcode-box">
+                  <p style="margin-bottom:.8rem; font-weight:600;">Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho:</p>
+                  <img src="${srcImg}" alt="QR Code WhatsApp" style="max-width:240px; margin:0 auto; display:block; border-radius:8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1);">
+                  <p style="margin-top:.8rem; font-size:.85rem; color:#6b7280;">O código atualiza sozinho. Aponte a câmera agora.</p>
+                  
+                  <div style="margin-top:1.2rem; padding-top:1rem; border-top:1px dashed #e5e7eb;">
+                    <p style="font-size:.85rem; margin-bottom:.5rem;"><strong>Prefere conectar por código no celular sem câmera?</strong></p>
+                    <div style="display:flex; gap:.5rem; justify-content:center; max-width:320px; margin:0 auto;">
+                      <input type="tel" id="wpp-input-tel-bot" placeholder="55 + DDD + Número" style="padding:.4rem .6rem; font-size:.85rem; border:1px solid #ccc; border-radius:6px; flex:1;">
+                      <button type="button" class="btn-acao" id="wpp-btn-gerar-pairing">Gerar Código</button>
+                    </div>
+                    <div id="wpp-pairing-box" style="margin-top:.6rem;"></div>
+                  </div>
+                </div>`;
+
+              const btnPairing = qrc.querySelector('#wpp-btn-gerar-pairing');
+              const inTel = qrc.querySelector('#wpp-input-tel-bot');
+              const pairBox = qrc.querySelector('#wpp-pairing-box');
+              if (btnPairing && inTel) {
+                btnPairing.addEventListener('click', async () => {
+                  const num = inTel.value.trim().replace(/\D/g, '');
+                  if (!num || num.length < 10) {
+                    pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Digite o número com DDD (ex: 5561999998888)</span>';
+                    return;
+                  }
+                  btnPairing.disabled = true;
+                  pairBox.innerHTML = '<span style="color:#6b7280; font-size:.82rem;">Solicitando código ao WhatsApp...</span>';
+                  try {
+                    const rCode = await api.get(`/whatsapp/qrcode?numero=${num}`);
+                    if (rCode.pairing_code || rCode.code) {
+                      const codFinal = rCode.pairing_code || rCode.code;
+                      pairBox.innerHTML = `
+                        <div style="background:#ecfdf5; border:1px solid #10b981; border-radius:6px; padding:.6rem; margin-top:.4rem;">
+                          <p style="font-size:.85rem; margin:0 0 .3rem; color:#065f46;">No WhatsApp, toque em <strong>Conectar com número de telefone</strong> e digite:</p>
+                          <strong style="font-size:1.4rem; letter-spacing:.15em; color:#047857; font-family:monospace;">${escapar(codFinal)}</strong>
+                        </div>`;
+                    } else {
+                      pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Não foi possível gerar código para este número. Use o QR Code acima.</span>';
+                    }
+                  } catch (ePair) {
+                    pairBox.innerHTML = `<span style="color:red; font-size:.82rem;">${ePair.message || 'Erro ao gerar código.'}</span>`;
+                  } finally {
+                    btnPairing.disabled = false;
+                  }
+                });
+              }
+            } else {
+              // Se conectou, fecha e recarrega perfil
+              if (res.estado === 'open') {
+                clearInterval(intervaloQr);
+                await window.Paginas.perfil.render(container);
+              } else {
+                qrc.innerHTML = `<div class="qrcode-box"><p>${res.erro || 'Instância conectando... aguarde.'}</p></div>`;
+              }
+            }
+          } catch (e) {
+            qrc.innerHTML = `<div class="qrcode-box"><p class="login-erro">${e.message || 'Erro ao carregar conexão.'}</p></div>`;
+          }
+        }
+
+        await carregarQr();
+        intervaloQr = setInterval(carregarQr, 8000);
       });
     }
   }
