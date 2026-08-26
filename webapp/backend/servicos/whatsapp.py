@@ -395,7 +395,7 @@ def processar_comando(db: Session, usuario: Usuario, comando: str, texto_complet
         from models import SessaoInventario, StatusSessaoInventario, InventarioItem
 
         param = partes[1] if len(partes) > 1 else None
-        unidade_ids = [u.id for u in usuario.unidades] if (usuario.unidades and not usuario.acesso_todas_unidades) else None
+        unidade_ids = None if (usuario.acesso_regional or eh_diretoria) else ([u.id for u in usuario.unidades] if usuario.unidades else None)
 
         q = db.query(SessaoInventario).filter(
             SessaoInventario.empresa_id == usuario.empresa_id,
