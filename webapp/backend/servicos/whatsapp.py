@@ -306,7 +306,8 @@ def formatar_ajuda(usuario: Usuario) -> str:
 
 
 def processar_comando(db: Session, usuario: Usuario, comando: str, texto_completo: str) -> str:
-    cmd = comando.lower().strip()
+    partes = (texto_completo or comando).strip().split()
+    cmd = partes[0].lower() if partes else comando.lower().strip()
     eh_diretoria = usuario.papel.value in ("ARQUITETO", "DIRETOR")
     eh_gestor = usuario.papel.value in ("ARQUITETO", "DIRETOR", "ADMIN", "GERENTE")
 
@@ -388,11 +389,85 @@ def processar_comando(db: Session, usuario: Usuario, comando: str, texto_complet
     elif cmd == "/congelar":
         if not eh_gestor:
             return "🚫 Apenas Gerentes e Diretores podem congelar inventários."
+
+        from routers.inventario import _produtos_do_escopo, saldos_por_produto, ultimos_custos
+        from models import SessaoInventario, StatusSessaoInventario, InventarioItem
+
+        param = partes[1] if len(partes) > 1 else None
+        unidade_ids = [u.id for u in usuario.unidades] if (usuario.unidades and not usuario.acesso_todas_unidades) else None
+
+        q = db.query(SessaoInventario).filter(
+            SessaoInventario.empresa_id == usuario.empresa_id,
+            SessaoInventario.status == StatusSessaoInventario.ABERTO
+        )
+        if unidade_ids:
+            q = q.filter(SessaoInventario.unidade_id.in_(unidade_ids))
+
+        abertos = q.all()
+
+        # Se especificou ID ou número do documento
+        if param and abertos:
+            alvo = next((s for s in abertos if str(s.id) == param or s.numero_documento.lower() == param.lower() or str(s.unidade_id) == param), None)
+            if alvo:
+                abertos = [alvo]
+
+        if not abertos:
+            q_prontos = db.query(SessaoInventario).filter(
+                SessaoInventario.empresa_id == usuario.empresa_id,
+                SessaoInventario.status.in_([StatusSessaoInventario.CONGELADO, StatusSessaoInventario.EM_CONTAGEM])
+            )
+            if unidade_ids:
+                q_prontos = q_prontos.filter(SessaoInventario.unidade_id.in_(unidade_ids))
+            prontos = q_prontos.all()
+
+            if prontos:
+                doc_str = ", ".join(f"nº {s.numero_documento} ({s.unidade.nome})" for s in prontos)
+                return (
+                    f"❄️ *Inventário Já Congelado*\n\n"
+                    f"O inventário {doc_str} já está congelado e pronto para contagens.\n\n"
+                    f"Mande `/contar` para iniciar a contagem."
+                )
+
+            return (
+                "📋 *Nenhum Inventário Aberto Encontrado*\n\n"
+                "Para iniciar um inventário, primeiro clique em *Novo Inventário* na aba *Inventários* do painel web "
+                "(onde você escolhe as famílias/categorias que entram no fechamento).\n\n"
+                "Assim que criar na tela, envie `/congelar` aqui para tirar a fotografia do estoque e liberar a contagem para a equipe."
+            )
+
+        if len(abertos) == 1:
+            sessao = abertos[0]
+            produtos = _produtos_do_escopo(db, sessao, usuario.empresa_id)
+            if not produtos:
+                return f"❌ Nenhum produto ativo no escopo do inventário nº {sessao.numero_documento}."
+
+            ids = [p.id for p in produtos]
+            saldos = saldos_por_produto(db, sessao.unidade_id, ids)
+            custos = ultimos_custos(db, sessao.unidade_id)
+            for p in produtos:
+                db.add(InventarioItem(
+                    sessao_inventario_id=sessao.id,
+                    produto_id=p.id,
+                    quantidade_sistema=saldos.get(p.id, 0.0),
+                    custo_unitario=custos.get(p.id),
+                ))
+            sessao.status = StatusSessaoInventario.CONGELADO
+            sessao.data_congelamento = datetime.utcnow()
+            db.commit()
+            return (
+                f"✅ *Inventário Nº {sessao.numero_documento} Congelado com Sucesso!*\n\n"
+                f"• Loja: *{sessao.unidade.nome}*\n"
+                f"• Itens no Escopo: *{len(produtos)} produtos*\n"
+                f"• Data: *{sessao.data_congelamento.strftime('%d/%m/%Y %H:%M')}*\n\n"
+                f"📸 A fotografia do estoque do sistema foi tirada.\n"
+                f"A contagem está liberada! Quem for contar pode mandar `/contar` agora."
+            )
+
+        linhas_inv = "\n".join([f"• `/congelar {s.id}` — Nº {s.numero_documento} ({s.unidade.nome})" for s in abertos])
         return (
-            "❄️ *Congelar Inventário*\n\n"
-            "Para congelar um ciclo de inventário por loja, use o comando:\n"
-            "`/congelar [id_loja]`\n\n"
-            "Ou acesse a aba *Inventários* no painel web."
+            f"❄️ *Mais de um inventário aberto encontrado:*\n\n"
+            f"{linhas_inv}\n\n"
+            f"Envie `/congelar <numero>` para escolher qual congelar."
         )
 
     elif cmd in ("/perda", "/requisicao", "/compra"):
