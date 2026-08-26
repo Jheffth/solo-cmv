@@ -69,9 +69,20 @@ WEB_CONCURRENCY=2
 BACKUP_DIAS_DIARIOS=7
 BACKUP_SEMANAS=8
 BACKUP_MESES=12
+BOT_TELEGRAM_TOKEN=<o token do @BotFather>
+BOT_SEGREDO=<gere outro, igual aos de cima>
 FIM
 chmod 600 .env
 ```
+
+**O bot do Telegram tem dois segredos, e eles são diferentes.** O
+`BOT_TELEGRAM_TOKEN` vem do @BotFather e identifica o bot para o Telegram;
+o `BOT_SEGREDO` é nosso e identifica o processo do bot para a nossa API.
+Trocar de servidor não exige token novo — mas se você mantiver os dois
+servidores no ar por uma semana (item 7), **só um deles pode ficar com o
+`BOT_TELEGRAM_TOKEN`**: dois processos buscando updates do mesmo bot
+brigam pelas mensagens, e metade some. Deixe o servidor antigo sem o token
+assim que o novo subir.
 
 Para gerar os dois segredos:
 

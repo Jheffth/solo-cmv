@@ -72,8 +72,15 @@ COMANDOS: List[Comando] = [
     Comando("/inventarios", "os últimos inventários e seus status", "CONSULTAR"),
     Comando("/cmv", "CMV do período contra a meta", "CONSULTAR",
             exige=Capacidade.VER_CMV),
-    Comando("/painel", "resumo do dia e pendências", "CONSULTAR",
-            exige=Capacidade.VER_CMV),
+    # Sem `exige`, e não por descuido: o backend já devolve uma coisa
+    # diferente para cada um. Quem vê dinheiro recebe CMV, faturamento e
+    # pendências; quem não vê recebe a própria fila de trabalho — inventário
+    # esperando contagem, requisição aberta.
+    #
+    # Recusar seria pior do que filtrar aqui. Este é o comando de "e agora,
+    # o que eu faço?", e negá-lo justamente a quem executa o trabalho
+    # deixaria a pergunta mais útil do bot sem dono.
+    Comando("/painel", "o que precisa da sua atenção agora", "CONSULTAR"),
 
     # ---------------------------------------------------- dentro da contagem
     Comando("faltam", "o que ainda não foi contado", "DURANTE A CONTAGEM",

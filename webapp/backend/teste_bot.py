@@ -576,7 +576,264 @@ ok(r.status_code == 401,
 
 
 # ==============================================================================
-print('\n[11] ADIVINHAR O CÓDIGO NÃO PODE COMPENSAR')
+print('\n[11] PERDA — três formatos, e o motivo é obrigatório')
+# ==============================================================================
+# A seção 9 desvinculou o operador de propósito. Sem religar aqui, TODA
+# asserção daqui para baixo recebe "este Telegram não está ligado" — e as
+# que procuram texto genérico passariam em verde sem ter exercitado nada.
+# Foi o que aconteceu na primeira versão desta suíte.
+tg_ope, conv_ope = vincular('bot_ope', CHAT_OPE)
+ok('conectado' in tg_ope.ultima.lower(),
+   'operador religado para as seções seguintes')
+
+# Perda é o lançamento que a operação mais deixa de fazer, e por um motivo
+# mecânico: dá trabalho parar e abrir o sistema. Se o bot não cobrir os três
+# jeitos de dizer a mesma coisa, ele reintroduz o atrito que veio tirar.
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/sair')
+
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/perda batata doce 3 validade')
+ok('Perda registrada' in tg_ope.tudo(),
+   f'uma linha só resolve: "{tg_ope.ultima[:70]}"')
+ok('Vencimento' in tg_ope.tudo() or 'validade' in tg_ope.tudo().lower(),
+   'e a confirmação repete o motivo')
+ok('Saldo' in tg_ope.tudo(),
+   'com o saldo antes e depois — "3 kg" não dá noção de tamanho, "168 → 165" dá')
+
+# Guiado: sem nada, o bot pergunta.
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/perda')
+ok('item' in tg_ope.ultima.lower(), 'sem argumento, ele conduz')
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, 'batata doce')
+ok('quanto' in tg_ope.ultima.lower(), 'pergunta a quantidade')
+ok('em ' in tg_ope.ultima.lower(),
+   f'dizendo a unidade de medida: "{tg_ope.ultima[:60]}"')
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '2')
+botoes = tg_ope.botoes_da_ultima()
+ok(any(b.startswith('mot:') for b in botoes),
+   f'e oferece os motivos em botões ({len(botoes)})')
+ok('Por quê' in tg_ope.ultima, 'perguntando o porquê')
+
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '', callback='mot:QUEBRA')
+ok('Perda registrada' in tg_ope.tudo(), 'o botão fecha o lançamento')
+
+# Perda de zero não é perda
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/perda')
+conv_ope.atender(CHAT_OPE, 'batata doce')
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '0')
+ok('zero não é perda' in tg_ope.ultima.lower(),
+   f'zero é recusado — criaria movimento vazio: "{tg_ope.ultima[:50]}"')
+conv_ope.atender(CHAT_OPE, '/sair')
+
+
+# ==============================================================================
+print('\n[12] REQUISIÇÃO — abre, lança e avisa quando vai faltar')
+# ==============================================================================
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/requisicao')
+ok('quisi' in tg_ope.ultima.lower(),
+   f'abre uma requisição sem pedir número: "{tg_ope.ultima[:60]}"')
+ok('/atender' in tg_ope.ultima, 'e diz como terminar')
+
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, 'batata doce 2')
+ok('✓' in tg_ope.ultima, f'lança pelo nome: "{tg_ope.ultima[:60]}"')
+
+# Pedir mais do que existe: o aviso tem que vir AGORA, não na hora de
+# atender, quando a produção já está parada esperando.
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, 'batata doce 999999')
+ok('faltar' in tg_ope.ultima.lower() or '⚠' in tg_ope.ultima,
+   f'pedir além do saldo avisa na hora: "{tg_ope.ultima[:80]}"')
+
+# O operador ABRE e LANÇA, mas não ATENDE — atender baixa o estoque.
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/atender')
+ok('não está no seu acesso' in tg_ope.ultima,
+   f'/atender é do gerente para cima: "{tg_ope.ultima[:60]}"')
+
+# E o gerente atende a mesma requisição
+tg_ger.limpar()
+conv_ger.atender(CHAT_GER, '/atender')
+ok('atendida' in tg_ger.ultima.lower() or 'Qual requisição' in tg_ger.ultima,
+   f'o gerente consegue: "{tg_ger.ultima[:70]}"')
+conv_ope.atender(CHAT_OPE, '/sair')
+
+
+# ==============================================================================
+print('\n[13] CONGELAR — existe no bot; finalizar continua fora')
+# ==============================================================================
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/congelar')
+ok('não está no seu acesso' in tg_ope.ultima,
+   'o operador não congela — é ele quem conta')
+
+# O gerente abre um inventário pela tela e congela pelo chat
+_cab_ger = entrar('bot_ger')
+_r = cliente.post('/api/inventario/sessoes/abrir', headers=_cab_ger,
+                  json={'unidade_id': UNI_ID, 'geral': False,
+                        'categoria_ids': [], 'descricao': 'para congelar'})
+if _r.status_code == 201:
+    tg_ger.limpar()
+    conv_ger.atender(CHAT_GER, '/congelar')
+    ok('congelado' in tg_ger.tudo().lower() or 'Qual inventário' in tg_ger.ultima,
+       f'o gerente congela pelo chat: "{tg_ger.ultima[:70]}"')
+else:
+    # Sem família livre não dá para abrir outro — o conflito de escopo é
+    # regra do sistema, não falha do bot. Confere que a recusa EXPLICA, e
+    # segue: exigir um código específico aqui seria testar o inventário,
+    # que já tem suíte própria.
+    ok(_r.status_code in (400, 409) and len(_r.json().get('detail', '')) > 20,
+       f'abrir esbarrou numa regra e disse qual ({_r.status_code}: '
+       f'{_r.json().get("detail", "")[:60]})')
+
+
+# ==============================================================================
+print('\n[14] COMPRA — o custo aparece porque a nota está na mão dele')
+# ==============================================================================
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/compra')
+botoes = tg_ope.botoes_da_ultima()
+ok(any(b.startswith('forn:') for b in botoes),
+   f'oferece os fornecedores, não pede id ({len(botoes)} botões)')
+
+if botoes:
+    tg_ope.limpar()
+    conv_ope.atender(CHAT_OPE, '', callback=botoes[0])
+    ok('nota' in tg_ope.ultima.lower(), 'depois pergunta o número da nota')
+
+    tg_ope.limpar()
+    conv_ope.atender(CHAT_OPE, '1500')
+    ok('quantidade' in tg_ope.ultima.lower() and 'custo' in tg_ope.ultima.lower(),
+       'e ensina o formato da linha, com exemplo')
+
+    tg_ope.limpar()
+    conv_ope.atender(CHAT_OPE, 'batata doce 50 10,48')
+    ok('R$' in tg_ope.ultima and '524' in tg_ope.ultima,
+       f'lança e mostra o total: "{tg_ope.ultima[:70]}"')
+
+    tg_ope.limpar()
+    conv_ope.atender(CHAT_OPE, '/fechar')
+    ok('encerrada' in tg_ope.ultima.lower(),
+       f'e fecha com o total da nota: "{tg_ope.ultima[:70]}"')
+
+
+# ==============================================================================
+print('\n[15] CONSULTA — cada um vê o que é dele')
+# ==============================================================================
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/cmv')
+ok('não está no seu acesso' in tg_ope.ultima,
+   f'/cmv não é do operador: "{tg_ope.ultima[:60]}"')
+
+tg_ger.limpar()
+conv_ger.atender(CHAT_GER, '/cmv')
+ok('CMV' in tg_ger.ultima or 'inventário' in tg_ger.ultima.lower(),
+   f'o gerente recebe o CMV ou o motivo de não haver: "{tg_ger.ultima[:70]}"')
+
+# /painel NÃO é recusado ao operador — ele recebe outra coisa, que é a fila
+# de trabalho dele. Negar o comando de "e agora, o que eu faço?" justamente
+# a quem executa deixaria a pergunta mais útil do bot sem dono.
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/painel')
+ok('não está no seu acesso' not in tg_ope.ultima,
+   f'/painel serve ao operador: "{tg_ope.ultima[:60]}"')
+ok('R$' not in tg_ope.ultima, 'sem nenhum R$ para ele')
+
+tg_ger.limpar()
+conv_ger.atender(CHAT_GER, '/painel')
+ok(len(tg_ger.ultima) > 10, 'e o gerente recebe o painel com números')
+
+
+# ==============================================================================
+print('\n[16] TODO COMANDO DA AJUDA TEM DONO')
+# ==============================================================================
+# O teste que fecha o ciclo: a ajuda anuncia comandos, e até agora oito deles
+# não tinham handler nenhum — caíam em "não conheço". A ajuda mentia, e
+# nenhum teste percebia porque cada um olhava só o comando que testava.
+import re as _re                                             # noqa: E402
+
+for chat, conv, tg, quem in ((CHAT_OPE, conv_ope, tg_ope, 'operador'),
+                             (CHAT_GER, conv_ger, tg_ger, 'gerente')):
+    conv.atender(chat, '/sair')
+    tg.limpar()
+    conv.atender(chat, '/ajuda')
+    anunciados = set(_re.findall(r'/[a-zà-ú]+', tg.ultima))
+    orfaos = []
+    for cmd in sorted(anunciados):
+        if cmd in ('/ajuda', '/sair', '/vincular'):
+            continue
+        tg.limpar()
+        conv.atender(chat, cmd)
+        if 'Não conheço' in tg.ultima:
+            orfaos.append(cmd)
+        conv.atender(chat, '/sair')
+    ok(not orfaos,
+       f'{quem}: nenhum comando anunciado cai em "não conheço" ({orfaos})')
+
+
+# ==============================================================================
+print('\n[17] O BOT APRENDE COMO A CASA CHAMA AS COISAS')
+# ==============================================================================
+# A tabela de apelidos existia e nada a preenchia: o sistema oferecia as
+# mesmas três opções toda vez, para sempre. O laço só fecha quando a ESCOLHA
+# vira conhecimento.
+from models import SinonimoProduto                          # noqa: E402
+
+_db = SessionLocal()
+_db.query(SinonimoProduto).delete()
+_db.commit()
+_db.close()
+
+conv_ope.atender(CHAT_OPE, '/sair')
+tg_ope.limpar()
+conv_ope.atender(CHAT_OPE, '/perda bata')          # termo ambíguo de propósito
+botoes = tg_ope.botoes_da_ultima()
+ok(any(b.startswith('pperda:') for b in botoes),
+   f'"bata" é ambíguo e o bot oferece as opções ({len(botoes)})')
+
+if botoes:
+    escolhido_id = int(botoes[0].split(':')[1])
+    conv_ope.atender(CHAT_OPE, '', callback=botoes[0])
+
+    _db = SessionLocal()
+    aprendido = _db.query(SinonimoProduto).filter(
+        SinonimoProduto.produto_id == escolhido_id,
+        SinonimoProduto.termo == 'bata').first()
+    _db.close()
+    ok(aprendido is not None,
+       'escolher no menu ensina que "bata" é aquele produto')
+
+    # A prova que importa: na segunda vez, a MESMA digitação não pergunta.
+    conv_ope.atender(CHAT_OPE, '/sair')
+    tg_ope.limpar()
+    conv_ope.atender(CHAT_OPE, '/perda bata')
+    ok('quanto' in tg_ope.ultima.lower(),
+       f'na segunda vez ele vai direto: "{tg_ope.ultima[:60]}"')
+    conv_ope.atender(CHAT_OPE, '/sair')
+
+# Aprender é ESCOLHA CONFIRMADA, nunca palpite: um termo que resolveu
+# sozinho não pode virar apelido, senão o acerto de hoje vira regra amanhã
+# e ninguém entende de onde saiu.
+_db = SessionLocal()
+antes = _db.query(SinonimoProduto).count()
+_db.close()
+conv_ope.atender(CHAT_OPE, '/perda batata doce 1 quebra')
+_db = SessionLocal()
+depois = _db.query(SinonimoProduto).count()
+_db.close()
+ok(depois == antes,
+   f'acerto direto NÃO vira apelido ({antes} → {depois})')
+
+
+# ==============================================================================
+print('\n[18] ADIVINHAR O CÓDIGO NÃO PODE COMPENSAR')
 # ==============================================================================
 # Seis dígitos são um milhão de combinações, e isso parece bastante até
 # alguém medir: sem limite, 400 palpites errados do mesmo chat levaram 1,8

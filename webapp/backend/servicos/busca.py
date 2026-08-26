@@ -202,10 +202,29 @@ def aprender(db: Session, produto_id: int, termo: str,
     db.commit()
 
 
+PONTOS_EXATO = 100.0
+
+
 def como_dicionario(candidatos: Sequence[Candidato]) -> List[dict]:
+    """A lista para quem for oferecer as opções — com `exato` calculado aqui.
+
+    A pontuação existia e não saía da API, e o efeito aparecia no bot: quem
+    escrevia "batata doce" INTEIRO recebia um menu com Batata Doce, Batata
+    Baroa e Batata Inglesa. A resposta certa estava em primeiro lugar, com
+    100 pontos contra 42 das outras — e o cliente não tinha como saber disso,
+    porque só recebia a ordem.
+
+    `exato` é essa informação: houve um nome idêntico ao que foi digitado, e
+    só um. Quem oferece opções pode então pular a pergunta — que é a mesma
+    regra de "uma opção só não vira pergunta", aplicada à relevância em vez
+    de à contagem.
+    """
+    perfeitos = [c for c in candidatos if c.pontos >= PONTOS_EXATO]
+    unico_perfeito = perfeitos[0].produto_id if len(perfeitos) == 1 else None
     return [
         {"produto_id": c.produto_id, "codigo": c.codigo, "nome": c.nome,
          "unidade_medida": c.unidade_medida, "categoria": c.categoria,
-         "ja_contado": c.ja_contado, "no_escopo": c.no_escopo}
+         "ja_contado": c.ja_contado, "no_escopo": c.no_escopo,
+         "exato": c.produto_id == unico_perfeito}
         for c in candidatos
     ]

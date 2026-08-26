@@ -662,6 +662,26 @@ O `fator` resolve o segundo gargalo, que já discutimos: a nota vem em caixa, o 
 
 ## 7. Fases de execução
 
+**Estado em 25/08/2026: as fases 1 a 7 estão implementadas e testadas**
+(`webapp/backend/teste_bot.py`, 18 seções). Falta só criar o bot no
+@BotFather e colar dois valores no `.env` — o passo a passo está em
+`webapp/bot/LEIAME.md`. As fases 8 e 9 seguem como pós-lançamento.
+
+Três coisas mudaram em relação ao que está escrito acima, e vale registrar
+por quê:
+
+- **`/vincular` exige o segredo do bot.** O desenho original a deixava
+  aberta porque o token ainda não existe. Correto, mas o bot já carrega o
+  segredo para as rotas de sessão — deixá-la aberta não comprava nada e
+  publicava um endpoint que aceita palpites.
+- **Cinco tentativas por chat, quinze minutos de castigo.** Medido: sem
+  limite, 400 palpites errados levavam 1,8 segundo. Seis dígitos só
+  protegem quem conta as tentativas.
+- **`/painel` não exige capacidade.** O backend já devolve coisas
+  diferentes para cada papel — CMV para quem vê dinheiro, a fila de
+  trabalho para quem não vê. Recusar o comando de "e agora, o que eu faço?"
+  justamente a quem executa deixaria a pergunta mais útil do bot sem dono.
+
 | # | Entrega | Verificação |
 |---|---|---|
 | 1 | Vínculo de identidade: modelo, código de pareamento, `/vincular`, token de canal, tela de vínculo em Usuários | Chat não vinculado não faz nada; vínculo revogado para de valer na hora; token com `canal=TELEGRAM` é recusado ao finalizar inventário |

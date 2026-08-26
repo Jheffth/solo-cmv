@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -46,6 +47,40 @@ def buscar_produtos(termo: str,
         db, termo, empresa_id=usuario.empresa_id,
         sessao_inventario=sessao, limite=max(1, min(limite, 25)))
     return {"termo": termo, "itens": servico_busca.como_dicionario(candidatos)}
+
+
+class ApelidoAprendido(BaseModel):
+    produto_id: int
+    termo: str
+    fornecedor_id: Optional[int] = None
+    fator_conversao: float = 1.0
+
+
+@router.post("/apelido", status_code=204)
+def aprender_apelido(dados: ApelidoAprendido, db: Session = Depends(get_db),
+                     usuario=Depends(requer(Capacidade.CADASTRAR))):
+    """"Quando eu escrevo isto, quero aquele produto."
+
+    A busca já sabia consultar apelidos e nada os criava — a tabela existia
+    vazia, e o sistema recomeçava do zero toda vez. O laço só fecha aqui: a
+    pessoa digita "bata doce", recebe três opções, escolhe uma, e o canal
+    avisa qual foi. Na segunda vez a mesma digitação acerta sozinha.
+
+    Aprender é uma ESCOLHA CONFIRMADA, nunca um palpite do sistema. Guardar
+    o que ele achou provável faria o erro se reforçar sozinho, e ninguém
+    entenderia por que "batata" passou a significar Batata Baroa.
+
+    Silencioso por desenho (204): quem acabou de escolher um item quer
+    lançar a quantidade, não receber um aviso de que o sistema anotou algo.
+    """
+    produto = db.query(Produto).filter(Produto.id == dados.produto_id).first()
+    if not produto:
+        raise HTTPException(404, "Produto não encontrado.")
+    if usuario.empresa_id and produto.empresa_id != usuario.empresa_id:
+        raise HTTPException(403, "Este produto é de outra empresa.")
+    servico_busca.aprender(db, dados.produto_id, dados.termo,
+                           fornecedor_id=dados.fornecedor_id,
+                           fator=dados.fator_conversao or 1.0)
 
 
 @router.get("", response_model=List[ProdutoOut])
