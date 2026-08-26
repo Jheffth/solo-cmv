@@ -52,10 +52,11 @@ def obter_qrcode(numero: Optional[str] = None,
 
 
 @router.post("/conectar")
+@router.post("/reiniciar")
 def reiniciar_conexao(db: Session = Depends(get_db),
                       usuario: Usuario = Depends(exigir_papeis(["ARQUITETO", "DIRETOR"]))):
-    """Reinicia ou cria a instância de WhatsApp na Evolution API."""
-    cliente_evolution.criar_instancia_se_necessario()
+    """Reinicia e recria a instância de WhatsApp na Evolution API para novo QR Code."""
+    cliente_evolution.recriar_instancia()
     return cliente_evolution.obter_qrcode()
 
 

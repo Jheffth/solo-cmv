@@ -1,21 +1,24 @@
+import sys
 import paramiko
 import json
+
+sys.stdout.reconfigure(encoding='utf-8')
 
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect('169.58.116.61', username='root', password='1601Jcs332503')
 
-# 1. Logs da Evolution API
-cmd1 = 'docker logs --tail 40 solo_cmv_whatsapp'
+# 1. Containers ativos
+cmd0 = 'docker ps --filter name=solo_cmv --format "table {{.Names}}\t{{.Status}}"'
+_, out0, _ = ssh.exec_command(cmd0)
+print("=== CONTAINERS ===")
+print(out0.read().decode('utf-8'))
+
+# 2. Logs da Evolution API
+cmd1 = 'docker logs --tail 25 solo_cmv_whatsapp'
 _, out1, _ = ssh.exec_command(cmd1)
 print("=== LOGS EVOLUTION API ===")
 print(out1.read().decode('utf-8', errors='replace'))
-
-# 2. Testa conexão direta na Evolution API no servidor
-cmd2 = 'curl -s -H "apikey: solo-cmv-evolution-key-2026" http://localhost:8080/instance/connectionState/solo_cmv'
-_, out2, _ = ssh.exec_command(cmd2)
-print("\n=== ESTADO DA INSTÂNCIA ===")
-print(out2.read().decode('utf-8'))
 
 # 3. Testa /instance/connect/solo_cmv
 cmd3 = 'curl -s -H "apikey: solo-cmv-evolution-key-2026" http://localhost:8080/instance/connect/solo_cmv'
@@ -26,8 +29,8 @@ try:
     print("\n=== RESPOSTA CONNECT ===")
     print("code:", bool(dados3.get("code")))
     print("base64 length:", len(dados3.get("base64") or ""))
-    print("base64 prefix:", (dados3.get("base64") or "")[:40])
     print("count:", dados3.get("count"))
+    print("estado:", dados3.get("state") or dados3.get("status"))
 except Exception as e:
     print("Erro parse:", e, raw3)
 

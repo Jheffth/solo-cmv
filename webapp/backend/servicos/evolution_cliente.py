@@ -111,6 +111,8 @@ class EvolutionCliente:
         if res.get("status_code") in (200, 201):
             dados = res.get("dados") or {}
             qrcode_base64 = dados.get("base64") or (dados.get("qrcode") or {}).get("base64")
+            if qrcode_base64 and not qrcode_base64.startswith("data:"):
+                qrcode_base64 = f"data:image/png;base64,{qrcode_base64}"
             code = dados.get("code") or (dados.get("qrcode") or {}).get("code")
             pairing_code = dados.get("pairingCode")
             return {
@@ -118,9 +120,15 @@ class EvolutionCliente:
                 "base64": qrcode_base64,
                 "code": code,
                 "pairing_code": pairing_code,
-                "estado": dados.get("state") or "connecting"
+                "estado": dados.get("state") or dados.get("status") or "connecting"
             }
         return {"sucesso": False, "erro": res.get("erro")}
+
+    def recriar_instancia(self, instancia: str = None) -> Dict[str, Any]:
+        """Deleta e recria a instância do zero caso tenha travado em conexão anterior."""
+        inst = instancia or self.instancia
+        self._fazer_requisicao("DELETE", f"/instance/delete/{inst}", timeout=10)
+        return self.criar_instancia_se_necessario(inst)
 
     def enviar_texto(self, destinatario: str, texto: str, instancia: str = None) -> bool:
         """

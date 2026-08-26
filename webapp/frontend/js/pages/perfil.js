@@ -273,11 +273,39 @@ window.Paginas.perfil = (function () {
                 clearInterval(intervaloQr);
                 await window.Paginas.perfil.render(container);
               } else {
-                qrc.innerHTML = `<div class="qrcode-box"><p>${res.erro || 'Instância conectando... aguarde.'}</p></div>`;
+                qrc.innerHTML = `
+                  <div class="qrcode-box">
+                    <p style="margin-bottom:.6rem;">${res.erro || 'Instância inicializando... aguarde alguns segundos ou force um novo código.'}</p>
+                    <button type="button" class="btn btn-primario" id="wpp-btn-forcar-qr" style="font-size:.85rem; padding:.4rem .8rem;">
+                      🔄 Forçar Novo QR Code
+                    </button>
+                  </div>`;
+                const btnForcar = qrc.querySelector('#wpp-btn-forcar-qr');
+                if (btnForcar) {
+                  btnForcar.addEventListener('click', async () => {
+                    btnForcar.disabled = true;
+                    btnForcar.textContent = 'Gerando...';
+                    await api.post('/whatsapp/reiniciar');
+                    await carregarQr();
+                  });
+                }
               }
             }
           } catch (e) {
-            qrc.innerHTML = `<div class="qrcode-box"><p class="login-erro">${e.message || 'Erro ao carregar conexão.'}</p></div>`;
+            qrc.innerHTML = `
+              <div class="qrcode-box">
+                <p class="login-erro">${e.message || 'Erro ao carregar conexão.'}</p>
+                <button type="button" class="btn btn-primario" id="wpp-btn-forcar-qr-erro" style="font-size:.85rem; padding:.4rem .8rem; margin-top:.5rem;">
+                  🔄 Tentar Novamente
+                </button>
+              </div>`;
+            const btnForcarErro = qrc.querySelector('#wpp-btn-forcar-qr-erro');
+            if (btnForcarErro) {
+              btnForcarErro.addEventListener('click', async () => {
+                await api.post('/whatsapp/reiniciar');
+                await carregarQr();
+              });
+            }
           }
         }
 
