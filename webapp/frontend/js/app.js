@@ -138,6 +138,23 @@ document.getElementById('form-login').addEventListener('submit', async (ev) => {
 
 document.getElementById('btn-logout').addEventListener('click', fazerLogout);
 
+(function ligarToggleSenhaLogin() {
+  const btn = document.getElementById('btn-toggle-senha');
+  const input = document.getElementById('input-senha');
+  const olhoAberto = document.getElementById('icone-olho-aberto');
+  const olhoFechado = document.getElementById('icone-olho-fechado');
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', () => {
+    const ehPassword = input.type === 'password';
+    input.type = ehPassword ? 'text' : 'password';
+    if (olhoAberto && olhoFechado) {
+      olhoAberto.style.display = ehPassword ? 'none' : 'block';
+      olhoFechado.style.display = ehPassword ? 'block' : 'none';
+    }
+  });
+})();
+
 /* O card do usuário na barra lateral abre o perfil. É onde a pessoa já olha
    quando quer trocar a foto — pedir que ela procure no menu seria fazer com
    que o lugar óbvio não funcionasse. O botão de sair fica de fora do clique,
