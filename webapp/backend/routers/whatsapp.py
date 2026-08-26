@@ -60,6 +60,15 @@ def reiniciar_conexao(db: Session = Depends(get_db),
     return servico.obter_qrcode_cache_ou_api()
 
 
+@router.post("/desconectar")
+@router.delete("/instancia")
+def desconectar_instancia(usuario: Usuario = Depends(exigir_papeis(PapelUsuario.DIRETOR))):
+    """Desconecta e remove a sessão atual do WhatsApp na Evolution API."""
+    cliente_evolution._fazer_requisicao("DELETE", f"/instance/logout/{cliente_evolution.instancia}")
+    cliente_evolution._fazer_requisicao("DELETE", f"/instance/delete/{cliente_evolution.instancia}")
+    return {"status": "desconectado"}
+
+
 @router.post("/webhook")
 @router.post("/webhook/{caminho:path}")
 async def webhook_evolution(request: Request,
