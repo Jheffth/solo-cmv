@@ -212,105 +212,103 @@ window.Paginas.perfil = (function () {
           return;
         }
 
+        let containerEstruturado = false;
+
         qrc.hidden = false;
-        qrc.innerHTML = '<div class="qrcode-box"><p>Carregando conexão com a Evolution API...</p></div>';
+        qrc.innerHTML = `
+          <div class="qrcode-box" id="wpp-box-content">
+            <p id="wpp-box-instrucao" style="margin-bottom:.8rem; font-weight:600;">Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho:</p>
+            
+            <div id="wpp-img-wrapper" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
+              <p id="wpp-loading-txt" style="color: #6b7280;">Carregando QR Code da Evolution API...</p>
+              <img id="wpp-qrcode-img" alt="QR Code WhatsApp" style="display:none; max-width:240px; margin:0 auto; border-radius:8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1);">
+            </div>
+            
+            <div style="display:flex; justify-content:center; gap:.5rem; margin-top:.8rem;">
+              <button type="button" class="btn-acao" id="wpp-btn-manual-refresh" style="font-size:.82rem; padding:.3rem .7rem;">
+                🔄 Atualizar QR Code
+              </button>
+            </div>
+
+            <div style="margin-top:1.2rem; padding-top:1rem; border-top:1px dashed #e5e7eb;">
+              <p style="font-size:.85rem; margin-bottom:.5rem;"><strong>Prefere conectar por código no celular sem câmera?</strong></p>
+              <div style="display:flex; gap:.5rem; justify-content:center; max-width:320px; margin:0 auto;">
+                <input type="tel" id="wpp-input-tel-bot" placeholder="55 + DDD + Número" style="padding:.4rem .6rem; font-size:.85rem; border:1px solid #ccc; border-radius:6px; flex:1;">
+                <button type="button" class="btn-acao" id="wpp-btn-gerar-pairing">Gerar Código</button>
+              </div>
+              <div id="wpp-pairing-box" style="margin-top:.6rem;"></div>
+            </div>
+          </div>`;
+
+        const imgEl = qrc.querySelector('#wpp-qrcode-img');
+        const loadTxt = qrc.querySelector('#wpp-loading-txt');
+        const btnManual = qrc.querySelector('#wpp-btn-manual-refresh');
+        const btnPairing = qrc.querySelector('#wpp-btn-gerar-pairing');
+        const inTel = qrc.querySelector('#wpp-input-tel-bot');
+        const pairBox = qrc.querySelector('#wpp-pairing-box');
+
+        if (btnManual) {
+          btnManual.addEventListener('click', async () => {
+            btnManual.disabled = true;
+            btnManual.textContent = 'Atualizando...';
+            await api.post('/whatsapp/reiniciar').catch(() => {});
+            await carregarQr();
+            btnManual.disabled = false;
+            btnManual.textContent = '🔄 Atualizar QR Code';
+          });
+        }
+
+        if (btnPairing && inTel) {
+          btnPairing.addEventListener('click', async () => {
+            const num = inTel.value.trim().replace(/\D/g, '');
+            if (!num || num.length < 10) {
+              pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Digite o número com DDD (ex: 5561999998888)</span>';
+              return;
+            }
+            btnPairing.disabled = true;
+            pairBox.innerHTML = '<span style="color:#6b7280; font-size:.82rem;">Solicitando código ao WhatsApp...</span>';
+            try {
+              const rCode = await api.get(`/whatsapp/qrcode?numero=${num}`);
+              const codFinal = rCode.pairing_code || rCode.code;
+              if (codFinal) {
+                pairBox.innerHTML = `
+                  <div style="background:#ecfdf5; border:1px solid #10b981; border-radius:6px; padding:.6rem; margin-top:.4rem;">
+                    <p style="font-size:.85rem; margin:0 0 .3rem; color:#065f46;">No WhatsApp, toque em <strong>Conectar com número de telefone</strong> e digite:</p>
+                    <strong style="font-size:1.4rem; letter-spacing:.15em; color:#047857; font-family:monospace;">${escapar(codFinal)}</strong>
+                  </div>`;
+              } else {
+                pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Não foi possível gerar código para este número. Use o QR Code acima.</span>';
+              }
+            } catch (ePair) {
+              pairBox.innerHTML = `<span style="color:red; font-size:.82rem;">${ePair.message || 'Erro ao gerar código.'}</span>`;
+            } finally {
+              btnPairing.disabled = false;
+            }
+          });
+        }
 
         async function carregarQr() {
           try {
             const res = await api.get('/whatsapp/qrcode');
             if (res.base64) {
               const srcImg = res.base64.startsWith('data:') ? res.base64 : 'data:image/png;base64,' + res.base64;
-              qrc.innerHTML = `
-                <div class="qrcode-box">
-                  <p style="margin-bottom:.8rem; font-weight:600;">Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho:</p>
-                  <img src="${srcImg}" alt="QR Code WhatsApp" style="max-width:240px; margin:0 auto; display:block; border-radius:8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1);">
-                  <p style="margin-top:.8rem; font-size:.85rem; color:#6b7280;">O código atualiza sozinho. Aponte a câmera agora.</p>
-                  
-                  <div style="margin-top:1.2rem; padding-top:1rem; border-top:1px dashed #e5e7eb;">
-                    <p style="font-size:.85rem; margin-bottom:.5rem;"><strong>Prefere conectar por código no celular sem câmera?</strong></p>
-                    <div style="display:flex; gap:.5rem; justify-content:center; max-width:320px; margin:0 auto;">
-                      <input type="tel" id="wpp-input-tel-bot" placeholder="55 + DDD + Número" style="padding:.4rem .6rem; font-size:.85rem; border:1px solid #ccc; border-radius:6px; flex:1;">
-                      <button type="button" class="btn-acao" id="wpp-btn-gerar-pairing">Gerar Código</button>
-                    </div>
-                    <div id="wpp-pairing-box" style="margin-top:.6rem;"></div>
-                  </div>
-                </div>`;
-
-              const btnPairing = qrc.querySelector('#wpp-btn-gerar-pairing');
-              const inTel = qrc.querySelector('#wpp-input-tel-bot');
-              const pairBox = qrc.querySelector('#wpp-pairing-box');
-              if (btnPairing && inTel) {
-                btnPairing.addEventListener('click', async () => {
-                  const num = inTel.value.trim().replace(/\D/g, '');
-                  if (!num || num.length < 10) {
-                    pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Digite o número com DDD (ex: 5561999998888)</span>';
-                    return;
-                  }
-                  btnPairing.disabled = true;
-                  pairBox.innerHTML = '<span style="color:#6b7280; font-size:.82rem;">Solicitando código ao WhatsApp...</span>';
-                  try {
-                    const rCode = await api.get(`/whatsapp/qrcode?numero=${num}`);
-                    if (rCode.pairing_code || rCode.code) {
-                      const codFinal = rCode.pairing_code || rCode.code;
-                      pairBox.innerHTML = `
-                        <div style="background:#ecfdf5; border:1px solid #10b981; border-radius:6px; padding:.6rem; margin-top:.4rem;">
-                          <p style="font-size:.85rem; margin:0 0 .3rem; color:#065f46;">No WhatsApp, toque em <strong>Conectar com número de telefone</strong> e digite:</p>
-                          <strong style="font-size:1.4rem; letter-spacing:.15em; color:#047857; font-family:monospace;">${escapar(codFinal)}</strong>
-                        </div>`;
-                    } else {
-                      pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Não foi possível gerar código para este número. Use o QR Code acima.</span>';
-                    }
-                  } catch (ePair) {
-                    pairBox.innerHTML = `<span style="color:red; font-size:.82rem;">${ePair.message || 'Erro ao gerar código.'}</span>`;
-                  } finally {
-                    btnPairing.disabled = false;
-                  }
-                });
-              }
-            } else {
-              // Se conectou, fecha e recarrega perfil
-              if (res.estado === 'open') {
-                clearInterval(intervaloQr);
-                await window.Paginas.perfil.render(container);
-              } else {
-                qrc.innerHTML = `
-                  <div class="qrcode-box">
-                    <p style="margin-bottom:.6rem;">${res.erro || 'Instância inicializando... aguarde alguns segundos ou force um novo código.'}</p>
-                    <button type="button" class="btn btn-primario" id="wpp-btn-forcar-qr" style="font-size:.85rem; padding:.4rem .8rem;">
-                      🔄 Forçar Novo QR Code
-                    </button>
-                  </div>`;
-                const btnForcar = qrc.querySelector('#wpp-btn-forcar-qr');
-                if (btnForcar) {
-                  btnForcar.addEventListener('click', async () => {
-                    btnForcar.disabled = true;
-                    btnForcar.textContent = 'Gerando...';
-                    await api.post('/whatsapp/reiniciar');
-                    await carregarQr();
-                  });
-                }
-              }
+              imgEl.src = srcImg;
+              imgEl.style.display = 'block';
+              loadTxt.style.display = 'none';
+            }
+            if (res.estado === 'open' || res.conectado) {
+              if (intervaloQr) clearInterval(intervaloQr);
+              await window.Paginas.perfil.render(container);
             }
           } catch (e) {
-            qrc.innerHTML = `
-              <div class="qrcode-box">
-                <p class="login-erro">${e.message || 'Erro ao carregar conexão.'}</p>
-                <button type="button" class="btn btn-primario" id="wpp-btn-forcar-qr-erro" style="font-size:.85rem; padding:.4rem .8rem; margin-top:.5rem;">
-                  🔄 Tentar Novamente
-                </button>
-              </div>`;
-            const btnForcarErro = qrc.querySelector('#wpp-btn-forcar-qr-erro');
-            if (btnForcarErro) {
-              btnForcarErro.addEventListener('click', async () => {
-                await api.post('/whatsapp/reiniciar');
-                await carregarQr();
-              });
+            if (!imgEl.src) {
+              loadTxt.textContent = e.message || 'Tentando carregar conexão...';
             }
           }
         }
 
         await carregarQr();
-        intervaloQr = setInterval(carregarQr, 8000);
+        intervaloQr = setInterval(carregarQr, 12000);
       });
     }
   }
