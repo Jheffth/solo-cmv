@@ -150,7 +150,7 @@ window.Paginas.perfil = (function () {
         <div style="margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--borda, #e5e7eb);">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.5rem;">
             <small class="form-dica">
-              WhatsApp Central da Empresa: <strong>${w.instancia_conectada ? '🟢 Conectado' : '🔴 Desconectado'}</strong>
+              WhatsApp Central da Empresa: <strong id="wpp-badge-status">${w.instancia_conectada ? '🟢 Conectado' : '🔴 Desconectado'}</strong>
             </small>
             <button type="button" class="btn-acao" id="wpp-abrir-qrcode">
               ${w.instancia_conectada ? 'Reconectar / QR Code' : 'Escanear QR Code do Sistema'}
@@ -198,6 +198,24 @@ window.Paginas.perfil = (function () {
         await window.Paginas.perfil.render(container);
       });
     }
+
+    const badgeStatus = container.querySelector('#wpp-badge-status');
+    const pollerStatusGeral = setInterval(async () => {
+      if (!document.body.contains(container)) {
+        clearInterval(pollerStatusGeral);
+        return;
+      }
+      try {
+        const st = await api.get('/whatsapp/status');
+        if (badgeStatus) {
+          badgeStatus.textContent = st.instancia_conectada ? '🟢 Conectado' : '🔴 Desconectado';
+        }
+        if (st.vinculado !== (dados.whatsapp && dados.whatsapp.vinculado)) {
+          clearInterval(pollerStatusGeral);
+          await window.Paginas.perfil.render(container);
+        }
+      } catch (_) {}
+    }, 4000);
 
     let intervaloQr = null;
 

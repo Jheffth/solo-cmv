@@ -426,9 +426,25 @@ def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
     data = evento.get("data") or {}
     message_data = data.get("message") or {}
 
-    # Ignora mensagens enviadas pelo próprio bot ou mensagens de sistema
+    # Extrai o texto da mensagem
+    texto = (
+        message_data.get("conversation")
+        or (message_data.get("extendedTextMessage") or {}).get("text")
+        or ""
+    ).strip()
+
+    if not texto:
+        return
+
+    # Tratamento de fromMe:
+    # Se a mensagem foi enviada pelo próprio aparelho (fromMe),
+    # só processamos se for um comando explícito (inicia com '/') ou código de 6 dígitos,
+    # permitindo que a pessoa use o próprio WhatsApp como bot e operador no mesmo número.
     key = data.get("key") or {}
-    if key.get("fromMe"):
+    from_me = bool(key.get("fromMe"))
+    eh_comando_ou_codigo = texto.startswith("/") or (len(texto) == 6 and texto.isdigit())
+
+    if from_me and not eh_comando_ou_codigo:
         return
 
     mensagem_id = key.get("id")
@@ -451,18 +467,8 @@ def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
         # Ignora grupos por enquanto para privacidade e segurança
         return
 
-    # Extrai o texto da mensagem
-    texto = (
-        message_data.get("conversation")
-        or (message_data.get("extendedTextMessage") or {}).get("text")
-        or ""
-    ).strip()
-
-    if not texto:
-        return
-
     push_name = data.get("pushName") or ""
-    log.info("Mensagem WhatsApp recebida de %s (%s): %s", remote_jid, push_name, texto)
+    log.info("Mensagem WhatsApp recebida de %s (fromMe=%s): %s", remote_jid, from_me, texto)
 
     # 1. Tratamento de Vínculo: /vincular 123456 ou 123456
     partes = texto.split()
