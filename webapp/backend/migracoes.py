@@ -309,12 +309,44 @@ def _usuario_telegram(conexao):
             print(f"[MIGRACAO] usuarios: coluna '{nome}' adicionada.")
 
 
+def _usuario_whatsapp(conexao):
+    """O vínculo com a conta de WhatsApp."""
+    if not _tabela_existe(conexao, "usuarios"):
+        return
+    colunas = _colunas(conexao, "usuarios")
+    novas = [
+        ("whatsapp_jid", "VARCHAR(64)"),
+        ("whatsapp_numero", "VARCHAR(30)"),
+        ("whatsapp_nome", "VARCHAR(100)"),
+        ("whatsapp_vinculado_em", "TIMESTAMP"),
+    ]
+    for nome, tipo in novas:
+        if nome not in colunas:
+            conexao.execute(text(f"ALTER TABLE usuarios ADD COLUMN {nome} {tipo}"))
+            print(f"[MIGRACAO] usuarios: coluna '{nome}' adicionada.")
+
+
+def _codigo_pareamento_canal(conexao):
+    """Canal (TELEGRAM/WHATSAPP) e destino nos códigos de pareamento."""
+    if not _tabela_existe(conexao, "codigos_pareamento"):
+        return
+    colunas = _colunas(conexao, "codigos_pareamento")
+    if "canal" not in colunas:
+        conexao.execute(text("ALTER TABLE codigos_pareamento ADD COLUMN canal VARCHAR(20) DEFAULT 'TELEGRAM'"))
+        print("[MIGRACAO] codigos_pareamento: coluna 'canal' adicionada.")
+    if "whatsapp_jid" not in colunas:
+        conexao.execute(text("ALTER TABLE codigos_pareamento ADD COLUMN whatsapp_jid VARCHAR(64)"))
+        print("[MIGRACAO] codigos_pareamento: coluna 'whatsapp_jid' adicionada.")
+
+
 def aplicar_migracoes():
     with engine.begin() as conexao:
         _usuario_escopo_unidades(conexao)
         _usuario_exclusao(conexao)
         _usuario_perfil(conexao)
         _usuario_telegram(conexao)
+        _usuario_whatsapp(conexao)
+        _codigo_pareamento_canal(conexao)
         # A tabela `execucoes_backup` é criada pelo create_all — não há nada
         # a migrar. Fica registrado aqui para quem procurar não concluir que
         # foi esquecimento.
@@ -328,3 +360,4 @@ def aplicar_migracoes():
         _meta_origem(conexao)
         _usuario_escopo(conexao)
         _metas_iniciais(conexao)
+

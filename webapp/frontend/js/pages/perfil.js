@@ -116,6 +116,117 @@ window.Paginas.perfil = (function () {
       </div>`;
   }
 
+  function whatsappHtml() {
+    const w = dados.whatsapp || {};
+    const papel = dados.acesso ? dados.acesso.papel : '';
+    const ehGestor = papel === 'ARQUITETO' || papel === 'DIRETOR';
+
+    let corpo = '';
+    if (w.vinculado) {
+      const desde = w.desde ? w.desde.slice(0, 10).split('-').reverse().join('/') : '';
+      corpo = `
+        <div class="perfil-acesso">
+          <div><span>Situação</span><strong>conectado · +${escapar(w.numero)}</strong></div>
+          ${desde ? `<div><span>Desde</span><strong>${desde}</strong></div>` : ''}
+        </div>
+        <p class="card-sub">Perdeu o celular? Desvincular corta o acesso do bot agora.</p>
+        <button type="button" class="btn-acao btn-perigo" id="wpp-desvincular">
+          Desvincular WhatsApp
+        </button>
+      `;
+    } else {
+      corpo = `
+        <p class="card-sub">Receba alertas, lance perdas, requisições e consulte CMV direto no WhatsApp.</p>
+        <div id="wpp-codigo-area"></div>
+        <button type="button" class="btn secundario" id="wpp-vincular">
+          Vincular WhatsApp
+        </button>
+      `;
+    }
+
+    let qrSecao = '';
+    if (ehGestor) {
+      qrSecao = `
+        <div style="margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--borda, #e5e7eb);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.5rem;">
+            <small class="form-dica">
+              WhatsApp Central da Empresa: <strong>${w.instancia_conectada ? '🟢 Conectado' : '🔴 Desconectado'}</strong>
+            </small>
+            <button type="button" class="btn-acao" id="wpp-abrir-qrcode">
+              ${w.instancia_conectada ? 'Reconectar / QR Code' : 'Escanear QR Code do Sistema'}
+            </button>
+          </div>
+          <div id="wpp-qrcode-container" hidden></div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="card">
+        <h3 class="card-titulo">WhatsApp (Evolution API)</h3>
+        ${corpo}
+        ${qrSecao}
+      </div>`;
+  }
+
+  function ligarWhatsapp(container) {
+    const pedir = container.querySelector('#wpp-vincular');
+    if (pedir) {
+      pedir.addEventListener('click', async () => {
+        pedir.disabled = true;
+        try {
+          const r = await api.post('/whatsapp/codigo');
+          container.querySelector('#wpp-codigo-area').innerHTML = `
+            <div class="wpp-codigo">
+              <strong>${r.codigo}</strong>
+              <p>No WhatsApp da empresa, envie:<br>
+                 <code>/vincular ${r.codigo}</code></p>
+              <small>Vale ${r.minutos} minutos e serve uma vez só.</small>
+            </div>`;
+          pedir.textContent = 'Gerar outro código';
+        } finally {
+          pedir.disabled = false;
+        }
+      });
+    }
+
+    const cortar = container.querySelector('#wpp-desvincular');
+    if (cortar) {
+      cortar.addEventListener('click', async () => {
+        if (!confirm('Desvincular o WhatsApp? O bot para de responder agora.')) return;
+        await api.del('/whatsapp/vinculo');
+        await window.Paginas.perfil.render(container);
+      });
+    }
+
+    const abrirQr = container.querySelector('#wpp-abrir-qrcode');
+    if (abrirQr) {
+      abrirQr.addEventListener('click', async () => {
+        abrirQr.disabled = true;
+        const qrc = container.querySelector('#wpp-qrcode-container');
+        qrc.hidden = false;
+        qrc.innerHTML = '<div class="qrcode-box"><p>Carregando QR Code da Evolution API...</p></div>';
+        try {
+          const res = await api.get('/whatsapp/qrcode');
+          if (res.base64) {
+            qrc.innerHTML = `
+              <div class="qrcode-box">
+                <p style="margin-bottom:.8rem; font-weight:600;">Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho:</p>
+                <img src="${res.base64}" alt="QR Code WhatsApp">
+                <p style="margin-top:.8rem; font-size:.85rem; color:#6b7280;">Após escanear, o status mudará para Conectado automaticamente.</p>
+              </div>`;
+          } else {
+            qrc.innerHTML = `<div class="qrcode-box"><p>${res.erro || 'Instância já está conectada ou aguardando.'}</p></div>`;
+          }
+        } catch (e) {
+          qrc.innerHTML = `<div class="qrcode-box"><p class="login-erro">${e.message || 'Erro ao carregar QR Code.'}</p></div>`;
+        } finally {
+          abrirQr.disabled = false;
+        }
+      });
+    }
+  }
+
   function ligarTelegram(container) {
     const pedir = container.querySelector('#tg-vincular');
     if (pedir) {
@@ -210,6 +321,7 @@ window.Paginas.perfil = (function () {
 
       ${acessoHtml()}
       ${telegramHtml()}
+      ${whatsappHtml()}
 
       <div class="card">
         <h3 class="card-titulo">Trocar senha</h3>
@@ -338,16 +450,18 @@ window.Paginas.perfil = (function () {
   return {
     async render(container) {
       fotoNova = null;
-      // Duas chamadas em paralelo, não em fila: são independentes, e o
-      // servidor está a 250 ms daqui — enfileirar dobraria a espera por nada.
-      const [perfil, telegram] = await Promise.all([
+      // Três chamadas em paralelo, não em fila: são independentes
+      const [perfil, telegram, whatsapp] = await Promise.all([
         api.get('/perfil'),
         api.get('/telegram/status').catch(() => ({ vinculado: false })),
+        api.get('/whatsapp/status').catch(() => ({ vinculado: false, instancia_conectada: false })),
       ]);
       dados = perfil;
       dados.telegram = telegram;
+      dados.whatsapp = whatsapp;
       render(container);
       ligarTelegram(container);
+      ligarWhatsapp(container);
     },
   };
 })();

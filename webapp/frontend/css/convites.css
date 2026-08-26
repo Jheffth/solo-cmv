@@ -297,24 +297,46 @@ tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: no
 /* ------------------------------------------------- vínculo com o Telegram */
 /* O código é para ser LIDO e digitado noutro aparelho: grande, espaçado e
    monoespaçado, porque quem confere 6 dígitos na pressa troca 5 por S. */
-.tg-codigo {
+.tg-codigo, .wpp-codigo {
   margin: .8rem 0;
   padding: 1rem 1.2rem;
   border-radius: 10px;
   background: var(--fundo-suave, rgba(37, 99, 235, .07));
   border-left: 3px solid var(--primaria, #2563eb);
 }
-.tg-codigo strong {
+.wpp-codigo {
+  background: rgba(16, 185, 129, .08);
+  border-left-color: #10b981;
+}
+.tg-codigo strong, .wpp-codigo strong {
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 2rem;
   letter-spacing: .28em;
   color: var(--primaria, #2563eb);
 }
-.tg-codigo p { margin: .6rem 0 .4rem; font-size: .92rem; }
-.tg-codigo code {
+.wpp-codigo strong { color: #059669; }
+.tg-codigo p, .wpp-codigo p { margin: .6rem 0 .4rem; font-size: .92rem; }
+.tg-codigo code, .wpp-codigo code {
   background: rgba(0, 0, 0, .06);
   padding: .15rem .4rem;
   border-radius: 4px;
 }
-.tg-codigo small { color: var(--texto-suave, #6b7280); font-size: .82rem; }
+.tg-codigo small, .wpp-codigo small { color: var(--texto-suave, #6b7280); font-size: .82rem; }
+
+.qrcode-box {
+  text-align: center;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--borda, #e5e7eb);
+  margin: 1rem 0;
+}
+.qrcode-box img {
+  max-width: 260px;
+  height: auto;
+  border-radius: 8px;
+  margin: 0 auto;
+  display: block;
+}
+

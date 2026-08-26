@@ -35,6 +35,8 @@ services:
       AMBIENTE: ${AMBIENTE:-prod}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://solocmv.duckdns.org,http://localhost:8095,http://127.0.0.1:8095}
       BOT_SEGREDO: ${BOT_SEGREDO}
+      EVOLUTION_API_URL: http://whatsapp:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-solo-cmv-evolution-key-2026}
     depends_on:
       - db
     networks:
@@ -115,6 +117,35 @@ services:
     networks:
       - solo_cmv_net
 
+  # ==========================================================================
+  # GATEWAY WHATSAPP — EVOLUTION API v2 (Baileys)
+  # ==========================================================================
+  whatsapp:
+    image: atendai/evolution-api:v2.2.3
+    container_name: solo_cmv_whatsapp
+    restart: always
+    env_file:
+      - .env
+    environment:
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: http://whatsapp:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-solo-cmv-evolution-key-2026}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+      DATABASE_ENABLED: "false"
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_URL: http://app:8095/api/whatsapp/webhook
+      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
+      WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
+      CONFIG_SESSION_PHONE_CLIENT: "Solo CMV"
+      CONFIG_SESSION_PHONE_NAME: "Chrome"
+      QRCODE_LIMIT: 30
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - solo_cmv_net
+
 networks:
   solo_cmv_net:
   solo-network:
@@ -122,10 +153,6 @@ networks:
 
 volumes:
   pgdata:
-  # O backup PRECISA de volume próprio. Escrito no sistema de arquivos do
-  # container, sumiria no próximo `docker compose up --build` — a mesma
-  # armadilha da foto de perfil, e aqui infinitamente mais cara.
-  #
-  # Atenção: volume no MESMO servidor é meio backup. Se a máquina morrer,
-  # morrem os dois. A cópia externa está em MIGRAR_SERVIDOR.md.
   backups:
+  evolution_instances:
+

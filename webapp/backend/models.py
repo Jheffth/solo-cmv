@@ -339,6 +339,13 @@ class Usuario(Base):
     telegram_username = Column(String(64), nullable=True)   # só para exibir; muda
     telegram_vinculado_em = Column(DateTime, nullable=True)
 
+    # ------------------------------------------------------------- WhatsApp
+    # O vínculo com o WhatsApp (Evolution API).
+    whatsapp_jid = Column(String(64), unique=True, nullable=True, index=True)
+    whatsapp_numero = Column(String(30), nullable=True)
+    whatsapp_nome = Column(String(100), nullable=True)
+    whatsapp_vinculado_em = Column(DateTime, nullable=True)
+
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # EXCLUSÃO QUE NÃO APAGA A HISTÓRIA
@@ -896,12 +903,13 @@ class ExecucaoBackup(Base):
 # não abre nada sozinho — quem o digita já precisa estar com o celular na mão
 # no momento em que alguém de dentro do sistema o gerou.
 class CodigoPareamento(Base):
-    """Código de 6 dígitos que liga uma conta de Telegram a um usuário."""
+    """Código de 6 dígitos que liga uma conta (Telegram ou WhatsApp) a um usuário."""
     __tablename__ = "codigos_pareamento"
 
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
     codigo = Column(String(6), nullable=False, index=True)
+    canal = Column(String(20), default="TELEGRAM", nullable=False)   # TELEGRAM ou WHATSAPP
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
     expira_em = Column(DateTime, nullable=False)
 
@@ -909,31 +917,14 @@ class CodigoPareamento(Base):
     # usado às 14h32" diferente de "este código nunca existiu" — e as duas
     # situações pedem respostas diferentes para quem está tentando entrar.
     usado_em = Column(DateTime, nullable=True)
-    chat_id = Column(BigInteger, nullable=True)     # quem consumiu
+    chat_id = Column(BigInteger, nullable=True)     # quem consumiu no Telegram
+    whatsapp_jid = Column(String(64), nullable=True) # quem consumiu no WhatsApp
 
     usuario = relationship("Usuario")
 
 
 class TentativaVinculo(Base):
-    """Cada palpite errado de código, para que adivinhar deixe de compensar.
-
-    POR QUE PRECISA EXISTIR
-    Seis dígitos são um milhão de combinações, e isso soa muito até alguém
-    medir: 400 tentativas erradas do mesmo chat levaram 1,8 segundo. Sem
-    limite, a defesa não é o tamanho do código — é a esperança de que
-    ninguém tente, e esperança não é controle.
-
-    O prêmio também não é pequeno. O código não diz de quem é: quem acertar
-    qualquer código vivo recebe o token DAQUELA pessoa, e se ela for
-    Diretora, recebe o acesso de Diretora. E o `chat_id` vem no pedido, então
-    o atacante amarra a conta ao Telegram dele.
-
-    O CONTADOR É POR CHAT, NÃO POR CÓDIGO
-    Contar por código protegeria o código; o que precisa ser contido é quem
-    tenta. Por chat, cinco erros já custam quinze minutos, e varrer um
-    milhão passa a exigir uma conta de Telegram nova a cada cinco palpites —
-    que é o que transforma o ataque de tedioso em inviável.
-    """
+    """Cada palpite errado de código, para que adivinhar deixe de compensar."""
     __tablename__ = "tentativas_vinculo"
 
     id = Column(Integer, primary_key=True)
@@ -941,18 +932,52 @@ class TentativaVinculo(Base):
     quando = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
-class ModoTelegram(str, enum.Enum):
-    """Onde a conversa está. É o que permite responder só "12,5".
+class TentativaVinculoWhatsApp(Base):
+    """Contador de tentativas erradas de pareamento por JID de WhatsApp."""
+    __tablename__ = "tentativas_vinculo_whatsapp"
 
-    Sem modo, cada mensagem teria que se explicar inteira — "contagem do
-    inventário 3, produto batata doce, 12,5 quilos" — e o canal perderia a
-    única vantagem que tem sobre a tela.
-    """
+    id = Column(Integer, primary_key=True)
+    whatsapp_jid = Column(String(64), nullable=False, index=True)
+    quando = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class ModoTelegram(str, enum.Enum):
+    """Onde a conversa está. É o que permite responder só "12,5"."""
     LIVRE = "LIVRE"
     CONTAGEM = "CONTAGEM"
     PERDA = "PERDA"
     REQUISICAO = "REQUISICAO"
     COMPRA = "COMPRA"
+
+
+class SessaoWhatsApp(Base):
+    """O estado de conversa de cada usuário no WhatsApp."""
+    __tablename__ = "sessoes_whatsapp"
+
+    id = Column(Integer, primary_key=True)
+    whatsapp_jid = Column(String(64), unique=True, nullable=False, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    unidade_id = Column(Integer, ForeignKey("unidades.id"), nullable=True)
+
+    modo = Column(Enumerado(ModoTelegram), nullable=False, default=ModoTelegram.LIVRE)
+    contexto = Column(Text, nullable=True)
+    ultimo_lancamento = Column(Text, nullable=True)
+
+    atualizado_em = Column(DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow, nullable=False)
+
+    usuario = relationship("Usuario")
+    unidade = relationship("Unidade")
+
+
+class MensagemProcessadaWhatsApp(Base):
+    """Idempotência para mensagens recebidas do webhook da Evolution API."""
+    __tablename__ = "mensagens_processadas_whatsapp"
+
+    id = Column(Integer, primary_key=True)
+    mensagem_id = Column(String(120), unique=True, nullable=False, index=True)
+    processado_em = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
 
 
 class SessaoTelegram(Base):

@@ -22,6 +22,7 @@ from routers.usuarios import router as usuarios_router
 from routers.convites import router as convites_router
 from routers.perfil import router as perfil_router
 from routers.telegram import router as telegram_router
+from routers.whatsapp import router as whatsapp_router
 from routers.movimentos import router as movimentos_router
 from routers.inventario import router as inventario_router
 from routers.vendas import router as vendas_router
@@ -112,7 +113,8 @@ app.include_router(produtos_router, prefix="/api")
 app.include_router(usuarios_router, prefix="/api")
 app.include_router(convites_router, prefix="/api")   # cadastro fechado por convite
 app.include_router(perfil_router, prefix="/api")     # o que a própria pessoa edita
-app.include_router(telegram_router, prefix="/api")   # pareamento e comandos do bot
+app.include_router(telegram_router, prefix="/api")   # pareamento e comandos do bot Telegram
+app.include_router(whatsapp_router, prefix="/api")   # pareamento e comandos do WhatsApp (Evolution API)
 app.include_router(movimentos_router, prefix="/api")
 app.include_router(inventario_router, prefix="/api")
 app.include_router(vendas_router, prefix="/api")
