@@ -136,9 +136,16 @@ window.AbrirInventario = (function () {
   }
 
   function centralizar() {
+    if (window.innerWidth <= 620) {
+      janela.style.left = '6px';
+      janela.style.top = '6px';
+      janela.style.transform = 'none';
+      posicao = null;
+      return;
+    }
     const w = janela.offsetWidth || 540;
     janela.style.left = Math.max(0, (window.innerWidth - w) / 2) + 'px';
-    janela.style.top = window.innerWidth <= 620 ? '8px' : '80px';
+    janela.style.top = '80px';
     janela.style.transform = 'none';
     posicao = null;
   }
@@ -147,6 +154,12 @@ window.AbrirInventario = (function () {
      sem isso, a posição salva a jogava para fora e ela parecia sumir. */
   function garantirVisivel() {
     if (!janela || !estaAberto()) return;
+    if (window.innerWidth <= 620) {
+      janela.style.left = '6px';
+      janela.style.top = '6px';
+      posicao = null;
+      return;
+    }
     const r = janela.getBoundingClientRect();
     const limiteX = Math.max(0, window.innerWidth - r.width);
     const limiteY = Math.max(0, window.innerHeight - 60);

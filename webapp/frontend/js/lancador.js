@@ -182,9 +182,16 @@ window.Lancador = (function () {
   }
 
   function centralizar() {
+    if (window.innerWidth <= 620) {
+      janela.style.left = '6px';
+      janela.style.top = '6px';
+      janela.style.transform = 'none';
+      posicao = null;
+      return;
+    }
     const w = janela.offsetWidth || 580;
     janela.style.left = Math.max(0, (window.innerWidth - w) / 2) + 'px';
-    janela.style.top = window.innerWidth <= 620 ? '8px' : '70px';
+    janela.style.top = '70px';
     janela.style.transform = 'none';
     posicao = null;
   }
@@ -193,6 +200,12 @@ window.Lancador = (function () {
      tela e a janela "sumia". Aqui ela é trazida de volta para dentro. */
   function garantirVisivel() {
     if (!janela || !estaAberto()) return;
+    if (window.innerWidth <= 620) {
+      janela.style.left = '6px';
+      janela.style.top = '6px';
+      posicao = null;
+      return;
+    }
     const r = janela.getBoundingClientRect();
     const limiteX = Math.max(0, window.innerWidth - r.width);
     const limiteY = Math.max(0, window.innerHeight - 60);

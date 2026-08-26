@@ -67,15 +67,28 @@ window.AbrirRequisicao = (function () {
   }
 
   function centralizar() {
+    if (window.innerWidth <= 620) {
+      janela.style.left = '6px';
+      janela.style.top = '6px';
+      janela.style.transform = 'none';
+      posicao = null;
+      return;
+    }
     const w = janela.offsetWidth || 500;
     janela.style.left = Math.max(0, (window.innerWidth - w) / 2) + 'px';
-    janela.style.top = window.innerWidth <= 620 ? '8px' : '90px';
+    janela.style.top = '90px';
     janela.style.transform = 'none';
     posicao = null;
   }
 
   function garantirVisivel() {
     if (!janela || !estaAberto()) return;
+    if (window.innerWidth <= 620) {
+      janela.style.left = '6px';
+      janela.style.top = '6px';
+      posicao = null;
+      return;
+    }
     const r = janela.getBoundingClientRect();
     const left = Math.min(Math.max(0, r.left), Math.max(0, window.innerWidth - r.width));
     const top = Math.min(Math.max(0, r.top), Math.max(0, window.innerHeight - 60));

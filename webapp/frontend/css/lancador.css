@@ -28,35 +28,54 @@
 .lancador-header {
   display: flex;
   align-items: center;
-  gap: .6rem;
+  gap: .5rem;
   padding: .75rem 1rem;
   background: var(--navy);
   color: #fff;
   cursor: move;
   touch-action: none;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 .lancador-header svg { width: 18px; height: 18px; flex-shrink: 0; }
-.lancador-header .titulo { font-weight: 700; font-size: .95rem; }
+.lancador-header .titulo { font-weight: 700; font-size: .95rem; white-space: nowrap; }
 .lancador-header .unidade-atual {
   margin-left: auto;
   font-size: .72rem;
-  opacity: .85;
+  opacity: .9;
   background: rgba(255, 255, 255, .14);
-  padding: .16rem .55rem;
+  padding: .2rem .55rem;
   border-radius: 999px;
   white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lancador-close-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, .85);
+  background: rgba(255, 255, 255, .15);
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: #fff;
   cursor: pointer;
-  padding: .25rem;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 8px;
   display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  margin-left: .35rem;
+  transition: all .15s ease;
 }
-.lancador-close-btn:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+.lancador-close-btn:hover,
+.lancador-close-btn:active {
+  background: var(--red, #B63421);
+  border-color: var(--red, #B63421);
+  color: #fff;
+  transform: scale(1.05);
+}
 .lancador-close-btn svg { width: 16px; height: 16px; }
 
 .modal-requisicao { width: 500px; }
@@ -321,14 +340,57 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
 
 /* ---------- Janelas flutuantes em telas pequenas ---------- */
 @media (max-width: 760px) {
-  .lancador-janela, .modal-inventario { width: calc(100vw - 20px); }
-  .lancador-corpo { max-height: calc(100vh - 250px); }
-  .modal-inventario .lancador-corpo { max-height: calc(100vh - 190px); }
+  .lancador-janela, .modal-inventario, .modal-requisicao {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+  }
+  .lancador-corpo { max-height: calc(100vh - 230px); }
+  .modal-inventario .lancador-corpo { max-height: calc(100vh - 180px); }
 }
 
 @media (max-width: 620px) {
-  .lancador-janela, .modal-inventario { width: calc(100vw - 12px); max-height: calc(100vh - 16px); }
-  .lancador-corpo, .modal-inventario .lancador-corpo { padding: .8rem; }
+  .lancador-janela, .modal-inventario, .modal-requisicao {
+    left: 6px !important;
+    right: 6px !important;
+    top: 6px !important;
+    width: calc(100vw - 12px) !important;
+    max-width: calc(100vw - 12px) !important;
+    max-height: calc(100vh - 12px) !important;
+    border-radius: 12px;
+    transform: none !important;
+  }
+  .lancador-corpo, .modal-inventario .lancador-corpo { padding: .75rem; }
+
+  /* Header responsivo e botão de fechar proeminente na direita */
+  .lancador-header {
+    padding: .55rem .75rem;
+    gap: .4rem;
+  }
+  .lancador-header .titulo {
+    font-size: .88rem;
+  }
+  .lancador-header .unidade-atual {
+    max-width: 85px;
+    font-size: .66rem;
+    padding: .15rem .45rem;
+    margin-left: auto;
+  }
+  .lancador-close-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    background: #B63421; /* Vermelho/tijolo Casa Josefina destacado */
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    border-radius: 8px;
+    margin-left: .35rem;
+  }
+  .lancador-close-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+  }
 
   /* Itens da nota empilham: cada linha vira um bloco legível */
   .nf-item {
@@ -355,7 +417,6 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
   .linha-produto .campo-produto { flex: 1 1 100%; order: 3; }
   .linha-produto .campo-codigo { width: 96px; }
 
-  .lancador-header .unidade-atual { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
   .lancador-rodape { flex-wrap: wrap; gap: .5rem; }
   .lancador-rodape .btn { width: 100%; margin-left: 0; }
   .lancador-msg { flex: 1 1 100%; }
@@ -364,4 +425,5 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
 @media (max-width: 420px) {
   .lancador-grid, .lancador-grid.col-2 { grid-template-columns: 1fr; }
   .nf-item { grid-template-columns: 1fr 1fr 30px; }
+  .lancador-header .unidade-atual { max-width: 75px; }
 }
