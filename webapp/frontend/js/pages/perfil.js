@@ -247,6 +247,8 @@ window.Paginas.perfil = (function () {
         const inTel = qrc.querySelector('#wpp-input-tel-bot');
         const pairBox = qrc.querySelector('#wpp-pairing-box');
 
+        let intervaloStatus = null;
+
         if (btnManual) {
           btnManual.addEventListener('click', async () => {
             btnManual.disabled = true;
@@ -265,24 +267,60 @@ window.Paginas.perfil = (function () {
               pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Digite o número com DDD (ex: 5561999998888)</span>';
               return;
             }
+            
+            // Pausa imediatamente qualquer atualização de QR Code para não sobrescrever o código
+            if (intervaloQr) {
+              clearInterval(intervaloQr);
+              intervaloQr = null;
+            }
+
             btnPairing.disabled = true;
-            pairBox.innerHTML = '<span style="color:#6b7280; font-size:.82rem;">Solicitando código ao WhatsApp...</span>';
+            btnPairing.textContent = 'Gerando...';
+            pairBox.innerHTML = '<p style="color:#6b7280; font-size:.85rem; margin-top:.4rem;">Solicitando código de 8 dígitos ao WhatsApp...</p>';
+
             try {
               const rCode = await api.get(`/whatsapp/qrcode?numero=${num}`);
-              const codFinal = rCode.pairing_code || rCode.code;
-              if (codFinal) {
+              const codRaw = (rCode.pairing_code || rCode.code || '').trim();
+              if (codRaw) {
+                // Formata o código com espaço ou hífen para facilitar leitura (ex: ABCD-1234)
+                let codFormatado = codRaw;
+                if (codRaw.length === 8 && !codRaw.includes('-')) {
+                  codFormatado = codRaw.slice(0, 4) + ' - ' + codRaw.slice(4);
+                }
+
                 pairBox.innerHTML = `
-                  <div style="background:#ecfdf5; border:1px solid #10b981; border-radius:6px; padding:.6rem; margin-top:.4rem;">
-                    <p style="font-size:.85rem; margin:0 0 .3rem; color:#065f46;">No WhatsApp, toque em <strong>Conectar com número de telefone</strong> e digite:</p>
-                    <strong style="font-size:1.4rem; letter-spacing:.15em; color:#047857; font-family:monospace;">${escapar(codFinal)}</strong>
+                  <div style="background:#f0fdf4; border:2px solid #10b981; border-radius:8px; padding:1rem; margin-top:.6rem; text-align:center;">
+                    <p style="font-size:.9rem; margin:0 0 .5rem; color:#065f46; font-weight:600;">
+                      No celular: <em>Aparelhos conectados › Conectar com número de telefone</em>
+                    </p>
+                    <div style="font-size:1.8rem; font-weight:bold; letter-spacing:.2em; color:#047857; font-family:monospace; margin:.5rem 0; padding:.5rem; background:#fff; border:1px dashed #10b981; border-radius:6px; user-select:all;">
+                      ${escapar(codFormatado)}
+                    </div>
+                    <p style="font-size:.8rem; color:#4b5563; margin:0;">
+                      ⏳ O código fica fixo aqui. Digite no WhatsApp do celular com calma.
+                    </p>
                   </div>`;
+
+                // Monitora apenas o status silenciosamente até o WhatsApp conectar
+                if (intervaloStatus) clearInterval(intervaloStatus);
+                intervaloStatus = setInterval(async () => {
+                  try {
+                    const st = await api.get('/whatsapp/status');
+                    if (st.instancia_conectada) {
+                      clearInterval(intervaloStatus);
+                      await window.Paginas.perfil.render(container);
+                    }
+                  } catch (_) {}
+                }, 4000);
+
               } else {
-                pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Não foi possível gerar código para este número. Use o QR Code acima.</span>';
+                pairBox.innerHTML = '<span style="color:red; font-size:.82rem;">Não foi possível gerar o código. Verifique se o número está correto (ex: 5561999998888).</span>';
               }
             } catch (ePair) {
               pairBox.innerHTML = `<span style="color:red; font-size:.82rem;">${ePair.message || 'Erro ao gerar código.'}</span>`;
             } finally {
               btnPairing.disabled = false;
+              btnPairing.textContent = 'Gerar Código';
             }
           });
         }
@@ -298,6 +336,7 @@ window.Paginas.perfil = (function () {
             }
             if (res.estado === 'open' || res.conectado) {
               if (intervaloQr) clearInterval(intervaloQr);
+              if (intervaloStatus) clearInterval(intervaloStatus);
               await window.Paginas.perfil.render(container);
             }
           } catch (e) {
@@ -308,7 +347,7 @@ window.Paginas.perfil = (function () {
         }
 
         await carregarQr();
-        intervaloQr = setInterval(carregarQr, 12000);
+        intervaloQr = setInterval(carregarQr, 30000);
       });
     }
   }
