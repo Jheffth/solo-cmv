@@ -163,9 +163,10 @@ services:
       WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
       WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
       WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
-      CONFIG_SESSION_PHONE_CLIENT: "Solo CMV"
+      CONFIG_SESSION_PHONE_CLIENT: "Ubuntu"
       CONFIG_SESSION_PHONE_NAME: "Chrome"
-      QRCODE_LIMIT: 30
+      CONFIG_SESSION_PHONE_VERSION: "2.3000.1015901307"
+      QRCODE_LIMIT: 0
     volumes:
       - evolution_instances:/evolution/instances
     networks:

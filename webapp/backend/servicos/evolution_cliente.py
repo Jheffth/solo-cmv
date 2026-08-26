@@ -100,7 +100,13 @@ class EvolutionCliente:
     def obter_qrcode(self, instancia: str = None, numero_telefone: str = None) -> Dict[str, Any]:
         """Obtém o QR Code em Base64 ou pairing code para conectar o WhatsApp."""
         inst = instancia or self.instancia
-        self.criar_instancia_se_necessario(inst)
+
+        # Se o estado atual estiver recusado ou sem sessão, recria a instância
+        st = self.obter_status_instancia(inst)
+        if st.get("estado") in ("refused", "closed"):
+            self.recriar_instancia(inst)
+        else:
+            self.criar_instancia_se_necessario(inst)
 
         caminho = f"/instance/connect/{inst}"
         if numero_telefone:
@@ -108,6 +114,11 @@ class EvolutionCliente:
             caminho += f"?number={num_limpo}"
 
         res = self._fazer_requisicao("GET", caminho, timeout=12)
+        err_msg = str(res.get("erro") or "")
+        if "does not exist" in err_msg or "limit reached" in err_msg or "428" in err_msg:
+            self.recriar_instancia(inst)
+            res = self._fazer_requisicao("GET", caminho, timeout=12)
+
         if res.get("status_code") in (200, 201):
             dados = res.get("dados") or {}
             qrcode_base64 = dados.get("base64") or (dados.get("qrcode") or {}).get("base64")
