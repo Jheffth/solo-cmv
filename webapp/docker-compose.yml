@@ -83,6 +83,37 @@ services:
                sleep 86400;
              done"
 
+  # ==========================================================================
+  # BOT DO TELEGRAM
+  # ==========================================================================
+  # Processo próprio, e cliente HTTP da mesma API que o navegador usa — ver o
+  # cabeçalho de bot/solo_api.py sobre por que ele NÃO importa os serviços
+  # direto. Consequência boa: se o bot cair, o sistema web nem percebe.
+  #
+  # Não sobe sem token. Isso é desejável: um bot que sobe pela metade e não
+  # responde é pior que um que não sobe, porque ninguém vai olhar o log.
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solo_cmv_bot
+    restart: always
+    working_dir: /app/bot
+    command: ["python", "principal.py"]
+    env_file:
+      - .env
+    environment:
+      # O bot fala com a aplicação pela rede interna do compose — nunca pelo
+      # domínio público. Sai mais rápido e não depende do Caddy estar de pé.
+      SOLO_API: http://app:8095
+      BOT_TELEGRAM_TOKEN: ${BOT_TELEGRAM_TOKEN}
+      BOT_SEGREDO: ${BOT_SEGREDO}
+      BOT_LOG: ${BOT_LOG:-INFO}
+    depends_on:
+      - app
+    networks:
+      - solo_cmv_net
+
 networks:
   solo_cmv_net:
   solo-network:

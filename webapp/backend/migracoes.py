@@ -284,11 +284,37 @@ def _usuario_perfil(conexao):
             print(f"[MIGRACAO] usuarios: coluna '{nome}' adicionada.")
 
 
+def _usuario_telegram(conexao):
+    """O vínculo com a conta de Telegram.
+
+    Sem UNIQUE no ALTER: o SQLite não aceita acrescentar índice único junto
+    com a coluna, e criá-lo depois falharia em base que já tivesse dois
+    nulos. A unicidade é garantida no serviço de pareamento, que é o único
+    lugar que escreve aqui.
+    """
+    if not _tabela_existe(conexao, "usuarios"):
+        return
+    colunas = _colunas(conexao, "usuarios")
+    novas = [
+        # BIGINT: o chat_id do Telegram já passou de 2^31 e continua crescendo.
+        # INTEGER estouraria em silêncio, e o vínculo apontaria para o chat
+        # errado — que é a pior falha possível neste lugar.
+        ("telegram_chat_id", "BIGINT"),
+        ("telegram_username", "VARCHAR(64)"),
+        ("telegram_vinculado_em", "TIMESTAMP"),
+    ]
+    for nome, tipo in novas:
+        if nome not in colunas:
+            conexao.execute(text(f"ALTER TABLE usuarios ADD COLUMN {nome} {tipo}"))
+            print(f"[MIGRACAO] usuarios: coluna '{nome}' adicionada.")
+
+
 def aplicar_migracoes():
     with engine.begin() as conexao:
         _usuario_escopo_unidades(conexao)
         _usuario_exclusao(conexao)
         _usuario_perfil(conexao)
+        _usuario_telegram(conexao)
         # A tabela `execucoes_backup` é criada pelo create_all — não há nada
         # a migrar. Fica registrado aqui para quem procurar não concluir que
         # foi esquecimento.

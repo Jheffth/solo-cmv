@@ -82,6 +82,74 @@ window.Paginas.perfil = (function () {
       </div>`;
   }
 
+  /* O código aparece NA TELA e some sozinho. Não vai por e-mail nem por
+     mensagem: um código de vínculo encaminhado é um vínculo entregue a
+     outra pessoa. Ele vale 10 minutos porque essa é a janela em que alguém
+     está com o celular na mão, olhando para esta tela. */
+  function telegramHtml() {
+    const t = dados.telegram || {};
+    if (t.vinculado) {
+      const desde = t.desde ? t.desde.slice(0, 10).split('-').reverse().join('/') : '';
+      return `
+        <div class="card">
+          <h3 class="card-titulo">Telegram</h3>
+          <div class="perfil-acesso">
+            <div><span>Situação</span><strong>conectado${t.username ? ' · @' + escapar(t.username) : ''}</strong></div>
+            ${desde ? `<div><span>Desde</span><strong>${desde}</strong></div>` : ''}
+          </div>
+          <p class="card-sub">Perdeu o celular? Desvincular corta o acesso do
+             bot agora — não quando a sessão vencer.</p>
+          <button type="button" class="btn-acao btn-perigo" id="tg-desvincular">
+            Desvincular
+          </button>
+        </div>`;
+    }
+    return `
+      <div class="card">
+        <h3 class="card-titulo">Telegram</h3>
+        <p class="card-sub">Conte inventário, registre perda e peça itens pelo
+           celular, sem abrir o sistema.</p>
+        <div id="tg-codigo-area"></div>
+        <button type="button" class="btn secundario" id="tg-vincular">
+          Vincular Telegram
+        </button>
+      </div>`;
+  }
+
+  function ligarTelegram(container) {
+    const pedir = container.querySelector('#tg-vincular');
+    if (pedir) {
+      pedir.addEventListener('click', async () => {
+        pedir.disabled = true;
+        try {
+          const r = await api.post('/telegram/codigo');
+          container.querySelector('#tg-codigo-area').innerHTML = `
+            <div class="tg-codigo">
+              <strong>${r.codigo}</strong>
+              <p>No Telegram, mande para o bot:<br>
+                 <code>/vincular ${r.codigo}</code></p>
+              <small>Vale ${r.minutos} minutos e serve uma vez.
+                Nunca mande sua senha pelo chat — nem para o bot.</small>
+            </div>`;
+          pedir.textContent = 'Gerar outro código';
+        } finally {
+          pedir.disabled = false;
+        }
+      });
+    }
+
+    const cortar = container.querySelector('#tg-desvincular');
+    if (cortar) {
+      cortar.addEventListener('click', async () => {
+        // Confirmação porque é destrutivo e silencioso: sem ela, um toque
+        // errado tira o acesso e a pessoa só descobre na câmara fria.
+        if (!confirm('Desvincular o Telegram? O bot para de responder agora.')) return;
+        await api.del('/telegram/vinculo');
+        await window.Paginas.perfil.render(container);
+      });
+    }
+  }
+
   function render(container) {
     container.innerHTML = `
       <p id="perfil-aviso" hidden></p>
@@ -141,6 +209,7 @@ window.Paginas.perfil = (function () {
       </div>
 
       ${acessoHtml()}
+      ${telegramHtml()}
 
       <div class="card">
         <h3 class="card-titulo">Trocar senha</h3>
@@ -269,8 +338,16 @@ window.Paginas.perfil = (function () {
   return {
     async render(container) {
       fotoNova = null;
-      dados = await api.get('/perfil');
+      // Duas chamadas em paralelo, não em fila: são independentes, e o
+      // servidor está a 250 ms daqui — enfileirar dobraria a espera por nada.
+      const [perfil, telegram] = await Promise.all([
+        api.get('/perfil'),
+        api.get('/telegram/status').catch(() => ({ vinculado: false })),
+      ]);
+      dados = perfil;
+      dados.telegram = telegram;
       render(container);
+      ligarTelegram(container);
     },
   };
 })();

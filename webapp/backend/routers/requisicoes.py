@@ -30,7 +30,7 @@ from schemas import (
     RequisicaoOut, RequisicaoAbrir, RequisicaoDetalheOut, RequisicaoItemOut,
     RequisicaoItemLancamento, RequisicaoItemResultado,
 )
-from auth.deps import get_current_user, exigir_papeis
+from auth.deps import get_current_user, exigir_papeis, exigir_canal_web
 from servicos import escopo as _escopo
 from calculo_estoque import saldos_por_produto, ultimos_custos
 from servicos.requisicao import (
@@ -209,7 +209,8 @@ def atender(requisicao_id: int, db: Session = Depends(get_db),
                                 resumo=resumo_requisicao(db, req))
 
 
-@router.post("/{requisicao_id}/cancelar", response_model=RequisicaoOut)
+@router.post("/{requisicao_id}/cancelar", response_model=RequisicaoOut,
+             dependencies=[Depends(exigir_canal_web)])
 def cancelar(requisicao_id: int, db: Session = Depends(get_db),
              usuario=Depends(requer(Capacidade.ATENDER_REQUISICAO))):
     try:

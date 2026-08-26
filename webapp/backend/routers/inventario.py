@@ -31,7 +31,7 @@ from schemas import (
     SessaoInventarioOut, SessaoInventarioAbrir, InventarioDetalheOut,
     InventarioItemOut, ContagemItem, ContagemLancamento, ContagemResultado,
 )
-from auth.deps import get_current_user, exigir_papeis
+from auth.deps import get_current_user, exigir_papeis, exigir_canal_web
 from calculo_estoque import saldos_por_produto, ultimos_custos
 from servicos.contagem import (registrar_contagem, ErroContagem, ORIGEM_WEB,
                                STATUS_ACEITA_CONTAGEM)
@@ -470,7 +470,8 @@ def lancar_contagem(sessao_id: int, dados: ContagemItem, db: Session = Depends(g
 # ==============================================================================
 # FINALIZAÇÃO — aplica as contagens ao estoque
 # ==============================================================================
-@router.post("/sessoes/{sessao_id}/finalizar", response_model=InventarioDetalheOut)
+@router.post("/sessoes/{sessao_id}/finalizar", response_model=InventarioDetalheOut,
+             dependencies=[Depends(exigir_canal_web)])
 def finalizar(sessao_id: int, db: Session = Depends(get_db),
               usuario=Depends(requer(Capacidade.FINALIZAR_INVENTARIO))):
     """Encerra o inventário e passa as quantidades contadas para o estoque.
@@ -521,7 +522,8 @@ def finalizar(sessao_id: int, db: Session = Depends(get_db),
 # ==============================================================================
 # CANCELAMENTO
 # ==============================================================================
-@router.post("/sessoes/{sessao_id}/cancelar", response_model=SessaoInventarioOut)
+@router.post("/sessoes/{sessao_id}/cancelar", response_model=SessaoInventarioOut,
+             dependencies=[Depends(exigir_canal_web)])
 def cancelar(sessao_id: int, db: Session = Depends(get_db),
              usuario=Depends(requer(Capacidade.FINALIZAR_INVENTARIO))):
     """Cancela o inventário. Ele continua consultável para análise, e o número

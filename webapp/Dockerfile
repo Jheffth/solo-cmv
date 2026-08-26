@@ -18,6 +18,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
+# O bot vem na MESMA imagem, e não numa própria, por um motivo prático: as
+# duas subiriam do mesmo commit de qualquer jeito, e duas imagens dobram o
+# tempo de build a cada deploy para separar 20 KB de código. O que separa os
+# dois é o processo — serviço próprio no compose, que cai sozinho sem levar
+# o sistema web junto.
+COPY bot/ ./bot/
 COPY MIGRACAO_POSTGRES.md ./
 
 WORKDIR /app/backend

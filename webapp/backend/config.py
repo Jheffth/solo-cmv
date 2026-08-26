@@ -98,3 +98,32 @@ def _resolver_chave() -> str:
 
 
 SECRET_KEY = _resolver_chave()
+
+
+# ==============================================================================
+# O SEGREDO DO BOT — como o processo do bot se identifica na API
+# ==============================================================================
+# O PROBLEMA QUE ISTO RESOLVE
+# O bot reinicia a cada deploy. Se os tokens dos usuários vivessem só na
+# memória dele, todo mundo teria que vincular o Telegram de novo a cada
+# atualização do sistema — o que, na prática, significa que ninguém usaria o
+# bot depois da segunda vez.
+#
+# Guardar os tokens em disco resolveria e criaria pior: dezenas de
+# credenciais de longa duração paradas num arquivo, dentro de um container
+# que ninguém audita.
+#
+# A saída é o bot não guardar token nenhum. Ele apresenta ESTE segredo junto
+# do chat_id, e a API — que já sabe qual usuário tem aquele chat_id vinculado
+# — devolve um token curto para aquele pedido. Nada de credencial em repouso.
+#
+# O QUE ISTO CUSTA, DITO EM VOZ ALTA
+# Quem tiver este segredo pode agir como qualquer pessoa JÁ VINCULADA, dentro
+# dos limites do canal Telegram (não finaliza inventário, não cancela, não
+# define meta). O raio é o mesmo de quem roubasse o token do @BotFather — que
+# mora no mesmo `.env`, no mesmo container. Não estamos abrindo uma porta
+# nova; estamos evitando abrir uma segunda.
+#
+# Vazio em desenvolvimento é aceito e desliga o caminho: sem segredo
+# configurado, a rota recusa tudo, em vez de aceitar qualquer coisa.
+BOT_SEGREDO = os.getenv("BOT_SEGREDO", "").strip()

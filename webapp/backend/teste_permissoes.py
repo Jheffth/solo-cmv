@@ -289,9 +289,18 @@ A_VARRER = [
     '/api/perdas/motivos',
     '/api/usuarios/poderes',
     '/api/perfil',
+    # Rotas do canal Telegram. Entraram aqui porque a checagem de cobertura
+    # as acusou — que é o serviço que ela presta: rota nova não passa
+    # despercebida, vira decisão.
+    '/api/telegram/status',
+    '/api/telegram/comandos',
 ]
 if SESSAO_ID:
     A_VARRER.append(f'/api/inventario/sessoes/{SESSAO_ID}')
+
+# A busca de produto devolve nome, código e unidade — nunca custo. Vai na
+# varredura com um termo real, senão a lista viria vazia e não provaria nada.
+A_VARRER.append('/api/produtos/buscar?termo=batata')
 
 for rota in A_VARRER:
     r = cliente.get(rota, headers=OPE)

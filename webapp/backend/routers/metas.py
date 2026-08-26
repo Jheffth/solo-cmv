@@ -25,7 +25,7 @@ from models import (
 from schemas import (
     MetaPainel, MetaLinha, MetaDefinicao, MetaHistoricoItem, MetaDistribuicao,
 )
-from auth.deps import get_current_user, exigir_papeis
+from auth.deps import get_current_user, exigir_papeis, exigir_canal_web
 from servicos.permissoes import Capacidade, requer
 from servicos import metas as servico
 from servicos import cmv as motor_cmv
@@ -155,7 +155,8 @@ def painel(unidade_id: Optional[int] = None,
     )
 
 
-@router.post("", response_model=MetaHistoricoItem, status_code=201)
+@router.post("", response_model=MetaHistoricoItem, status_code=201,
+             dependencies=[Depends(exigir_canal_web)])
 def definir(dados: MetaDefinicao, db: Session = Depends(get_db),
             usuario=Depends(requer(Capacidade.DEFINIR_META))):
     """Abre uma vigência nova. A anterior é fechada, nunca apagada."""
@@ -209,7 +210,7 @@ def previa_distribuicao(meta_geral: float,
     return previa
 
 
-@router.post("/distribuir")
+@router.post("/distribuir", dependencies=[Depends(exigir_canal_web)])
 def distribuir(dados: MetaDistribuicao, db: Session = Depends(get_db),
                usuario=Depends(requer(Capacidade.DEFINIR_META))):
     """Define a meta geral e reparte entre as famílias, proporcional ao custo."""

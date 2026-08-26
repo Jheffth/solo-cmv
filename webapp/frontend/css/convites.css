@@ -293,3 +293,28 @@ tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: no
 
 .sidebar-user { transition: background .15s; border-radius: 8px; }
 .sidebar-user:hover { background: rgba(255, 255, 255, .06); }
+
+/* ------------------------------------------------- vínculo com o Telegram */
+/* O código é para ser LIDO e digitado noutro aparelho: grande, espaçado e
+   monoespaçado, porque quem confere 6 dígitos na pressa troca 5 por S. */
+.tg-codigo {
+  margin: .8rem 0;
+  padding: 1rem 1.2rem;
+  border-radius: 10px;
+  background: var(--fundo-suave, rgba(37, 99, 235, .07));
+  border-left: 3px solid var(--primaria, #2563eb);
+}
+.tg-codigo strong {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 2rem;
+  letter-spacing: .28em;
+  color: var(--primaria, #2563eb);
+}
+.tg-codigo p { margin: .6rem 0 .4rem; font-size: .92rem; }
+.tg-codigo code {
+  background: rgba(0, 0, 0, .06);
+  padding: .15rem .4rem;
+  border-radius: 4px;
+}
+.tg-codigo small { color: var(--texto-suave, #6b7280); font-size: .82rem; }

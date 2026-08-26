@@ -24,8 +24,8 @@ import enum
 from datetime import datetime, date
 
 from sqlalchemy import (
-    Column, Integer, String, Float, Boolean, Date, DateTime, ForeignKey,
-    Enum, Text, Table, UniqueConstraint,
+    Column, Integer, BigInteger, String, Float, Boolean, Date, DateTime,
+    ForeignKey, Enum, Text, Table, UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -326,6 +326,18 @@ class Usuario(Base):
     # que ninguém lembre de configurar um volume. Se um dia houver
     # armazenamento de verdade, esta coluna vira a URL e nada mais muda.
     avatar_url = Column(Text, nullable=True)
+
+    # ------------------------------------------------------------- Telegram
+    # O vínculo com a conta de Telegram. Nulo = não vinculado, e o bot não
+    # responde nada além de "quem é você?".
+    #
+    # Fica no usuário, e não numa tabela à parte, porque é atributo dele: uma
+    # pessoa, uma conta de Telegram. Desvincular é anular esta coluna, e isso
+    # invalida o token do bot na hora — a checagem de vínculo acontece antes
+    # de o token ser sequer lido.
+    telegram_chat_id = Column(BigInteger, unique=True, nullable=True, index=True)
+    telegram_username = Column(String(64), nullable=True)   # só para exibir; muda
+    telegram_vinculado_em = Column(DateTime, nullable=True)
 
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -865,3 +877,161 @@ class ExecucaoBackup(Base):
     # Em caso de falha, o que aconteceu — para quem abrir não precisar ir
     # atrás do log para descobrir se foi disco cheio ou banco fora do ar.
     mensagem = Column(Text, nullable=True)
+
+
+# ==============================================================================
+# TELEGRAM — o canal de quem está com a mão ocupada
+# ==============================================================================
+# POR QUE O VÍNCULO É POR CÓDIGO, E NUNCA POR SENHA NO CHAT
+#
+# O Telegram entrega `chat_id` (número estável) e `username` (que o dono troca
+# quando quiser). A chave é o `chat_id`; o username só serve para exibir.
+#
+# Pedir login e senha dentro do chat pareceria mais simples e seria bem pior:
+# a mensagem fica no histórico do aparelho, no aparelho de quem receber um
+# encaminhamento, e nos servidores do Telegram. Seriam três lugares que não
+# controlamos guardando uma credencial nossa.
+#
+# Com o código, o segredo que trafega vale 10 minutos, serve uma vez só, e
+# não abre nada sozinho — quem o digita já precisa estar com o celular na mão
+# no momento em que alguém de dentro do sistema o gerou.
+class CodigoPareamento(Base):
+    """Código de 6 dígitos que liga uma conta de Telegram a um usuário."""
+    __tablename__ = "codigos_pareamento"
+
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    codigo = Column(String(6), nullable=False, index=True)
+    criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expira_em = Column(DateTime, nullable=False)
+
+    # Queimado ao usar. Guardar em vez de apagar deixa "este código já foi
+    # usado às 14h32" diferente de "este código nunca existiu" — e as duas
+    # situações pedem respostas diferentes para quem está tentando entrar.
+    usado_em = Column(DateTime, nullable=True)
+    chat_id = Column(BigInteger, nullable=True)     # quem consumiu
+
+    usuario = relationship("Usuario")
+
+
+class TentativaVinculo(Base):
+    """Cada palpite errado de código, para que adivinhar deixe de compensar.
+
+    POR QUE PRECISA EXISTIR
+    Seis dígitos são um milhão de combinações, e isso soa muito até alguém
+    medir: 400 tentativas erradas do mesmo chat levaram 1,8 segundo. Sem
+    limite, a defesa não é o tamanho do código — é a esperança de que
+    ninguém tente, e esperança não é controle.
+
+    O prêmio também não é pequeno. O código não diz de quem é: quem acertar
+    qualquer código vivo recebe o token DAQUELA pessoa, e se ela for
+    Diretora, recebe o acesso de Diretora. E o `chat_id` vem no pedido, então
+    o atacante amarra a conta ao Telegram dele.
+
+    O CONTADOR É POR CHAT, NÃO POR CÓDIGO
+    Contar por código protegeria o código; o que precisa ser contido é quem
+    tenta. Por chat, cinco erros já custam quinze minutos, e varrer um
+    milhão passa a exigir uma conta de Telegram nova a cada cinco palpites —
+    que é o que transforma o ataque de tedioso em inviável.
+    """
+    __tablename__ = "tentativas_vinculo"
+
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(BigInteger, nullable=False, index=True)
+    quando = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class ModoTelegram(str, enum.Enum):
+    """Onde a conversa está. É o que permite responder só "12,5".
+
+    Sem modo, cada mensagem teria que se explicar inteira — "contagem do
+    inventário 3, produto batata doce, 12,5 quilos" — e o canal perderia a
+    única vantagem que tem sobre a tela.
+    """
+    LIVRE = "LIVRE"
+    CONTAGEM = "CONTAGEM"
+    PERDA = "PERDA"
+    REQUISICAO = "REQUISICAO"
+    COMPRA = "COMPRA"
+
+
+class SessaoTelegram(Base):
+    """O "onde eu estava" de cada chat.
+
+    Mora no banco, e não em memória do processo, por um motivo prático: o bot
+    reinicia a cada deploy. Guardado em memória, quem estivesse no item 30 de
+    42 voltaria ao começo sem entender por quê — e recontaria itens já
+    contados, que é pior do que ter que recomeçar.
+    """
+    __tablename__ = "sessoes_telegram"
+
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(BigInteger, unique=True, nullable=False, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    unidade_id = Column(Integer, ForeignKey("unidades.id"), nullable=True)
+
+    modo = Column(Enumerado(ModoTelegram), nullable=False, default=ModoTelegram.LIVRE)
+
+    # JSON livre: id do inventário em curso, fila de itens, item aguardando
+    # quantidade. Coluna solta para cada um deles engessaria o desenho da
+    # conversa, que ainda vai mudar bastante.
+    contexto = Column(Text, nullable=True)
+
+    # Para o /desfazer. Guarda o suficiente para reverter o último ato — e só
+    # o último: desfazer em cadeia, no celular, sem ver a lista, é como se
+    # apaga trabalho sem perceber.
+    ultimo_lancamento = Column(Text, nullable=True)
+
+    atualizado_em = Column(DateTime, default=datetime.utcnow,
+                           onupdate=datetime.utcnow, nullable=False)
+
+    usuario = relationship("Usuario")
+    unidade = relationship("Unidade")
+
+
+class UpdateProcessado(Base):
+    """Idempotência — o risco mais provável e o mais silencioso.
+
+    O Telegram REENTREGA todo update que o servidor não confirmou. Sem esta
+    tabela, uma queda de rede no momento errado vira contagem duplicada; e
+    contagem duplicada não dá erro, não avisa ninguém, e estraga o inventário
+    inteiro em silêncio.
+
+    Cresce sem parar e por isso é podada: o Telegram não reentrega nada com
+    mais de 24 h, então 7 dias é folga suficiente.
+    """
+    __tablename__ = "updates_telegram"
+
+    id = Column(Integer, primary_key=True)
+    update_id = Column(BigInteger, unique=True, nullable=False, index=True)
+    processado_em = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class SinonimoProduto(Base):
+    """Como esta casa — ou esta nota fiscal — chama este produto.
+
+    Dois propósitos que parecem diferentes e são o mesmo. Aprender que a
+    pessoa digita "bata doce", e aprender que a nota do ASSAI escreve
+    "TOMATE ITAL CX 20KG". Nos dois casos é um apelido apontando para um
+    produto.
+
+    Com `fornecedor_id` nulo vale para a busca do bot; preenchido, vale para
+    a importação de nota — e aí `fator_conversao` resolve o segundo gargalo,
+    que é a nota vir em caixa e o inventário contar em quilo.
+    """
+    __tablename__ = "sinonimos_produto"
+
+    id = Column(Integer, primary_key=True)
+    produto_id = Column(Integer, ForeignKey("produtos.id"), nullable=False, index=True)
+    termo = Column(String(180), nullable=False, index=True)
+    fornecedor_id = Column(Integer, ForeignKey("fornecedores.id"), nullable=True)
+
+    # 20 quando a nota vem em caixa de 20 Kg. 1 para apelido de digitação.
+    fator_conversao = Column(Float, nullable=False, default=1.0)
+
+    # Quantas vezes foi confirmado — ordena a busca. Apelido usado 40 vezes
+    # vale mais que um digitado uma vez por engano.
+    usos = Column(Integer, nullable=False, default=0)
+    criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    produto = relationship("Produto")
