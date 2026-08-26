@@ -75,3 +75,7 @@ desktop.ini
 .idea/
 .vscode/
 ~$*
+
+# Scripts de diagnóstico com credenciais de servidor. NUNCA versionar.
+webapp/backend/scratch/
+scratch/

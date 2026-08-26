@@ -288,6 +288,7 @@ A_VARRER = [
     '/api/fornecedores',
     '/api/perdas/motivos',
     '/api/usuarios/poderes',
+    '/api/whatsapp/status',
     '/api/perfil',
     # Rotas do canal Telegram. Entraram aqui porque a checagem de cobertura
     # as acusou — que é o serviço que ela presta: rota nova não passa
@@ -321,6 +322,8 @@ registradas = {
 cobertas = {p.split('?')[0] for p in A_VARRER} | set(ISENTAS)
 # O que é reconhecidamente sem dinheiro ou fora do alcance do operador
 FORA = {'/api/docs', '/api/redoc', '/api/openapi.json',
+        # QR de conexão do WhatsApp: Diretor para cima, e não traz dinheiro.
+        '/api/whatsapp/qrcode',
         '/api/health', '/api/versao/', '/api/auth/me', '/api/nfe/status',
         '/api/unidades', '/api/unidades/escopo', '/api/produtos/unidades-medida',
         '/api/vendas', '/api/relatorios', '/api/metas/painel', '/api/metas',

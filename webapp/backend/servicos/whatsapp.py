@@ -39,6 +39,21 @@ class ErroVinculoWhatsApp(Exception):
         super().__init__(mensagem)
 
 
+# QUANTO O QR PODE ENVELHECER ANTES DE SER INÚTIL
+#
+# O QR do WhatsApp vive cerca de 20 segundos: o Baileys gira um novo a cada
+# ~20s e o servidor descarta o anterior. Escanear um vencido é o pior tipo de
+# falha — o celular LÊ o código, aceita, tenta parear, e o servidor já jogou
+# a vaga fora. Não aparece erro em lugar nenhum; simplesmente não conecta.
+#
+# O cache estava em 30 segundos e a tela buscava de 30 em 30. Somados, o QR
+# exibido podia ter até 60 segundos — três vezes a validade dele. Não era um
+# problema de leitura, de contraste ou de tamanho do QR, que foi onde se
+# procurou primeiro: era um código morto na tela.
+#
+# 8 segundos deixa margem para a viagem até o servidor e a pintura na tela.
+SEGUNDOS_CACHE_QRCODE = 8
+
 CACHE_QRCODE = {
     "base64": None,
     "code": None,
@@ -64,15 +79,17 @@ def atualizar_cache_qrcode(dados: dict) -> None:
 def obter_qrcode_cache_ou_api(numero_telefone: str = None) -> dict:
     if not numero_telefone and CACHE_QRCODE["base64"] and CACHE_QRCODE["atualizado_em"]:
         idade = (datetime.utcnow() - CACHE_QRCODE["atualizado_em"]).total_seconds()
-        if idade < 30:
+        if idade < SEGUNDOS_CACHE_QRCODE:
             return {
                 "sucesso": True,
                 "base64": CACHE_QRCODE["base64"],
                 "code": CACHE_QRCODE["code"],
                 "pairing_code": CACHE_QRCODE["pairing_code"],
-                "estado": "connecting"
+                "estado": "connecting",
+                "idade_segundos": round(idade, 1),
             }
     res = cliente_evolution.obter_qrcode(numero_telefone=numero_telefone)
+    res["idade_segundos"] = 0
     if res.get("base64"):
         CACHE_QRCODE["base64"] = res.get("base64")
         CACHE_QRCODE["code"] = res.get("code")

@@ -147,7 +147,10 @@ services:
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: "postgresql"
-      DATABASE_CONNECTION_URI: "postgresql://solo_cmv:solo_cmv_2026_secreto@db:5432/solo_cmv?schema=evolution"
+      # Montada a partir do .env, nunca escrita aqui. Este arquivo é
+      # versionado; senha em arquivo versionado é senha pública, e esta já
+      # foi publicada uma vez por estar nesta linha.
+      DATABASE_CONNECTION_URI: "postgresql://${POSTGRES_USER:-solo_cmv}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-solo_cmv}?schema=evolution"
       DATABASE_CONNECTION_CLIENT_NAME: "solo_cmv_evolution"
       DATABASE_SAVE_DATA_INSTANCE: "true"
       DATABASE_SAVE_DATA_NEW_MESSAGE: "false"

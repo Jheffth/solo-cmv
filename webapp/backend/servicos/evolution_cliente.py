@@ -78,33 +78,105 @@ class EvolutionCliente:
         inst = instancia or self.instancia
         webhook_url = os.getenv("SOLO_API_WHATSAPP_WEBHOOK", "http://app:8095/api/whatsapp/webhook")
 
+        # FORMATO DA v2, E ISSO NÃO É DETALHE.
+        #
+        # Na v1 o webhook ia solto: `webhook` como string, mais
+        # `webhook_by_events` e `events` no primeiro nível. A v2 espera um
+        # OBJETO. Mandando no formato antigo, a v2 aceita a criação da
+        # instância e simplesmente ignora o webhook — sem erro, sem aviso.
+        #
+        # A consequência é justamente o sintoma que se via: o evento
+        # QRCODE_UPDATED nunca chegava, o backend nunca recebia o QR novo, e
+        # a tela ficava mostrando o último que conseguiu buscar. Um QR do
+        # WhatsApp vive ~20 segundos; escanear um vencido faz o celular
+        # aceitar e o servidor descartar — nada acontece, e não há erro em
+        # lugar nenhum para investigar.
+        #
+        # `base64: True` é o que faz o evento trazer a imagem junto. Sem
+        # isso, chega o aviso de que há QR novo e não o QR.
         payload = {
             "instanceName": inst,
-            "token": "",
             "qrcode": True,
             "integration": "WHATSAPP-BAILEYS",
-            "webhook": webhook_url,
-            "webhook_by_events": False,
-            "events": [
-                "MESSAGES_UPSERT",
-                "CONNECTION_UPDATE",
-                "QRCODE_UPDATED"
-            ]
+            "webhook": {
+                "enabled": True,
+                "url": webhook_url,
+                "byEvents": False,
+                "base64": True,
+                "events": [
+                    "QRCODE_UPDATED",
+                    "CONNECTION_UPDATE",
+                    "MESSAGES_UPSERT",
+                ],
+            },
         }
 
         res = self._fazer_requisicao("POST", "/instance/create", payload=payload, timeout=12)
         if res.get("status_code") in (200, 201):
+            # Registrar de novo por fora. A criação já leva o webhook, mas
+            # instância que JÁ existia (403 abaixo) foi criada antes desta
+            # correção — e ficaria para sempre sem webhook, porque ninguém
+            # cria de novo o que já existe.
+            self.registrar_webhook(inst, webhook_url)
             return res.get("dados") or {}
+
+        # 403 aqui quer dizer "esse nome já está em uso", que é o caso normal
+        # a partir da segunda chamada. Não é falha — mas é a hora de garantir
+        # que o webhook dela está certo.
+        if res.get("status_code") == 403:
+            self.registrar_webhook(inst, webhook_url)
+            return {"status": "ja_existe"}
         return {"status": "resultado", "detalhes": res.get("erro")}
+
+    def registrar_webhook(self, instancia: str = None, url: str = None) -> bool:
+        """Aponta o webhook da instância para cá — idempotente.
+
+        Existe separado da criação porque instância criada antes da correção
+        acima nasceu sem webhook e não seria recriada nunca.
+        """
+        inst = instancia or self.instancia
+        destino = url or os.getenv(
+            "SOLO_API_WHATSAPP_WEBHOOK", "http://app:8095/api/whatsapp/webhook")
+        payload = {
+            "webhook": {
+                "enabled": True,
+                "url": destino,
+                "byEvents": False,
+                "base64": True,
+                "events": [
+                    "QRCODE_UPDATED",
+                    "CONNECTION_UPDATE",
+                    "MESSAGES_UPSERT",
+                ],
+            }
+        }
+        res = self._fazer_requisicao("POST", f"/webhook/set/{inst}",
+                                     payload=payload, timeout=8)
+        ok = res.get("status_code") in (200, 201)
+        if not ok:
+            log.warning("Webhook não registrado para %s: %s", inst, res.get("erro"))
+        return ok
 
     def obter_qrcode(self, instancia: str = None, numero_telefone: str = None) -> Dict[str, Any]:
         """Obtém o QR Code em Base64 ou pairing code para conectar o WhatsApp."""
         inst = instancia or self.instancia
 
-        # Se o estado atual estiver recusado ou sem sessão, recria a instância
+        # O estado que a Evolution devolve é "close", sem o D — e o teste
+        # aqui procurava "closed". Nunca casava, então o ramo de recriar era
+        # código morto e toda chamada caía no `else`, fazendo um POST de
+        # criação a cada busca de QR (a cada 10 segundos, agora).
+        #
+        # Criar é idempotente e devolve 403 quando já existe, então não
+        # quebrava nada — só escondia o caso que importa: instância travada
+        # em "close" precisa ser recriada, e nunca era.
         st = self.obter_status_instancia(inst)
-        if st.get("estado") in ("refused", "closed"):
+        estado = (st.get("estado") or "").lower()
+        if estado in ("close", "closed", "refused"):
             self.recriar_instancia(inst)
+        elif estado == "connecting":
+            # Já está esperando alguém escanear. Recriar aqui invalidaria o
+            # QR que a pessoa tem na mão neste instante.
+            pass
         else:
             self.criar_instancia_se_necessario(inst)
 

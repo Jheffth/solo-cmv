@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Usuario
+from models import PapelUsuario, Usuario
 from auth.deps import get_current_user, exigir_canal_web, exigir_papeis
 from servicos import whatsapp as servico
 from servicos.evolution_cliente import cliente_evolution
@@ -40,7 +40,7 @@ def desvincular(db: Session = Depends(get_db),
 @router.get("/qrcode")
 def obter_qrcode(numero: Optional[str] = None,
                  db: Session = Depends(get_db),
-                 usuario: Usuario = Depends(exigir_papeis(["ARQUITETO", "DIRETOR"]))):
+                 usuario: Usuario = Depends(exigir_papeis(PapelUsuario.DIRETOR))):
     """
     Obtém o QR Code atual ou código de pareamento para o número fornecido.
     Exclusivo para Arquiteto e Diretores.
@@ -54,7 +54,7 @@ def obter_qrcode(numero: Optional[str] = None,
 @router.post("/conectar")
 @router.post("/reiniciar")
 def reiniciar_conexao(db: Session = Depends(get_db),
-                      usuario: Usuario = Depends(exigir_papeis(["ARQUITETO", "DIRETOR"]))):
+                      usuario: Usuario = Depends(exigir_papeis(PapelUsuario.DIRETOR))):
     """Reinicia e recria a instância de WhatsApp na Evolution API para novo QR Code."""
     cliente_evolution.recriar_instancia()
     return servico.obter_qrcode_cache_ou_api()

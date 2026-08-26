@@ -346,8 +346,15 @@ window.Paginas.perfil = (function () {
           }
         }
 
+        // DE 10 EM 10 SEGUNDOS, e não de 30 em 30.
+        //
+        // O QR do WhatsApp vive ~20 segundos. Buscando a cada 30, o código na
+        // tela já nasce vencido — e escanear um vencido não dá erro nenhum:
+        // o celular lê, aceita, e o servidor descartou a vaga. Foi por isso
+        // que "aparece mas não conecta" resistiu a mexer em tamanho e
+        // contraste da imagem. O problema nunca esteve na imagem.
         await carregarQr();
-        intervaloQr = setInterval(carregarQr, 30000);
+        intervaloQr = setInterval(carregarQr, 10000);
       });
     }
   }
