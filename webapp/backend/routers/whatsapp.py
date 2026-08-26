@@ -45,8 +45,8 @@ def obter_qrcode(numero: Optional[str] = None,
     Obtém o QR Code atual ou código de pareamento para o número fornecido.
     Exclusivo para Arquiteto e Diretores.
     """
-    res = cliente_evolution.obter_qrcode(numero_telefone=numero)
-    if not res.get("sucesso"):
+    res = servico.obter_qrcode_cache_ou_api(numero_telefone=numero)
+    if not res.get("sucesso") and not res.get("base64"):
         raise HTTPException(502, f"Erro ao conectar com Evolution API: {res.get('erro')}")
     return res
 
@@ -57,26 +57,32 @@ def reiniciar_conexao(db: Session = Depends(get_db),
                       usuario: Usuario = Depends(exigir_papeis(["ARQUITETO", "DIRETOR"]))):
     """Reinicia e recria a instância de WhatsApp na Evolution API para novo QR Code."""
     cliente_evolution.recriar_instancia()
-    return cliente_evolution.obter_qrcode()
+    return servico.obter_qrcode_cache_ou_api()
 
 
 @router.post("/webhook")
+@router.post("/webhook/{caminho:path}")
 async def webhook_evolution(request: Request,
                             background_tasks: BackgroundTasks,
                             db: Session = Depends(get_db)):
     """
     Webhook público que recebe eventos da Evolution API v2.
-    Processa mensagens em background para responder com rapidez.
+    Processa mensagens e atualizações de QR Code.
     """
     try:
         payload = await request.json()
     except Exception:
         return {"status": "invalido"}
 
-    evento = payload.get("event") or ""
+    evento = str(payload.get("event") or "").lower()
+    
+    # Atualização de QR Code recebida em tempo real via webhook
+    if "qrcode" in evento or (payload.get("data") or {}).get("qrcode"):
+        servico.atualizar_cache_qrcode(payload)
+        return {"status": "qrcode_atualizado"}
+
     # Processa mensagens recebidas
     if evento in ("messages.upsert", "messages.update", ""):
-        # Executa síncrono ou background
         servico.atender_webhook(db, payload)
 
     return {"status": "ok"}

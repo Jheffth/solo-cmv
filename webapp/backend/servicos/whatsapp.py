@@ -39,6 +39,48 @@ class ErroVinculoWhatsApp(Exception):
         super().__init__(mensagem)
 
 
+CACHE_QRCODE = {
+    "base64": None,
+    "code": None,
+    "pairing_code": None,
+    "atualizado_em": None
+}
+
+
+def atualizar_cache_qrcode(dados: dict) -> None:
+    data = dados.get("data") or {}
+    qrcode = data.get("qrcode") or {}
+    b64 = qrcode.get("base64") or data.get("base64")
+    if b64:
+        if not b64.startswith("data:"):
+            b64 = f"data:image/png;base64,{b64}"
+        CACHE_QRCODE["base64"] = b64
+        CACHE_QRCODE["code"] = qrcode.get("code") or data.get("code")
+        CACHE_QRCODE["pairing_code"] = qrcode.get("pairingCode") or data.get("pairingCode")
+        CACHE_QRCODE["atualizado_em"] = datetime.utcnow()
+        log.info("QR Code de WhatsApp atualizado em cache com sucesso.")
+
+
+def obter_qrcode_cache_ou_api(numero_telefone: str = None) -> dict:
+    if not numero_telefone and CACHE_QRCODE["base64"] and CACHE_QRCODE["atualizado_em"]:
+        idade = (datetime.utcnow() - CACHE_QRCODE["atualizado_em"]).total_seconds()
+        if idade < 30:
+            return {
+                "sucesso": True,
+                "base64": CACHE_QRCODE["base64"],
+                "code": CACHE_QRCODE["code"],
+                "pairing_code": CACHE_QRCODE["pairing_code"],
+                "estado": "connecting"
+            }
+    res = cliente_evolution.obter_qrcode(numero_telefone=numero_telefone)
+    if res.get("base64"):
+        CACHE_QRCODE["base64"] = res.get("base64")
+        CACHE_QRCODE["code"] = res.get("code")
+        CACHE_QRCODE["pairing_code"] = res.get("pairing_code")
+        CACHE_QRCODE["atualizado_em"] = datetime.utcnow()
+    return res
+
+
 def _gerar_codigo() -> str:
     return "".join(str(secrets.randbelow(10)) for _ in range(DIGITOS))
 
