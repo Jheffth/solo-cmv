@@ -390,7 +390,8 @@ def processar_comando(db: Session, usuario: Usuario, comando: str, texto_complet
         if not eh_gestor:
             return "🚫 Apenas Gerentes e Diretores podem congelar inventários."
 
-        from routers.inventario import _produtos_do_escopo, saldos_por_produto, ultimos_custos
+        from calculo_estoque import saldos_por_produto, ultimos_custos
+        from routers.inventario import _produtos_do_escopo
         from models import SessaoInventario, StatusSessaoInventario, InventarioItem
 
         param = partes[1] if len(partes) > 1 else None
@@ -597,5 +598,9 @@ def atender_webhook(db: Session, evento: Dict[str, Any]) -> None:
 
     # 3. Usuário autenticado: processa comando
     primeira_palavra = partes[0] if partes else ""
-    resposta = processar_comando(db, usuario, primeira_palavra, texto)
+    try:
+        resposta = processar_comando(db, usuario, primeira_palavra, texto)
+    except Exception as e:
+        log.exception("Erro ao processar comando WhatsApp: %s", e)
+        resposta = f"❌ Erro ao executar `{primeira_palavra}`: {e}"
     cliente_evolution.enviar_texto(remote_jid, resposta)
