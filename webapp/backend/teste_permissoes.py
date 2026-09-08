@@ -301,6 +301,10 @@ A_VARRER = [
     # despercebida, vira decisão.
     '/api/telegram/status',
     '/api/telegram/comandos',
+    # O que foi tirado do estoque, com o valor de cada lançamento. É dinheiro
+    # e é auditoria: está aqui para a varredura provar que o operador não
+    # alcança nem o valor nem a informação de que algo foi excluído.
+    '/api/movimentos/excluidos',
 ]
 if SESSAO_ID:
     A_VARRER.append(f'/api/inventario/sessoes/{SESSAO_ID}')
@@ -394,6 +398,37 @@ ok(rotulos <= esperados,
    f'só volta o que aceita contagem: {rotulos or "nenhum"}')
 ok(len(prontas) <= len(todas),
    f'{len(prontas)} de {len(todas)} inventários servem para contar')
+
+# ==============================================================================
+print('\n[N] APAGAR ESTOQUE É RECUSADO NA API, NÃO ESCONDIDO NA TELA')
+# ==============================================================================
+# A tela some com a caixinha de seleção para quem não pode. Isso é cortesia,
+# não segurança: quem tem o token faz o POST direto. A recusa que vale é
+# esta — e é ela que este bloco prova, papel por papel.
+for rotulo, cabecalho in (('operador', OPE), ('gerente', GER), ('diretor', DIR)):
+    r = cliente.post('/api/movimentos/excluir',
+                     json={'ids': [1], 'motivo': 'tentativa'},
+                     headers=cabecalho)
+    ok(r.status_code == 403,
+       f'{rotulo} tem o POST de exclusão RECUSADO ({r.status_code})')
+
+# Anular a nota é do Diretor para cima — e por isso o gerente para aqui.
+r = cliente.post('/api/nfe/999999/anular', json={'motivo': 'x'}, headers=GER)
+ok(r.status_code == 403,
+   f'gerente NÃO anula nota ({r.status_code})')
+# O Diretor passa da permissão e esbarra no 404 da nota inexistente — que é
+# exatamente a prova de que ele passou pela permissão.
+r = cliente.post('/api/nfe/999999/anular', json={'motivo': 'x'}, headers=DIR)
+ok(r.status_code == 404,
+   f'diretor passa da permissão e chega na nota ({r.status_code})')
+
+# E a auditoria do que sumiu é do Diretor: quem responde pelo número da
+# empresa precisa ver o que foi tirado dele, mesmo sem poder tirar.
+ok(cliente.get('/api/movimentos/excluidos', headers=OPE).status_code == 403,
+   'operador não vê a lista do que foi excluído')
+ok(cliente.get(f'/api/movimentos/excluidos?unidade_id={UNI_ID}',
+               headers=DIR).status_code == 200,
+   'e o diretor vê — auditar não é o mesmo que poder excluir')
 
 shutil.rmtree(os.path.dirname(_copia), ignore_errors=True)
 print('\n' + ('FALHAS:\n  ' + '\n  '.join(falhas) if falhas else 'Tudo certo.'))

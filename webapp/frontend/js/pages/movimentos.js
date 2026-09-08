@@ -47,6 +47,25 @@ const qtdBR = (v) => Number(v || 0).toLocaleString('pt-BR', { maximumFractionDig
 window.Paginas.movimentos = (function () {
   let filtroTipo = '';
   let filtroBusca = '';
+  // Os ids marcados, e a última lista carregada — a confirmação precisa
+  // NOMEAR o que vai sair, e para isso precisa dos dados, não só dos ids.
+  let selecionados = new Set();
+  let ultimaLista = [];
+
+  /* A CAIXINHA DE SELEÇÃO É UMA PERMISSÃO, NÃO UM ENFEITE.
+
+     Quem decide se ela aparece é o servidor, em dois níveis: a capacidade
+     EXCLUIR_MOVIMENTO diz se a coluna existe para esta pessoa, e o campo
+     `travado_para_excluir` de cada linha — calculado pela MESMA função que
+     recusa no POST — diz se aquela linha pode ser marcada.
+
+     Nada disso é conferido aqui por conta própria. Tela que decide sozinha
+     quem pode o quê é uma segunda régua de permissão, escrita em
+     JavaScript e nunca testada contra a primeira; as duas concordam até o
+     dia em que uma mudar. */
+  function podeExcluir() {
+    return typeof window.pode === 'function' && window.pode('EXCLUIR_MOVIMENTO');
+  }
 
   function tabela(movimentos, produtos, fornecedores) {
     const acha = (id) => produtos.find((p) => p.id === id) || {};
@@ -55,10 +74,12 @@ window.Paginas.movimentos = (function () {
       return `<div class="estado-vazio">Nenhuma movimentação encontrada com os filtros atuais.</div>`;
     }
     const regional = typeof emRegional === 'function' && emRegional();
+    const selecionavel = podeExcluir();
     return `
       <div class="tabela-rolavel">
       <table class="tabela-simples">
         <thead><tr>
+          ${selecionavel ? '<th class="mov-sel"><input type="checkbox" id="mov-todos" title="selecionar todos os que podem ser excluídos"></th>' : ''}
           ${regional ? '<th>Unidade</th>' : ''}
           <th>Data</th><th>Tipo</th><th>Nº Documento</th><th>Produto</th>
           <th class="num">Qtd.</th><th class="num">Custo unit.</th><th class="num">Total</th>
@@ -73,7 +94,17 @@ window.Paginas.movimentos = (function () {
             const contexto = m.tipo === 'PERDA'
               ? (m.motivo ? `<span class="tag">${(m.motivo || '').replace(/_/g, ' ').toLowerCase()}</span>` : '—')
               : (achaForn(m.fornecedor_id).nome || '—');
-            return `<tr>
+            const travado = m.travado_para_excluir;
+            const selecao = selecionavel ? `
+              <td class="mov-sel">
+                <input type="checkbox" class="mov-marca" data-id="${m.id}"
+                       ${travado ? 'disabled' : ''}
+                       ${selecionados.has(m.id) ? 'checked' : ''}
+                       title="${travado ? String(travado).replace(/"/g, '&quot;') : 'selecionar para excluir'}">
+                ${travado ? '<span class="mov-cadeado" aria-hidden="true">🔒</span>' : ''}
+              </td>` : '';
+            return `<tr class="${selecionados.has(m.id) ? 'mov-marcado' : ''}">
+              ${selecao}
               ${regional ? `<td><span class="marca-unidade">${m.unidade_nome || '—'}</span></td>` : ''}
               <td>${dataBR(m.data)}</td>
               <td><span class="status-badge ${CLASSES_TIPO_MOVIMENTO[m.tipo] || ''}">${RÓTULOS_TIPO_MOVIMENTO[m.tipo] || m.tipo}</span></td>
@@ -88,6 +119,67 @@ window.Paginas.movimentos = (function () {
         </tbody>
       </table>
       </div>`;
+  }
+
+  /* A CONFIRMAÇÃO NOMEIA O QUE VAI SAIR.
+
+     "Excluir 3 lançamentos?" não é uma pergunta que alguém consiga responder
+     — é um pedido de coragem. Quem está prestes a mexer no estoque precisa
+     ver O QUÊ, QUANTO e DE QUAL NOTA, porque é aí que se percebe que a linha
+     marcada era a do mês passado.
+
+     E o texto avisa do efeito real: sai do saldo E do CMV. Quem só pensou
+     em "arrumar a lista" precisa saber que o número do mês vai mudar. */
+  function textoDaConfirmacao(marcados, produtos) {
+    const nome = (id) => (produtos.find((p) => p.id === id) || {}).nome || `#${id}`;
+    const linhas = marcados.slice(0, 8).map((m) =>
+      `  · ${dataBR(m.data)}  ${nome(m.produto_id)}  ${qtdBR(m.quantidade)}`
+      + `  ${moedaBR(m.custo_total)}  ${m.documento || m.numero_documento || ''}`);
+    const resto = marcados.length > 8
+      ? `\n  … e mais ${marcados.length - 8} lançamento(s)` : '';
+    const total = marcados.reduce((t, m) => t + (Number(m.custo_total) || 0), 0);
+    const notas = [...new Set(marcados
+      .filter((m) => m.tipo === 'COMPRA' && m.documento)
+      .map((m) => m.documento))];
+
+    return `Excluir ${marcados.length} lançamento(s) do estoque?\n\n`
+      + linhas.join('\n') + resto
+      + `\n\nTotal: ${moedaBR(total)}`
+      + `\n\nIsto sai do saldo E do CMV do período — o número do mês vai mudar.`
+      + (notas.length
+        ? `\nA(s) nota(s) ${notas.join(', ')} voltam a poder ser lançadas.` : '')
+      + `\n\nFica registrado quem excluiu e quando.`;
+  }
+
+  async function excluirMarcados(container, produtos, fornecedores) {
+    const marcados = ultimaLista.filter((m) => selecionados.has(m.id));
+    if (!marcados.length) return;
+    if (!confirm(textoDaConfirmacao(marcados, produtos))) return;
+
+    const motivo = prompt(
+      'Por que estes lançamentos estão sendo excluídos?\n'
+      + '(fica no registro, para quem olhar isto depois entender)', '') ;
+    if (motivo === null) return;   // desistiu no meio: nada é excluído
+
+    try {
+      const r = await api.post('/movimentos/excluir', {
+        ids: [...selecionados], motivo,
+      });
+      selecionados = new Set();
+      await carregar(container, produtos, fornecedores);
+      alert(`${r.excluidos} lançamento(s) saíram do estoque.`
+        + (r.avisos && r.avisos.length ? '\n\n' + r.avisos.join('\n') : ''));
+    } catch (erro) {
+      alert(erro.message || 'Não foi possível excluir.');
+    }
+  }
+
+  function atualizarBarra(container) {
+    const barra = container.querySelector('#mov-acoes');
+    if (!barra) return;
+    barra.hidden = selecionados.size === 0;
+    const contador = container.querySelector('#mov-selecionados');
+    if (contador) contador.textContent = `${selecionados.size} selecionado(s)`;
   }
 
   async function carregar(container, produtos, fornecedores) {
@@ -111,9 +203,38 @@ window.Paginas.movimentos = (function () {
         || (m.documento || m.numero_documento || '').toLowerCase().includes(termo));
     }
 
+    ultimaLista = movs;
+    // Marcado que saiu da lista (por filtro ou por já ter sido excluído) não
+    // pode continuar contando: senão o botão diz "3 selecionados" apontando
+    // para linhas que a pessoa não está mais vendo.
+    const visiveis = new Set(movs.map((m) => m.id));
+    selecionados = new Set([...selecionados].filter((id) => visiveis.has(id)));
+
     alvo.innerHTML = tabela(movs, produtos, fornecedores);
     container.querySelector('#mov-contagem').textContent = `${movs.length} registro(s)`;
     container.querySelector('#mov-limpar').hidden = !(filtroTipo || filtroBusca);
+    ligarSelecao(container, produtos, fornecedores);
+    atualizarBarra(container);
+  }
+
+  function ligarSelecao(container, produtos, fornecedores) {
+    container.querySelectorAll('.mov-marca').forEach((caixa) => {
+      caixa.addEventListener('change', () => {
+        const id = Number(caixa.dataset.id);
+        if (caixa.checked) selecionados.add(id); else selecionados.delete(id);
+        caixa.closest('tr').classList.toggle('mov-marcado', caixa.checked);
+        atualizarBarra(container);
+      });
+    });
+    const todos = container.querySelector('#mov-todos');
+    if (todos) todos.addEventListener('change', () => {
+      // Só os que PODEM. "Selecionar todos" que marcasse o travado só para
+      // a exclusão recusar o lote inteiro depois seria uma armadilha.
+      container.querySelectorAll('.mov-marca:not([disabled])').forEach((caixa) => {
+        caixa.checked = todos.checked;
+        caixa.dispatchEvent(new Event('change'));
+      });
+    });
   }
 
   return {
@@ -160,6 +281,17 @@ window.Paginas.movimentos = (function () {
             <button class="btn secundario" type="button" id="mov-limpar" hidden>Limpar filtros</button>
           </div>
 
+          ${podeExcluir() ? `
+            <div class="mov-acoes" id="mov-acoes" hidden>
+              <span id="mov-selecionados"></span>
+              <button class="btn btn-perigo" type="button" id="mov-excluir">
+                Excluir do estoque
+              </button>
+              <button class="btn secundario" type="button" id="mov-desmarcar">
+                Desmarcar
+              </button>
+            </div>` : ''}
+
           <div id="mov-tabela"></div>
         </div>
       `;
@@ -178,6 +310,15 @@ window.Paginas.movimentos = (function () {
         filtroTipo = ''; filtroBusca = '';
         container.querySelector('#mov-busca').value = '';
         container.querySelector('#mov-tipo').value = '';
+        carregar(container, produtos, fornecedores);
+      });
+
+      const botaoExcluir = container.querySelector('#mov-excluir');
+      if (botaoExcluir) botaoExcluir.addEventListener('click',
+        () => excluirMarcados(container, produtos, fornecedores));
+      const desmarcar = container.querySelector('#mov-desmarcar');
+      if (desmarcar) desmarcar.addEventListener('click', () => {
+        selecionados = new Set();
         carregar(container, produtos, fornecedores);
       });
 

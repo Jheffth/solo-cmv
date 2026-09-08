@@ -201,9 +201,14 @@ class StatusNotaFiscal(str, enum.Enum):
     AGUARDANDO_XML -> só a chave foi informada; os itens ainda não vieram
     CONFERINDO     -> itens lidos, esperando alguém casar produto e aprovar
     PROCESSADA     -> virou movimento de compra no estoque
+    ANULADA        -> foi lançada e depois TIRADA do estoque e do CMV. Não é
+                      o mesmo que descartada: descartada nunca entrou;
+                      anulada entrou, saiu, e pode ser relançada com a mesma
+                      chave — que é o motivo de este estado existir.
     DESCARTADA     -> conferida e recusada; fica no histórico, não some
     ERRO           -> a leitura falhou; a mensagem diz por quê
     """
+    ANULADA = "ANULADA"
     AGUARDANDO_XML = "AGUARDANDO_XML"
     CONFERINDO = "CONFERINDO"
     PENDENTE = "PENDENTE"
@@ -465,6 +470,61 @@ class Movimento(Base):
     produto = relationship("Produto", back_populates="movimentos")
     fornecedor = relationship("Fornecedor", back_populates="movimentos")
     sessao_inventario = relationship("SessaoInventario", back_populates="movimentos")
+
+
+class MovimentoExcluido(Base):
+    """A fotografia de um movimento que saiu do estoque, e quem o tirou.
+
+    POR QUE UMA TABELA SEPARADA, E NÃO UMA COLUNA "excluido_em"
+    ----------------------------------------------------------
+    A marca de exclusão na própria linha é o desenho óbvio, e é o errado
+    aqui. Vinte e quatro consultas neste código leem `movimentos` para
+    apurar saldo, CMV, painel, perdas e regional. Com uma coluna de
+    exclusão, cada uma dessas vinte e quatro precisa lembrar de filtrar — e
+    a que esquecer não dá erro: ela só continua contando no CMV um movimento
+    que a tela já mostra como excluído. É o pior tipo de bug deste sistema,
+    porque o número fica *plausível*.
+
+    Tirando a linha da tabela viva, não há o que esquecer: o que não está
+    lá não entra em conta nenhuma. O rastro fica aqui, completo o bastante
+    para responder "o que havia ali, quem tirou, quando e por quê" — e para
+    devolver, se tiver sido engano.
+
+    O ESTOQUE É O LIVRO-RAZÃO, e por isso não existe contra-lançamento: o
+    saldo é a soma dos movimentos, então retirar o movimento já desfaz o
+    efeito. Um estorno em vez da retirada deixaria duas linhas onde não
+    houve dois fatos.
+    """
+    __tablename__ = "movimentos_excluidos"
+
+    id = Column(Integer, primary_key=True)
+    movimento_id = Column(Integer, nullable=False)   # o id que ele tinha
+    unidade_id = Column(Integer, ForeignKey("unidades.id"), nullable=False)
+    produto_id = Column(Integer, ForeignKey("produtos.id"), nullable=True)
+    tipo = Column(String(30), nullable=False)
+    quantidade = Column(Float, nullable=False, default=0)
+    custo_unitario = Column(Float, nullable=True)
+    custo_total = Column(Float, nullable=True)
+    fornecedor_id = Column(Integer, ForeignKey("fornecedores.id"), nullable=True)
+    numero_documento = Column(String(60), nullable=True)
+    data = Column(Date, nullable=True)
+    motivo_perda = Column(String(30), nullable=True)
+    observacao = Column(Text, nullable=True)
+    lancado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    lancado_em = Column(DateTime, nullable=True)
+
+    # A nota de onde a compra veio, quando veio de uma. É por aqui que se
+    # sabe o que precisa ser relançado.
+    nota_id = Column(Integer, nullable=True, index=True)
+
+    excluido_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    excluido_em = Column(DateTime, default=datetime.utcnow, nullable=False)
+    excluido_motivo = Column(String(255), nullable=True)
+
+    unidade = relationship("Unidade")
+    produto = relationship("Produto")
+    fornecedor = relationship("Fornecedor")
+    excluido_por = relationship("Usuario", foreign_keys=[excluido_por_id])
 
 
 # ==============================================================================

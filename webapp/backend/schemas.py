@@ -160,6 +160,14 @@ class MovimentoOut(BaseModel):
     documento_tipo: Optional[str] = None       # NOTA | INVENTARIO | REQUISICAO | PERDA
     unidade_nome: Optional[str] = None         # de qual loja é o lançamento
 
+    # Por que esta linha NÃO pode ser excluída — ou None quando pode.
+    #
+    # Vem do servidor pronto, e não é a tela que decide: a mesma regra que
+    # recusa no POST é a que apaga a caixinha de seleção. Interface que
+    # oferece o que a API recusa é interface que ensina a pessoa a tentar de
+    # novo até dar certo.
+    travado_para_excluir: Optional[str] = None
+
 
 class MovimentoCreate(BaseModel):
     unidade_id: int

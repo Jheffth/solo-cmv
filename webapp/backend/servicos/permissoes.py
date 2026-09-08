@@ -88,6 +88,8 @@ class Capacidade(str, enum.Enum):
     ESTORNAR_PERDA = "ESTORNAR_PERDA"
     ABRIR_REQUISICAO = "ABRIR_REQUISICAO"
     ATENDER_REQUISICAO = "ATENDER_REQUISICAO"  # baixa do estoque de verdade
+    ANULAR_NOTA = "ANULAR_NOTA"                # tira a nota INTEIRA do estoque
+    EXCLUIR_MOVIMENTO = "EXCLUIR_MOVIMENTO"    # linha a linha, sem a nota junto
 
     # ---- cadastro e acesso --------------------------------------------------
     CADASTRAR = "CADASTRAR"                    # produto, fornecedor, categoria
@@ -110,6 +112,18 @@ class Capacidade(str, enum.Enum):
 # entram no fechamento; congelar tira a fotografia que serve de referência
 # para tudo depois. São decisões de quem responde pelo número final. Contar é
 # o trabalho.
+#
+# ANULAR_NOTA e EXCLUIR_MOVIMENTO são duas coisas, e não uma com dois nomes.
+#
+# Anular a nota é uma operação do NEGÓCIO: a compra foi lançada errada, sai
+# inteira do estoque e do CMV, fica o rastro, e ela pode ser relançada. Quem
+# responde pelo número da empresa pode fazer isso — daí o piso no Diretor.
+#
+# Excluir movimento avulso é uma ferramenta de MANUTENÇÃO: apaga uma linha
+# do livro-razão sem passar pelo documento que a originou. Serve para testar
+# e para consertar dado torto, e é exatamente por isso que não desce do
+# Arquiteto: uma nota anulada continua contando a sua história; uma linha
+# apagada no meio de um documento deixa o documento mentindo.
 PISO: Dict[Capacidade, PapelUsuario] = {
     Capacidade.VER_DINHEIRO:        PapelUsuario.GERENTE,
     Capacidade.VER_CMV:             PapelUsuario.GERENTE,
@@ -128,6 +142,8 @@ PISO: Dict[Capacidade, PapelUsuario] = {
     Capacidade.ESTORNAR_PERDA:      PapelUsuario.GERENTE,
     Capacidade.ABRIR_REQUISICAO:    PapelUsuario.OPERADOR,
     Capacidade.ATENDER_REQUISICAO:  PapelUsuario.GERENTE,
+    Capacidade.ANULAR_NOTA:         PapelUsuario.DIRETOR,
+    Capacidade.EXCLUIR_MOVIMENTO:   PapelUsuario.ARQUITETO,
 
     Capacidade.CADASTRAR:           PapelUsuario.OPERADOR,
     Capacidade.CRIAR_UNIDADE:       PapelUsuario.ADMIN,
@@ -154,6 +170,8 @@ DESCRICAO: Dict[Capacidade, str] = {
     Capacidade.ESTORNAR_PERDA:      "estornar uma perda",
     Capacidade.ABRIR_REQUISICAO:    "abrir requisições e pedir itens",
     Capacidade.ATENDER_REQUISICAO:  "atender a requisição (baixa do estoque)",
+    Capacidade.ANULAR_NOTA:         "anular uma nota lançada",
+    Capacidade.EXCLUIR_MOVIMENTO:   "excluir lançamentos avulsos do livro-razão",
 
     Capacidade.CADASTRAR:           "cadastrar produtos e fornecedores",
     Capacidade.CRIAR_UNIDADE:       "criar unidades",

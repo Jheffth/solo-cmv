@@ -8,11 +8,12 @@ Cada lançamento também atualiza o Histórico de Custo do produto (equivalente
 from datetime import date as date_type
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import (
-    Movimento, HistoricoCusto, TipoMovimento, PapelUsuario,
+    Movimento, MovimentoExcluido, HistoricoCusto, TipoMovimento, PapelUsuario,
     SessaoInventario, Requisicao,
 )
 from schemas import (
@@ -21,6 +22,7 @@ from schemas import (
 from auth.deps import get_current_user, exigir_papeis
 from servicos.permissoes import Capacidade, requer
 from servicos import escopo as servico_escopo
+from servicos import exclusao as servico_exclusao
 
 router = APIRouter(prefix="/movimentos", tags=["movimentos"])
 
@@ -113,7 +115,90 @@ def listar(unidade_id: Optional[str] = None, produto_id: Optional[int] = None,
     nomes = {u.id: u.nome for u in recorte.unidades}
     for m in movimentos:
         m.unidade_nome = nomes.get(m.unidade_id)
+        m.travado_para_excluir = servico_exclusao.por_que_nao(m)
     return movimentos
+
+
+class ExclusaoEmLote(BaseModel):
+    ids: List[int]
+    motivo: Optional[str] = None
+
+
+@router.post("/excluir")
+def excluir_movimentos(
+        dados: ExclusaoEmLote, db: Session = Depends(get_db),
+        usuario=Depends(requer(Capacidade.EXCLUIR_MOVIMENTO))):
+    """Retira lançamentos do livro-razão, guardando a fotografia de cada um.
+
+    POST e não DELETE porque é um lote com motivo: DELETE com corpo é
+    aceito por alguns servidores e descartado por outros, e perder o motivo
+    no meio do caminho estragaria justamente a parte que serve para
+    entender depois.
+
+    Estoque e CMV são a soma dos movimentos, então tirar a linha já desfaz
+    o efeito — não há contra-lançamento. O rastro fica em
+    `movimentos_excluidos`, com quem tirou, quando e por quê.
+    """
+    if not dados.ids:
+        raise HTTPException(400, "Nenhum lançamento selecionado.")
+    if len(dados.ids) > 200:
+        raise HTTPException(
+            400, "São muitos lançamentos de uma vez. Exclua em partes — "
+                 "assim dá para conferir o que saiu a cada passo.")
+
+    recorte = servico_escopo.resolver(db, usuario, None)
+    movimentos = db.query(Movimento).filter(
+        Movimento.id.in_(dados.ids),
+        Movimento.unidade_id.in_(recorte.ids),
+    ).all()
+
+    # Sumiram, ou são de uma loja que esta pessoa não alcança. Nos dois casos
+    # a resposta é a mesma, e prosseguir com os que sobraram seria excluir
+    # menos do que a pessoa mandou sem ela saber.
+    if len(movimentos) != len(set(dados.ids)):
+        raise HTTPException(
+            404, "Algum dos lançamentos selecionados não existe mais ou não "
+                 "é de uma loja sua. Atualize a lista e tente de novo.")
+
+    try:
+        quantos, avisos = servico_exclusao.excluir(
+            db, movimentos, usuario, dados.motivo or "")
+    except servico_exclusao.ErroExclusao as erro:
+        raise HTTPException(409, str(erro))
+    return {"excluidos": quantos, "avisos": avisos}
+
+
+@router.get("/excluidos")
+def listar_excluidos(unidade_id: Optional[str] = None,
+                     db: Session = Depends(get_db),
+                     usuario=Depends(requer(Capacidade.ANULAR_NOTA))):
+    """O que foi tirado do estoque, por quem e quando.
+
+    Fica atrás de ANULAR_NOTA e não de EXCLUIR_MOVIMENTO de propósito: quem
+    responde pelo número da empresa precisa poder auditar o que sumiu dele,
+    mesmo sem poder excluir linha avulsa.
+    """
+    recorte = servico_escopo.resolver(db, usuario, unidade_id)
+    registros = db.query(MovimentoExcluido).filter(
+        MovimentoExcluido.unidade_id.in_(recorte.ids)
+    ).order_by(MovimentoExcluido.excluido_em.desc()).limit(200).all()
+
+    nomes = {u.id: u.nome for u in recorte.unidades}
+    return [{
+        "id": r.id,
+        "movimento_id": r.movimento_id,
+        "unidade_nome": nomes.get(r.unidade_id),
+        "produto": r.produto.nome if r.produto else None,
+        "tipo": r.tipo,
+        "quantidade": r.quantidade,
+        "custo_total": r.custo_total,
+        "documento": r.numero_documento,
+        "data": r.data.isoformat() if r.data else None,
+        "nota_id": r.nota_id,
+        "excluido_por": r.excluido_por.nome if r.excluido_por else None,
+        "excluido_em": r.excluido_em.isoformat() if r.excluido_em else None,
+        "motivo": r.excluido_motivo,
+    } for r in registros]
 
 
 @router.post("", response_model=MovimentoOut, status_code=201)

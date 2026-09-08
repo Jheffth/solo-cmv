@@ -37,6 +37,7 @@ from auth.deps import get_current_user
 from servicos import (chave_nfe, danfe, danfe_cabecalho, danfe_itens,
                       nfe_importacao, nfe_xml, sefaz)
 from servicos import busca as servico_busca
+from servicos import exclusao as servico_exclusao
 from servicos import escopo as servico_escopo
 from servicos.permissoes import Capacidade, requer
 
@@ -653,7 +654,39 @@ def descartar(nota_id: int, db: Session = Depends(get_db),
     """Recusa a nota, sem apagar: fica no histórico como decisão tomada."""
     nota = _buscar(db, nota_id)
     if nota.status == StatusNotaFiscal.PROCESSADA:
-        raise HTTPException(409, "Esta nota já virou compra no estoque.")
+        raise HTTPException(
+            409, "Esta nota já virou compra no estoque. Para tirá-la, use "
+                 "Anular — descartar só serve para nota que nunca entrou.")
     nota.status = StatusNotaFiscal.DESCARTADA
     db.commit()
     return {"status": nota.status.value}
+
+
+class Anulacao(BaseModel):
+    motivo: Optional[str] = None
+
+
+@router.post("/{nota_id}/anular")
+def anular(nota_id: int, dados: Optional[Anulacao] = None,
+           db: Session = Depends(get_db),
+           usuario: Usuario = Depends(requer(Capacidade.ANULAR_NOTA))):
+    """Tira a nota INTEIRA do estoque e do CMV, e a deixa relançável.
+
+    A operação que faltava. Até aqui uma compra lançada errada não tinha
+    volta: descartar recusa antes de entrar, e aprovar não tem inverso. Quem
+    percebia o erro depois só podia lançar uma perda para compensar — o que
+    tira a quantidade do estoque e deixa o custo dentro do CMV, escondendo
+    o erro em vez de desfazê-lo.
+
+    Aqui o documento e o estoque saem juntos, com rastro de quem anulou. E
+    a mesma chave volta a poder ser importada, que é o ponto: a nota estava
+    errada, não inexistente.
+    """
+    nota = _buscar(db, nota_id)
+    try:
+        quantos, avisos = servico_exclusao.anular_nota(
+            db, nota, usuario, (dados.motivo if dados else "") or "")
+    except servico_exclusao.ErroExclusao as erro:
+        raise HTTPException(409, str(erro))
+    return {"status": nota.status.value, "movimentos_removidos": quantos,
+            "avisos": avisos}

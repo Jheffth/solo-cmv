@@ -1,0 +1,62 @@
+/* ==========================================================================
+   MOVIMENTAÇÕES — a seleção que tira lançamento do estoque
+   ==========================================================================
+   Esta é a única tela do sistema onde um clique APAGA número de estoque e de
+   CMV. Tudo aqui é desenhado para que ninguém chegue ao botão sem perceber
+   que chegou: a barra de ação só existe quando há algo marcado, a linha
+   marcada muda de cor, e a linha que NÃO pode ser marcada mostra o cadeado e
+   diz por quê ao passar o mouse.
+   ========================================================================== */
+
+/* Coluna estreita e centrada: ela não é conteúdo, é controle. */
+th.mov-sel, td.mov-sel {
+  width: 42px;
+  text-align: center;
+  white-space: nowrap;
+}
+td.mov-sel input { width: auto; cursor: pointer; }
+td.mov-sel input:disabled { cursor: not-allowed; opacity: .35; }
+
+/* O cadeado não é decoração: é a resposta antecipada à pergunta "por que
+   não consigo marcar esta linha?". O motivo inteiro está no title, vindo do
+   servidor — a mesma frase que a API devolveria se alguém insistisse. */
+.mov-cadeado {
+  font-size: .7rem;
+  opacity: .5;
+  margin-left: .1rem;
+}
+
+tr.mov-marcado { background: rgba(166, 35, 31, .07); }
+tr.mov-marcado td { border-color: rgba(166, 35, 31, .18); }
+
+/* A barra aparece SÓ quando há seleção. Botão de excluir sempre visível
+   vira paisagem, e paisagem é o que se clica sem ler. */
+.mov-acoes {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  flex-wrap: wrap;
+  margin: 0 0 .9rem;
+  padding: .7rem .9rem;
+  background: rgba(166, 35, 31, .07);
+  border-left: 3px solid var(--red, #a6231f);
+  border-radius: 0 8px 8px 0;
+  font-size: .88rem;
+}
+.mov-acoes #mov-selecionados {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.btn.btn-perigo {
+  background: var(--red, #a6231f);
+  border-color: var(--red, #a6231f);
+  color: #fff;
+}
+.btn.btn-perigo:hover { filter: brightness(1.08); }
+
+@media (max-width: 720px) {
+  .mov-acoes { flex-direction: column; align-items: stretch; }
+  .mov-acoes #mov-selecionados { margin-right: 0; }
+  .mov-acoes .btn { width: 100%; }
+}

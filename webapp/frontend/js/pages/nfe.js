@@ -562,7 +562,16 @@ window.Paginas.nfe = (function () {
           <button class="btn btn-primario" id="nfe-aprovar" type="button"
                   ${nota.pronta_para_aprovar && nota.status !== 'PROCESSADA' ? '' : 'disabled'}>
             Lançar no estoque</button>
-          <button class="btn" id="nfe-descartar" type="button">Descartar</button>
+          ${/* Anular é o inverso de lançar, e só existe depois de lançar.
+                Aparecia como "Descartar" desabilitado, o que dizia à pessoa
+                que não havia volta — e não havia mesmo, até agora. */''}
+          ${nota.status === 'PROCESSADA'
+            ? (typeof window.pode === 'function' && window.pode('ANULAR_NOTA')
+              ? `<button class="btn btn-perigo" id="nfe-anular" type="button">
+                   Anular esta nota</button>`
+              : `<span class="nfe-dica">Esta nota já está no estoque. Anular é
+                   coisa da diretoria.</span>`)
+            : '<button class="btn" id="nfe-descartar" type="button">Descartar</button>'}
         </div>
       </div>`;
 
@@ -623,6 +632,39 @@ window.Paginas.nfe = (function () {
         notaAtual = null;
         container.querySelector('#nfe-conferencia').innerHTML = '';
         await carregarLista(container);
+      });
+    }
+
+    const anular = container.querySelector('#nfe-anular');
+    if (anular) {
+      anular.addEventListener('click', async () => {
+        // A confirmação diz o EFEITO, não a ação. "Anular esta nota?" é uma
+        // pergunta sobre a tela; "sai do estoque e do CMV" é uma pergunta
+        // sobre o negócio, que é a que a pessoa precisa responder.
+        const itens = (notaAtual.itens || []).filter((i) => !i.ignorar);
+        const total = itens.reduce((t, i) => t + (Number(i.custo_final) || 0), 0);
+        if (!confirm(
+          `Anular a nota ${notaAtual.numero || ''}?\n\n`
+          + `${itens.length} item(ns), ${brl(total)}, saem do estoque e do CMV `
+          + `do período — o número do mês vai mudar.\n\n`
+          + `Fica o registro de quem anulou e quando, e a nota pode ser `
+          + `lançada de novo com a mesma chave.`)) return;
+        const motivo = prompt('Por que esta nota está sendo anulada?\n'
+          + '(fica no registro da nota)', '');
+        if (motivo === null) return;
+
+        anular.disabled = true;
+        anular.textContent = 'Anulando…';
+        try {
+          const r = await api.post(`/nfe/${notaAtual.id}/anular`, { motivo });
+          alert((r.avisos || ['Nota anulada.']).join('\n'));
+          desenharNota(container, await api.get('/nfe/' + notaAtual.id));
+          await carregarLista(container);
+        } catch (erro) {
+          alert(erro.message || 'Não foi possível anular.');
+          anular.disabled = false;
+          anular.textContent = 'Anular esta nota';
+        }
       });
     }
   }
