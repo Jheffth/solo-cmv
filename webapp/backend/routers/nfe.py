@@ -197,12 +197,38 @@ async def itens_da_foto(arquivo: UploadFile = File(...),
     if len(dados) > TAMANHO_MAXIMO:
         raise HTTPException(400, "A foto passa de 8 MB. Tire outra com menos "
                                  "resolução.")
+    decodificada = None
+    if chave:
+        try:
+            decodificada = chave_nfe.validar(chave)
+        except chave_nfe.ChaveInvalida:
+            # Chave ruim não derruba a leitura: ela só deixa de ser
+            # autoridade, e o cabeçalho volta a depender da foto.
+            log.info("chave inválida junto da foto; seguindo só com o OCR")
+
+    # A TABELA E O CABEÇALHO SÃO LIDOS AO MESMO TEMPO.
+    #
+    # São faixas diferentes da página e nenhuma precisa da outra para ser
+    # LIDA. O cabeçalho só precisa do total dos produtos para INTERPRETAR o
+    # valor da nota — e interpretar é instantâneo. Por isso a transcrição
+    # dele entra na mesma fila da tabela, e a espera passa a ser a da mais
+    # lenta em vez da soma das duas.
+    def ler_a_tabela():
+        return danfe_itens.ler(dados).como_dicionario()
+
+    def transcrever_o_cabecalho():
+        return danfe_cabecalho.transcrever(dados, decodificada)
+
     try:
-        rascunho = danfe_itens.ler(dados).como_dicionario()
+        rascunho, texto_do_cabecalho = danfe.em_paralelo(
+            [ler_a_tabela, transcrever_o_cabecalho])
     except danfe.LeitorIndisponivel as erro:
         raise HTTPException(503, str(erro))
     except ValueError as erro:
         raise HTTPException(400, str(erro))
+    if rascunho is None:
+        raise HTTPException(400, "Não consegui ler nada nessa foto. Tente "
+                                 "outra, com a nota esticada e sem sombra.")
 
     for linha in rascunho.get("linhas", []):
         achado = nfe_importacao.candidatos_para_texto(
@@ -217,21 +243,12 @@ async def itens_da_foto(arquivo: UploadFile = File(...),
             f"cadastro. Escolha na lista ou deixe de fora.")
 
     # ------------------------------------------------------------ cabeçalho
-    decodificada = None
-    if chave:
-        try:
-            decodificada = chave_nfe.validar(chave)
-        except chave_nfe.ChaveInvalida:
-            # Chave ruim não derruba a leitura: ela só deixa de ser
-            # autoridade, e o cabeçalho volta a depender da foto.
-            log.info("chave inválida junto da foto; seguindo só com o OCR")
-
+    # Agora sim, com o total dos produtos em mãos: é ele que serve de piso
+    # para o valor da nota, e sem ele um número qualquer da página passaria.
     try:
-        cabecalho = danfe_cabecalho.ler(
-            dados, decodificada,
+        cabecalho = danfe_cabecalho.interpretar(
+            texto_do_cabecalho or "", decodificada,
             valor_produtos=rascunho.get("total_produtos"))
-    except danfe.LeitorIndisponivel as erro:
-        raise HTTPException(503, str(erro))
     except Exception:
         log.exception("cabeçalho da foto falhou")
         cabecalho = danfe_cabecalho.Cabecalho(avisos=[

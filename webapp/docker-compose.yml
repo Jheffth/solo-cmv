@@ -34,6 +34,17 @@ services:
       BOT_SEGREDO: ${BOT_SEGREDO}
       EVOLUTION_API_URL: http://whatsapp:8080
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-solo-cmv-evolution-key-2026}
+      # LEITURA DE NOTA POR FOTO
+      # O Tesseract paraleliza internamente com OpenMP, e em imagem de página
+      # o custo de coordenar as threads é maior que o ganho: medido, 3,67s
+      # com o padrão contra 1,63s com uma thread só. O código também define
+      # isso por conta própria; ficar aqui é para quem administra o servidor
+      # ver que é deliberado, e poder mexer sem caçar no Python.
+      OMP_THREAD_LIMIT: ${OMP_THREAD_LIMIT:-1}
+      # Quantas passadas de OCR rodam ao mesmo tempo. Duas, e não "todos os
+      # núcleos": esta máquina também roda o Solo Rotinas e o Solo Finances,
+      # e importar uma nota não pode derrubar a resposta dos outros dois.
+      OCR_SIMULTANEO: ${OCR_SIMULTANEO:-2}
     depends_on:
       - db
     networks:

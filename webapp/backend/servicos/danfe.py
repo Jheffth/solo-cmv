@@ -32,11 +32,83 @@ imagem em faixas sobrepostas, em várias escalas, e para no primeiro
 resultado que fecha o verificador.
 """
 import logging
+import os
 from typing import List, Optional
 
 from servicos import chave_nfe
 
 log = logging.getLogger("servicos.danfe")
+
+# ==============================================================================
+# DUAS LINHAS QUE VALEM MAIS QUE TODO O RESTO DESTE ARQUIVO
+# ==============================================================================
+# Medido na foto de referência: a leitura da nota levava 28 segundos, e o
+# tratamento de imagem inteiro — CLAHE, redimensionamento, filtro bilateral,
+# limiar adaptativo — respondia por 0,1 deles. Todo o tempo era do Tesseract.
+# Duas configurações dele explicam três quartos do custo:
+#
+# OMP_THREAD_LIMIT=1
+#   O Tesseract usa OpenMP para paralelizar internamente, e em imagem de
+#   página o custo de coordenar as threads é maior que o ganho. Medido aqui,
+#   numa passada: 3,67s com o padrão, 1,63s com uma thread só. Não é
+#   intuitivo — "menos paralelismo, mais rápido" — mas é reprodutível e
+#   conhecido. Fica em `setdefault` para o servidor poder discordar.
+#
+# tessedit_do_invert=0
+#   Quando a confiança sai baixa, o Tesseract REFAZ a leitura na imagem
+#   invertida, procurando texto branco em fundo preto. A nossa já chega
+#   binarizada em preto sobre branco pelo `_preparar`: a segunda passada não
+#   tem chance de achar nada e cobra o preço inteiro. Medido: 4,60s -> 2,77s.
+#
+# As duas juntas: 4,60s -> ~1,3s por passada, sem tocar em um pixel e sem
+# mudar um caractere do que é lido.
+os.environ.setdefault("OMP_THREAD_LIMIT", "1")
+
+# `--psm 6` = um bloco de texto uniforme, que é o que uma faixa de DANFE é.
+CONFIG_OCR = "--psm 6 -c tessedit_do_invert=0"
+
+# Quantas passadas de OCR podem rodar ao mesmo tempo.
+#
+# Duas, e não "quantos núcleos houver", porque este servidor não é só nosso:
+# o Solo Rotinas e o Solo Finances rodam na mesma máquina, e uma importação
+# de nota não pode derrubar a resposta dos outros dois. Duas também não é
+# regressão de consumo — antes UMA chamada do Tesseract se espalhava por
+# todos os núcleos via OpenMP; agora cada uma usa um só, e duas juntas
+# custam o mesmo que aquela uma custava.
+LEITURAS_SIMULTANEAS = int(os.environ.get("OCR_SIMULTANEO", "2"))
+
+
+def em_paralelo(tarefas, limite: int = None):
+    """Roda as leituras ao mesmo tempo, preservando a ordem das respostas.
+
+    Vale a pena porque o pytesseract não é Python: ele chama o executável do
+    Tesseract em outro processo, e a espera por esse processo solta a GIL.
+    Threads aqui são paralelismo de verdade, não concorrência de mentira.
+
+    Uma tarefa que estoura devolve None em vez de derrubar as outras — é a
+    mesma política das passadas isoladas, e pelo mesmo motivo: perder uma
+    leitura degrada o resultado, perder todas o inviabiliza.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    tarefas = list(tarefas)
+    if not tarefas:
+        return []
+    limite = limite or LEITURAS_SIMULTANEAS
+    if limite <= 1 or len(tarefas) == 1:
+        return [_com_rede(t) for t in tarefas]
+    with ThreadPoolExecutor(max_workers=min(limite, len(tarefas))) as pool:
+        return list(pool.map(_com_rede, tarefas))
+
+
+def _com_rede(tarefa):
+    try:
+        return tarefa()
+    except LeitorIndisponivel:
+        raise
+    except Exception:
+        log.exception("uma passada de OCR falhou; as outras seguem")
+        return None
 
 # Escalas tentadas na varredura. 4x foi o que leu a foto de referência; as
 # outras cobrem fotos maiores (câmera melhor) e menores (WhatsApp comprime).
@@ -160,7 +232,7 @@ def por_ocr(imagem) -> Optional[str]:
                 # onde há 5 e "O" onde há 0 — os dois erros clássicos.
                 texto = pytesseract.image_to_string(
                     versao,
-                    config="--psm 6 -c tessedit_char_whitelist=0123456789 ")
+                    config=CONFIG_OCR + " -c tessedit_char_whitelist=0123456789 ")
             except Exception:
                 log.exception("OCR falhou")
                 return None

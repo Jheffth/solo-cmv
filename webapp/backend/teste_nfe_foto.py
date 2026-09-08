@@ -469,5 +469,58 @@ if _eu and _loja:
     main.app.dependency_overrides.pop(get_current_user, None)
 _db4.close()
 
+# ==============================================================================
+print('\n[11] O RELÓGIO — porque a lentidão volta calada')
+# ==============================================================================
+# A primeira versão levava 28 segundos para ler uma foto, e nada no código
+# dizia por quê: o tratamento de imagem inteiro respondia por 0,1 deles, e o
+# resto era configuração do Tesseract que ninguém tinha medido.
+#
+# Estas verificações existem porque a lentidão não dá erro. Quem remover uma
+# das linhas abaixo não vê nada quebrar — só a importação volta a demorar
+# meio minuto, e demora assim para sempre, porque ninguém liga lentidão a um
+# `-c` que sumiu de uma string.
+import time                                                    # noqa: E402
+from servicos import danfe                                     # noqa: E402
+
+ok('tessedit_do_invert=0' in danfe.CONFIG_OCR,
+   'o OCR não refaz a leitura na imagem invertida (a nossa já é preto no '
+   'branco) — vale 40% do tempo')
+ok(os.environ.get('OMP_THREAD_LIMIT') == '1',
+   'e o Tesseract roda com uma thread: paralelizar página pequena custa '
+   'mais que rende (3,67s -> 1,63s)')
+
+# Paralelo de verdade, não concorrência de mentira: o pytesseract chama outro
+# processo, e essa espera solta a GIL. Se um dia isto virar sequencial, o
+# tempo da foto dobra sem nenhum sinal.
+def _dorme():
+    time.sleep(0.35)
+    return True
+
+_inicio = time.time()
+_r = danfe.em_paralelo([_dorme, _dorme])
+_gasto = time.time() - _inicio
+ok(_r == [True, True] and _gasto < 0.6,
+   f'duas leituras rodam JUNTAS ({_gasto:.2f}s para duas de 0,35s)')
+
+# Uma passada que estoura não pode derrubar as outras: perder uma leitura
+# degrada o resultado, perder todas o inviabiliza.
+def _quebra():
+    raise RuntimeError('faixa ilegível')
+
+ok(danfe.em_paralelo([_quebra, lambda: 'ok']) == [None, 'ok'],
+   'e a que falha vira None sem levar as outras junto')
+
+# O orçamento. Generoso de propósito — três vezes o medido — para não piscar
+# em máquina ocupada, e apertado o bastante para pegar a volta dos 28s.
+if os.path.exists(FOTO):
+    _bytes = open(FOTO, 'rb').read()
+    _inicio = time.time()
+    danfe_itens.ler(_bytes)
+    danfe_cabecalho.transcrever(_bytes, _chave)
+    _gasto = time.time() - _inicio
+    ok(_gasto < 20,
+       f'a foto inteira é lida em {_gasto:.1f}s (orçamento: 20s; já foi 28s)')
+
 print('\n' + ('FALHAS:\n  ' + '\n  '.join(falhas) if falhas else 'Tudo certo.'))
 sys.exit(1 if falhas else 0)

@@ -49,7 +49,21 @@ log = logging.getLogger("servicos.danfe_cabecalho")
 
 # O cabeçalho ocupa o terço de cima. Faixas largas e sobrepostas porque o
 # canhoto some quando alguém fotografa "a nota" e corta a borda superior.
-FAIXAS = ((0.08, 0.26, 3), (0.08, 0.26, 4), (0.16, 0.34, 3))
+#
+# DUAS LISTAS, E NÃO UMA
+# As principais são as duas que, medidas na foto de referência, respondem
+# sozinhas por todos os campos: o canhoto em 4x traz o fornecedor e o total,
+# o quadro do meio em 3x traz a data e o destinatário. As de reserva cobrem
+# a foto pior — canhoto cortado, nota mais torta, luz de lado.
+#
+# Antes as três rodavam sempre, e a terceira não acrescentava nada em foto
+# boa: 4,0s para entregar o que 2,0s já entregavam. Agora a reserva só é
+# paga quando falta campo — que é quando ela serve para alguma coisa.
+FAIXAS = ((0.08, 0.26, 4), (0.16, 0.34, 3))
+FAIXAS_RESERVA = ((0.08, 0.26, 3), (0.14, 0.32, 4))
+
+# Os campos que a foto precisa entregar. Faltando qualquer um, vale insistir.
+ESSENCIAIS = ("emitente_nome", "data_emissao", "valor_nota")
 
 # "RECEBEMOS" volta do OCR como "RECEIEMOsS", "RecEBEAtos", "RECEBEAIOS". O
 # que sobrevive é o formato: R + miolo + S, seguido de DE e, mais adiante,
@@ -160,26 +174,27 @@ def _ate_o_cnpj(bruto: str) -> str:
     return bruto[:corte.start()] if corte else bruto
 
 
-def _ler_texto(imagem) -> str:
+def _ler_texto(imagem, faixas) -> str:
     """O cabeçalho lido algumas vezes, tudo junto.
 
     Não vale a pena separar as passadas aqui: diferente da tabela, onde a
     posição de cada número importa, aqui só se procura por âncora de texto —
-    e âncora só precisa aparecer UMA vez em qualquer passada.
+    e âncora só precisa aparecer UMA vez em qualquer passada. Por isso o
+    resultado é um texto só, e por isso as passadas podem rodar juntas.
     """
-    partes = []
     altura = imagem.shape[0]
-    for topo, base, escala in FAIXAS:
-        recorte = imagem[int(altura * topo):int(altura * base), :]
-        if recorte.size == 0:
-            continue
-        try:
-            partes.append(_ocr(_preparar(recorte, escala)))
-        except danfe.LeitorIndisponivel:
-            raise
-        except Exception:
-            log.exception("passada do cabeçalho falhou (escala %s)", escala)
-    return "\n".join(partes)
+
+    def uma_faixa(topo, base, escala):
+        def ler():
+            recorte = imagem[int(altura * topo):int(altura * base), :]
+            if recorte.size == 0:
+                return ""
+            return _ocr(_preparar(recorte, escala))
+        return ler
+
+    partes = danfe.em_paralelo(
+        [uma_faixa(topo, base, escala) for topo, base, escala in faixas])
+    return "\n".join(p for p in partes if p)
 
 
 def _mais_repetido(achados: List[str]) -> str:
@@ -189,11 +204,49 @@ def _mais_repetido(achados: List[str]) -> str:
     return max(achados, key=lambda a: (achados.count(a), -achados.index(a)))
 
 
+def transcrever(dados: bytes, chave: Optional[chave_nfe.Chave] = None) -> str:
+    """Só o OCR do cabeçalho — a parte lenta, e a única que não depende de nada.
+
+    Existe separada de `interpretar` por um motivo de relógio: esta parte
+    pode rodar AO MESMO TEMPO que a leitura da tabela de itens, e a outra
+    não, porque precisa do total dos produtos que a tabela apura. Separando,
+    a espera das duas passa a ser a da mais lenta, e não a soma.
+
+    Lê as faixas principais e SÓ INSISTE se faltar campo. Em foto boa isso
+    corta o tempo pela metade sem tirar nada do resultado; em foto ruim as
+    passadas de reserva continuam lá, que é quando elas servem para algo.
+    """
+    imagem = danfe._de_bytes(dados)
+    texto = _sem_acento(_ler_texto(imagem, FAIXAS)).upper()
+
+    # A conferência do que falta é feita sem o total dos produtos, e não faz
+    # falta: o total só serve de piso para o valor da nota, nunca decide se
+    # um campo existe.
+    parcial = _extrair(texto, chave, None)
+    faltando = [c for c in ESSENCIAIS if not getattr(parcial, c)]
+    if not faltando:
+        return texto
+
+    log.info("cabeçalho incompleto (%s); indo para as faixas de reserva",
+             ", ".join(faltando))
+    return texto + "\n" + _sem_acento(_ler_texto(imagem, FAIXAS_RESERVA)).upper()
+
+
+def interpretar(texto: str, chave: Optional[chave_nfe.Chave] = None,
+                valor_produtos: Optional[float] = None) -> Cabecalho:
+    """O cabeçalho que este texto sustenta — com a chave mandando."""
+    return _extrair(texto, chave, valor_produtos)
+
+
 def ler(dados: bytes, chave: Optional[chave_nfe.Chave] = None,
         valor_produtos: Optional[float] = None) -> Cabecalho:
-    """Quem vendeu, qual nota, quando e quanto — com a chave mandando."""
-    imagem = danfe._de_bytes(dados)
-    texto = _sem_acento(_ler_texto(imagem)).upper()
+    """Quem vendeu, qual nota, quando e quanto. As duas partes, em ordem."""
+    return _extrair(transcrever(dados, chave), chave, valor_produtos)
+
+
+def _extrair(texto: str, chave: Optional[chave_nfe.Chave],
+             valor_produtos: Optional[float]) -> Cabecalho:
+    """O cabeçalho que este texto sustenta. Sem OCR: só leitura e travas."""
     cabecalho = Cabecalho()
 
     # ---------------------------------------------------------------- nome

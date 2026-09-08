@@ -136,7 +136,7 @@ def _pytesseract():
 
 def _ocr(imagem) -> str:
     try:
-        return _pytesseract().image_to_string(imagem, config="--psm 6")
+        return _pytesseract().image_to_string(imagem, config=danfe.CONFIG_OCR)
     except danfe.LeitorIndisponivel:
         raise
     except Exception as erro:
@@ -167,7 +167,7 @@ def _ocr_com_posicao(imagem) -> List[LinhaOcr]:
     """
     pt = _pytesseract()
     try:
-        dados = pt.image_to_data(imagem, config="--psm 6",
+        dados = pt.image_to_data(imagem, config=danfe.CONFIG_OCR,
                                  output_type=pt.Output.DICT)
     except Exception as erro:
         log.exception("OCR posicionado falhou")
@@ -322,17 +322,35 @@ def _ler_itens_em_varias_passadas(imagem) -> List[LinhaLida]:
     ruins não atrapalham: só entram na busca e são descartados por não
     fecharem a conta.
     """
+    return _juntar_passadas(danfe.em_paralelo(_tarefas_de_itens(imagem)))
+
+
+def _tarefas_de_itens(imagem):
+    """As leituras da tabela, ainda por fazer.
+
+    Devolve funções em vez de resultados para que quem chama decida QUANDO e
+    COM QUEM rodá-las. É o que permite juntar estas três com a leitura do
+    rodapé numa fila só — em vez de duas filas aninhadas, que dariam quatro
+    processos de Tesseract ao mesmo tempo num servidor que não é só nosso.
+    """
+    def uma_passada(topo, base, escala):
+        def ler_faixa():
+            recorte = imagem[int(imagem.shape[0] * topo):
+                             int(imagem.shape[0] * base), :]
+            if recorte.size == 0:
+                return None
+            return _ocr_com_posicao(_preparar(recorte, escala))
+        return ler_faixa
+
+    return [uma_passada(topo, base, escala)
+            for topo, base, escala in PASSADAS]
+
+
+def _juntar_passadas(resultados):
+    """Une o que as passadas viram, com a mais completa servindo de esqueleto."""
     passadas = []
-    for topo, base, escala in PASSADAS:
-        recorte = imagem[int(imagem.shape[0] * topo):int(imagem.shape[0] * base), :]
-        if recorte.size == 0:
-            continue
-        try:
-            fisicas = _ocr_com_posicao(_preparar(recorte, escala))
-        except danfe.LeitorIndisponivel:
-            raise
-        except Exception:
-            log.exception("passada de OCR falhou (escala %s)", escala)
+    for fisicas in resultados:
+        if not fisicas:
             continue
         itens = [(_linha_de_produto(f.texto), f) for f in fisicas]
         itens = [(l, f) for l, f in itens if l is not None]
@@ -666,12 +684,23 @@ def ler(dados: bytes) -> RascunhoDaFoto:
 
     rascunho = RascunhoDaFoto()
 
+    # O rodapé e a tabela de itens são faixas diferentes da página e não
+    # dependem um do outro, então leem-se juntos. Era a leitura mais fácil de
+    # esconder no caminho crítico: uma passada inteira esperando outra sem
+    # nenhuma razão além da ordem em que o código foi escrito.
     topo, base = FAIXA_TOTAIS
-    texto_totais = _ocr(_preparar(imagem[int(altura * topo):int(altura * base), :],
-                                  escala=3))
-    numeros_do_rodape = _numeros_do_bloco(texto_totais)
 
-    rascunho.linhas, passadas = _ler_itens_em_varias_passadas(imagem)
+    def ler_rodape():
+        return _ocr(_preparar(
+            imagem[int(altura * topo):int(altura * base), :], escala=3))
+
+    # Uma fila só, com o rodapé e as três passadas da tabela. Nenhuma delas
+    # depende do resultado das outras, e a ordem em que estavam no código não
+    # era uma dependência — era só a ordem em que foram escritas.
+    texto_totais, *lidas = danfe.em_paralelo(
+        [ler_rodape] + _tarefas_de_itens(imagem))
+    numeros_do_rodape = _numeros_do_bloco(texto_totais or "")
+    rascunho.linhas, passadas = _juntar_passadas(lidas)
 
     if not rascunho.linhas:
         rascunho.avisos.append(
