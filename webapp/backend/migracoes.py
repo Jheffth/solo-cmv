@@ -360,7 +360,7 @@ def _nota_importada_conferencia(conexao):
         "mensagem": TEXTO_LIVRE,
         "criado_por_id": "INTEGER",
         "processado_por_id": "INTEGER",
-        "processado_em": "DATETIME",
+        "processado_em": "TIMESTAMP",
     }
     for coluna, tipo in novas.items():
         if coluna in ja_tem:
