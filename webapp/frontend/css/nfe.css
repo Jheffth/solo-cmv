@@ -176,6 +176,52 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 }
 .nfe-check input { width: auto; }
 
+/* ==========================================================================
+   O CABEÇALHO DA LEITURA
+   ==========================================================================
+   Fica ANTES do placar e da tabela de propósito. A ordem da tela é a ordem
+   das perguntas: de quem foi a compra, qual documento, e só então quanto de
+   cada coisa. Invertida, a pessoa confere doze números e descobre no fim que
+   não sabe de quem comprou.
+   ========================================================================== */
+.nfe-cabecalho-lido {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .9rem 1.1rem;
+  margin: .3rem 0 1.1rem;
+  padding: 1rem 1.1rem;
+  background: rgba(31, 59, 87, .04);
+  border-left: 3px solid var(--navy);
+  border-radius: 0 8px 8px 0;
+}
+.nfe-campo-cab { flex: 1 1 150px; min-width: 130px; }
+.nfe-campo-cab--largo { flex: 2 1 300px; }
+.nfe-campo-cab--curto { flex: 0 1 90px; min-width: 80px; }
+.nfe-campo-cab label {
+  display: block;
+  font-size: .78rem;
+  color: var(--muted);
+  margin-bottom: .3rem;
+}
+.nfe-campo-cab input, .nfe-campo-cab select { width: 100%; font-size: .88rem; }
+.nfe-campo-cab .nfe-n { width: 100%; text-align: left; }
+
+/* Campo que a chave provou não pede conferência — e precisa PARECER que não
+   pede. Cinza e sem borda de edição: é fato exibido, não pergunta aberta.
+   Deixá-lo com cara de campo faria a pessoa reconferir o que tem dígito
+   verificador atrás, e desconfiar por igual do que não tem. */
+.nfe-campo-cab input[readonly] {
+  background: rgba(0, 0, 0, .04);
+  border-style: dashed;
+  color: var(--muted);
+}
+.nfe-provado-chave {
+  display: block;
+  margin-top: .2rem;
+  font-size: .7rem;
+  color: var(--verde, #1C7A3C);
+}
+
 .nfe-placar {
   display: flex;
   gap: 1.6rem;

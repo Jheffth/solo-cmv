@@ -17,6 +17,7 @@ mão; da segunda em diante a mesma descrição já vem casada, porque a escolha
 virou apelido (servicos/busca.py::aprender).
 """
 import logging
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -38,6 +39,106 @@ class ErroImportacao(Exception):
 # ==============================================================================
 # FORNECEDOR
 # ==============================================================================
+# Palavras que quase toda razão social tem. Contá-las como acerto faria
+# "ALFA COMERCIO DE ALIMENTOS LTDA" parecer "BETA COMERCIO DE ALIMENTOS
+# LTDA" — três de cinco palavras iguais e fornecedor completamente outro.
+RUIDO_RAZAO_SOCIAL = {
+    "ltda", "me", "epp", "eireli", "sa", "s", "a", "cia", "e", "de", "da",
+    "do", "das", "dos", "em", "com", "comercio", "comercial", "industria",
+    "distribuidora", "dist", "distribuicao", "produtos", "servicos",
+}
+
+# Quanto o primeiro precisa se destacar do segundo para ser pré-escolhido.
+# Mesma régua dos produtos: empate é dúvida real.
+FOLGA_PARA_SUGERIR = 1.5
+
+
+def _palavras_uteis(nome: str) -> set:
+    return {p for p in servico_busca.normalizar(nome).split()
+            if p not in RUIDO_RAZAO_SOCIAL and len(p) >= 3}
+
+
+def _pontuar_fornecedor(cnpj: str, nome_norm: str, uteis: set,
+                        cadastro: Fornecedor) -> float:
+    """Quanto este cadastro responde ao fornecedor da nota.
+
+    O CNPJ é uma escala à parte de propósito: ele não CONCORRE com o nome,
+    ele encerra a discussão. Nome é como alguém digitou um dia; CNPJ é
+    identidade, e nesta via ele vem da chave de acesso, com dígito
+    verificador — não de leitura.
+    """
+    if cnpj and cadastro.cnpj and re.sub(r"\D", "", cadastro.cnpj) == cnpj:
+        return 200.0
+
+    cadastro_norm = servico_busca.normalizar(cadastro.nome)
+    if not cadastro_norm or not nome_norm:
+        return 0.0
+    if cadastro_norm == nome_norm:
+        return 100.0
+    if cadastro_norm in nome_norm or nome_norm in cadastro_norm:
+        return 80.0
+
+    do_cadastro = _palavras_uteis(cadastro.nome)
+    if not uteis or not do_cadastro:
+        return 0.0
+    comuns = uteis & do_cadastro
+    if not comuns:
+        return 0.0
+    # Proporção sobre o MENOR dos dois conjuntos: "SUINOAVES" bate com
+    # "SUINOAVES ALIMENTOS LTDA" mesmo o cadastro sendo mais curto que a
+    # razão social impressa, que é o caso comum.
+    return 60.0 * len(comuns) / min(len(uteis), len(do_cadastro))
+
+
+def candidatos_de_fornecedor(db: Session, nome: str, cnpj: str,
+                             empresa_id: Optional[int], limite: int = 5) -> dict:
+    """Os fornecedores do cadastro que podem ser o emitente desta nota.
+
+    Mesmo desenho do casamento de produtos, com uma diferença que importa:
+    aqui existe uma chave de identidade de verdade. Quando o CNPJ da nota
+    bate com o do cadastro, não há candidato nem sugestão — há resposta, e
+    ela vem sozinha.
+
+    O resto do tempo (hoje, com 56 fornecedores e nenhum CNPJ gravado) a
+    decisão é por nome, e por nome ninguém decide sozinho: a lista sobe para
+    a tela e quem tem a nota na mão escolhe.
+    """
+    cnpj = re.sub(r"\D", "", cnpj or "")
+    nome_norm = servico_busca.normalizar(nome)
+    uteis = _palavras_uteis(nome)
+
+    consulta = db.query(Fornecedor)
+    if empresa_id:
+        consulta = consulta.filter(Fornecedor.empresa_id == empresa_id)
+
+    pontuados = []
+    for cadastro in consulta.all():
+        pontos = _pontuar_fornecedor(cnpj, nome_norm, uteis, cadastro)
+        if pontos > 0:
+            pontuados.append((pontos, cadastro))
+    pontuados.sort(key=lambda p: (-p[0], p[1].nome))
+
+    candidatos = [{
+        "fornecedor_id": c.id,
+        "nome": c.nome,
+        "cnpj": c.cnpj,
+        "pontos": round(pontos, 1),
+    } for pontos, c in pontuados[:limite]]
+
+    sugerido = None
+    if candidatos:
+        primeiro = candidatos[0]["pontos"]
+        segundo = candidatos[1]["pontos"] if len(candidatos) > 1 else 0.0
+        if primeiro >= 200:                      # CNPJ: identidade, não palpite
+            sugerido = candidatos[0]["fornecedor_id"]
+        elif primeiro >= 60 and (segundo == 0
+                                 or primeiro >= segundo * FOLGA_PARA_SUGERIR):
+            sugerido = candidatos[0]["fornecedor_id"]
+
+    return {"candidatos": candidatos, "sugerido": sugerido,
+            "nome_lido": nome, "cnpj_lido": cnpj}
+
+
 def _achar_ou_criar_fornecedor(db: Session, cnpj: str, nome: str,
                                empresa_id: Optional[int]) -> Optional[Fornecedor]:
     """Pelo CNPJ primeiro; pelo nome só como último recurso.
@@ -191,9 +292,45 @@ def _fator_sugerido(item: nfe_xml.ItemNota, produto: Optional[Produto]) -> float
 # ==============================================================================
 # REGISTRO
 # ==============================================================================
+def fixar_cnpj(fornecedor: Fornecedor, cnpj: str) -> Optional[str]:
+    """Grava no cadastro o CNPJ que veio da chave. Devolve o aviso, se houver.
+
+    POR QUE ESCREVER NO CADASTRO
+    Os fornecedores foram cadastrados por nome, e nenhum tem CNPJ. Isso faz
+    todo casamento depender de nome parecido, que é frágil e sempre vai
+    depender de alguém confirmar. Cada nota importada traz o CNPJ do emitente
+    de graça e com dígito verificador — aproveitar isso é o que faz o
+    casamento virar exato daqui para a frente, sem ninguém digitar nada.
+
+    O QUE NÃO SE FAZ
+    Sobrescrever. Se o cadastro já tem um CNPJ e ele é outro, isso não é
+    dado faltando: é o sinal de que a pessoa casou a nota com o fornecedor
+    errado, ou de que existem dois cadastros para o mesmo nome. Trocar o CNPJ
+    apagaria justamente a evidência disso.
+    """
+    cnpj = re.sub(r"\D", "", cnpj or "")
+    if not cnpj or len(cnpj) != 14:
+        return None
+    atual = re.sub(r"\D", "", fornecedor.cnpj or "")
+    if not atual:
+        fornecedor.cnpj = cnpj
+        return None
+    if atual != cnpj:
+        return (f"O cadastro de {fornecedor.nome} está com o CNPJ "
+                f"{atual} e esta nota é do CNPJ {cnpj}. Não mexi no "
+                f"cadastro — confira se é mesmo este fornecedor.")
+    return None
+
+
 def registrar(db: Session, nota: nfe_xml.NotaLida, unidade_id: int,
-              usuario: Usuario, origem: str = "XML") -> NotaFiscalImportada:
-    """Guarda a nota para conferência. NÃO mexe no estoque."""
+              usuario: Usuario, origem: str = "XML",
+              fornecedor: Optional[Fornecedor] = None) -> NotaFiscalImportada:
+    """Guarda a nota para conferência. NÃO mexe no estoque.
+
+    `fornecedor` vindo preenchido é a escolha de quem estava com a nota na
+    mão, e ela não é revista aqui: quem viu o papel sabe mais que qualquer
+    casamento por nome.
+    """
     ja = db.query(NotaFiscalImportada).filter(
         NotaFiscalImportada.chave_acesso == nota.chave).first()
     if ja and ja.status == StatusNotaFiscal.PROCESSADA:
@@ -207,8 +344,9 @@ def registrar(db: Session, nota: nfe_xml.NotaLida, unidade_id: int,
         db.delete(ja)
         db.flush()
 
-    fornecedor = _achar_ou_criar_fornecedor(
-        db, nota.emitente_cnpj, nota.emitente_nome, usuario.empresa_id)
+    if fornecedor is None:
+        fornecedor = _achar_ou_criar_fornecedor(
+            db, nota.emitente_cnpj, nota.emitente_nome, usuario.empresa_id)
 
     registro = NotaFiscalImportada(
         unidade_id=unidade_id,

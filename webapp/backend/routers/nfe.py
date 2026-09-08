@@ -23,18 +23,20 @@ qualquer viagem à rede.
 """
 import logging
 import re
+from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import (ItemNotaImportada, NotaFiscalImportada, Produto,
-                    StatusNotaFiscal, Usuario)
+from models import (Fornecedor, ItemNotaImportada, NotaFiscalImportada,
+                    Produto, StatusNotaFiscal, Unidade, Usuario)
 from auth.deps import get_current_user
-from servicos import (chave_nfe, danfe, danfe_itens, nfe_importacao,
-                      nfe_xml, sefaz)
+from servicos import (chave_nfe, danfe, danfe_cabecalho, danfe_itens,
+                      nfe_importacao, nfe_xml, sefaz)
+from servicos import busca as servico_busca
 from servicos import escopo as servico_escopo
 from servicos.permissoes import Capacidade, requer
 
@@ -125,11 +127,54 @@ async def chave_da_foto(arquivo: UploadFile = File(...),
         raise HTTPException(400, str(erro))
 
 
+def _conferir_a_loja(db: Session, destinatario: str, unidade_id: Optional[int],
+                     empresa_id: Optional[int]) -> Optional[str]:
+    """Avisa quando o destinatário da nota parece ser OUTRA loja.
+
+    Compra entra em UMA loja, e a loja errada estraga duas apurações de CMV
+    de uma vez: sobra onde não entrou e falta onde entrou. A nota sabe para
+    quem foi vendida — não usar isso é jogar fora uma conferência de graça.
+
+    O aviso é conservador de propósito. Só sai quando outra loja aparece no
+    texto do destinatário e a escolhida NÃO aparece; texto sujo, empate ou
+    nenhuma das duas reconhecível ficam em silêncio. Alarme que dispara à toa
+    é desligado pela pessoa em uma semana, e aí não avisa mais nem quando
+    importa.
+    """
+    if not destinatario or not unidade_id:
+        return None
+    alvo = servico_busca.normalizar(destinatario)
+    if not alvo:
+        return None
+
+    consulta = db.query(Unidade)
+    if empresa_id:
+        consulta = consulta.filter(Unidade.empresa_id == empresa_id)
+    lojas = consulta.all()
+
+    def aparece(loja: Unidade) -> bool:
+        nome = servico_busca.normalizar(loja.nome)
+        palavras = [p for p in nome.split() if len(p) >= 4]
+        return bool(palavras) and all(p in alvo for p in palavras)
+
+    escolhida = next((l for l in lojas if l.id == unidade_id), None)
+    if escolhida is None or aparece(escolhida):
+        return None
+    outras = [l.nome for l in lojas if l.id != unidade_id and aparece(l)]
+    if not outras:
+        return None
+    return (f"A nota foi emitida para {' / '.join(outras)}, e você escolheu "
+            f"{escolhida.nome}. Se a compra entrar na loja errada, o CMV das "
+            f"duas sai errado — confira antes de aprovar.")
+
+
 @router.post("/foto/itens")
 async def itens_da_foto(arquivo: UploadFile = File(...),
+                        chave: Optional[str] = Form(None),
+                        unidade_id: Optional[int] = Form(None),
                         db: Session = Depends(get_db),
                         usuario: Usuario = Depends(requer(Capacidade.LANCAR_COMPRA))):
-    """Lê a TABELA DE ITENS da foto — o caminho de quem não tem o XML.
+    """Lê a NOTA INTEIRA da foto — o caminho de quem não tem o XML.
 
     Devolve o que foi lido com cada campo marcado como provado ou não, e o
     total impresso na nota para a tela conferir a soma. Não grava nada: o
@@ -139,6 +184,11 @@ async def itens_da_foto(arquivo: UploadFile = File(...),
     COSTELA SALGADA - 2VL") não serve para ninguém escolher nada; o que
     serve é o produto do catálogo que ela provavelmente é. A busca tolerante
     resolve isso — a mesma que o bot usa no chat.
+
+    O CABEÇALHO VEM JUNTO, e é ele que torna a compra lançável: item sem
+    fornecedor, sem número de nota e sem data não é compra, é uma lista de
+    coisas. A `chave`, quando a tela já a tem, entra aqui como AUTORIDADE —
+    o CNPJ do emitente, o número e a série saem dela, não da leitura.
     """
     dados = await arquivo.read()
     if not dados:
@@ -164,6 +214,41 @@ async def itens_da_foto(arquivo: UploadFile = File(...),
         rascunho.setdefault("avisos", []).append(
             f"{sem_palpite} linha(s) não bateram com nenhum produto do "
             f"cadastro. Escolha na lista ou deixe de fora.")
+
+    # ------------------------------------------------------------ cabeçalho
+    decodificada = None
+    if chave:
+        try:
+            decodificada = chave_nfe.validar(chave)
+        except chave_nfe.ChaveInvalida:
+            # Chave ruim não derruba a leitura: ela só deixa de ser
+            # autoridade, e o cabeçalho volta a depender da foto.
+            log.info("chave inválida junto da foto; seguindo só com o OCR")
+
+    try:
+        cabecalho = danfe_cabecalho.ler(
+            dados, decodificada,
+            valor_produtos=rascunho.get("total_produtos"))
+    except danfe.LeitorIndisponivel as erro:
+        raise HTTPException(503, str(erro))
+    except Exception:
+        log.exception("cabeçalho da foto falhou")
+        cabecalho = danfe_cabecalho.Cabecalho(avisos=[
+            "Não consegui ler o cabeçalho desta foto. Preencha o fornecedor "
+            "e o número da nota à mão."])
+
+    dados_cabecalho = cabecalho.como_dicionario()
+    dados_cabecalho["fornecedor"] = nfe_importacao.candidatos_de_fornecedor(
+        db, cabecalho.emitente_nome, cabecalho.emitente_cnpj,
+        usuario.empresa_id)
+    rascunho["cabecalho"] = dados_cabecalho
+
+    rascunho.setdefault("avisos", []).extend(cabecalho.avisos)
+    alerta = _conferir_a_loja(db, cabecalho.destinatario_texto, unidade_id,
+                              usuario.empresa_id)
+    if alerta:
+        rascunho["avisos"].append(alerta)
+        dados_cabecalho["loja_divergente"] = True
     return rascunho
 
 
@@ -179,8 +264,17 @@ class NotaDigitada(BaseModel):
     unidade_id: int
     chave: Optional[str] = None
     numero: Optional[str] = None
+    serie: Optional[str] = None
+    data_emissao: Optional[date] = None
+    valor_nota: Optional[float] = None
     emitente_nome: Optional[str] = None
     emitente_cnpj: Optional[str] = None
+    # O fornecedor do CADASTRO que a pessoa confirmou. É o campo que faz a
+    # compra ser lançável: sem ele a nota não tem de quem se comprou.
+    fornecedor_id: Optional[int] = None
+    # Só `True` quando a pessoa clicou em criar o fornecedor da nota. Nada
+    # entra no cadastro por omissão.
+    criar_fornecedor: bool = False
     itens: List[ItemDigitado]
 
 
@@ -204,11 +298,26 @@ def nota_conferida(dados: NotaDigitada, db: Session = Depends(get_db),
         raise HTTPException(400, "Nenhum item conferido.")
 
     chave = ""
+    decodificada = None
     if dados.chave:
         try:
-            chave = chave_nfe.validar(dados.chave).digitos
+            decodificada = chave_nfe.validar(dados.chave)
+            chave = decodificada.digitos
         except chave_nfe.ChaveInvalida as erro:
             raise HTTPException(400, str(erro))
+
+    # A chave manda no que ela sabe, aqui também. Sem isso o número e o CNPJ
+    # entrariam pelo que a tela mandou — que veio de leitura.
+    cnpj = re.sub(r"\D", "", dados.emitente_cnpj or "")
+    numero = dados.numero or ""
+    serie = dados.serie or ""
+    if decodificada is not None:
+        cnpj = decodificada.cnpj_emitente
+        numero = str(decodificada.numero)
+        serie = str(int(decodificada.serie))
+
+    fornecedor, avisos_fornecedor = _resolver_fornecedor(db, dados, cnpj,
+                                                         usuario)
 
     itens = [nfe_xml.ItemNota(
         numero=i + 1, codigo_fornecedor="", descricao=item.descricao[:255],
@@ -221,23 +330,46 @@ def nota_conferida(dados: NotaDigitada, db: Session = Depends(get_db),
                             else item.quantidade * item.valor_unitario, 2),
     ) for i, item in enumerate(dados.itens)]
 
+    soma_dos_itens = round(sum(i.custo_total for i in itens), 2)
+    avisos = ["Nota montada a partir de leitura por foto, conferida à mão. "
+              "Sem o XML, o ICMS ST não entra no custo."]
+    avisos.extend(avisos_fornecedor)
+
+    # O total da nota inclui frete e imposto, que não estão nos itens desta
+    # via. Guardar o valor lido do rodapé preserva a diferença — é ela que
+    # explica, meses depois, por que a soma dos custos não bate com o que foi
+    # pago. Zerar isso seria apagar a pergunta junto com a resposta.
+    valor_nota = dados.valor_nota
+    if valor_nota and valor_nota + 0.02 < soma_dos_itens:
+        avisos.append(
+            f"O total informado (R$ {valor_nota:.2f}) é menor que a soma dos "
+            f"itens (R$ {soma_dos_itens:.2f}). Usei a soma dos itens.")
+        valor_nota = None
+    elif valor_nota and valor_nota - soma_dos_itens > 0.02:
+        avisos.append(
+            f"A nota fecha em R$ {valor_nota:.2f} e os itens somam "
+            f"R$ {soma_dos_itens:.2f}. A diferença de "
+            f"R$ {valor_nota - soma_dos_itens:.2f} é frete e imposto, que "
+            f"não entram no custo por esta via.")
+
     lida = nfe_xml.NotaLida(
         chave=chave,
-        numero=dados.numero or "", serie="",
-        emissao=None,
-        emitente_cnpj=re.sub(r"\D", "", dados.emitente_cnpj or ""),
-        emitente_nome=dados.emitente_nome or "",
+        numero=numero, serie=serie,
+        emissao=dados.data_emissao,
+        emitente_cnpj=cnpj,
+        emitente_nome=(fornecedor.nome if fornecedor
+                       else (dados.emitente_nome or "")),
         destinatario_cnpj="", destinatario_nome="",
         valor_produtos=round(sum(i.valor_produto for i in itens), 2),
-        valor_nota=round(sum(i.custo_total for i in itens), 2),
+        valor_nota=valor_nota or soma_dos_itens,
         itens=itens,
-        avisos=["Nota montada a partir de leitura por foto, conferida à mão. "
-                "Sem o XML, o ICMS ST não entra no custo."],
+        avisos=avisos,
     )
 
     try:
         registro = nfe_importacao.registrar(db, lida, unidade, usuario,
-                                            origem="FOTO")
+                                            origem="FOTO",
+                                            fornecedor=fornecedor)
     except nfe_importacao.ErroImportacao as erro:
         raise HTTPException(409, str(erro))
 
@@ -252,6 +384,56 @@ def nota_conferida(dados: NotaDigitada, db: Session = Depends(get_db),
             item.produto_id = produto_id
     db.commit()
     return _detalhe(db, registro, avisos=lida.avisos)
+
+
+def _resolver_fornecedor(db: Session, dados: "NotaDigitada", cnpj: str,
+                         usuario: Usuario):
+    """O fornecedor que a pessoa confirmou — e o CNPJ gravado no cadastro.
+
+    Três caminhos, e nenhum deles cadastra por conta própria:
+
+      · escolheu um da lista  -> é esse, e ele ganha o CNPJ da chave;
+      · pediu para criar      -> cria com o nome e o CNPJ lidos da nota;
+      · não escolheu nada     -> a nota entra sem fornecedor, e a tela cobra.
+
+    O terceiro caso é de propósito. Recusar a nota inteira por falta de
+    fornecedor jogaria fora a conferência de doze números que a pessoa acabou
+    de fazer; a compra fica registrada e o fornecedor é preenchido depois,
+    antes de aprovar.
+    """
+    avisos = []
+    if dados.fornecedor_id:
+        consulta = db.query(Fornecedor).filter(
+            Fornecedor.id == dados.fornecedor_id)
+        if usuario.empresa_id:
+            consulta = consulta.filter(
+                Fornecedor.empresa_id == usuario.empresa_id)
+        fornecedor = consulta.first()
+        if not fornecedor:
+            raise HTTPException(404, "Esse fornecedor não está no cadastro.")
+        conflito = nfe_importacao.fixar_cnpj(fornecedor, cnpj)
+        if conflito:
+            avisos.append(conflito)
+        return fornecedor, avisos
+
+    if dados.criar_fornecedor:
+        nome = (dados.emitente_nome or "").strip()
+        if len(nome) < 4:
+            raise HTTPException(
+                400, "Sem o nome do fornecedor não dá para cadastrar. "
+                     "Escolha um da lista ou digite o nome.")
+        fornecedor = Fornecedor(nome=nome[:180], cnpj=cnpj or None,
+                                empresa_id=usuario.empresa_id)
+        db.add(fornecedor)
+        db.flush()
+        avisos.append(f"Fornecedor {fornecedor.nome} cadastrado a partir "
+                      f"desta nota.")
+        return fornecedor, avisos
+
+    avisos.append("Esta nota ficou SEM FORNECEDOR. Escolha um antes de "
+                  "aprovar — sem ele a compra não aparece em nenhum "
+                  "relatório por fornecedor.")
+    return None, avisos
 
 
 # ==============================================================================
@@ -366,6 +548,9 @@ def _detalhe(db: Session, registro: NotaFiscalImportada,
         "emitente": registro.emitente_nome,
         "emitente_cnpj": registro.emitente_cnpj,
         "fornecedor_id": registro.fornecedor_id,
+        # O NOME do fornecedor, e não só o id: a tela de conferência precisa
+        # dizer de quem foi a compra, e quem lê a nota não sabe o que é 48.
+        "fornecedor": registro.fornecedor.nome if registro.fornecedor else None,
         "emissao": registro.data_emissao.isoformat() if registro.data_emissao else None,
         "valor_total": registro.valor_total,
         "valor_produtos": registro.valor_produtos,

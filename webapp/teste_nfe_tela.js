@@ -64,6 +64,11 @@ function montar(respostas = {}) {
         return [{ id: 7, nome: 'Costela bovina', unidade_medida: 'Kg' },
                 { id: 8, nome: 'Embutido de frango', unidade_medida: 'Kg' }];
       }
+      if (url.startsWith('/fornecedores')) {
+        return respostas.fornecedores
+          || [{ id: 3, nome: 'SUINOAVES ALIMENTOS LTDA', cnpj: null },
+              { id: 4, nome: 'AMBEV S A', cnpj: null }];
+      }
       if (url.startsWith('/nfe/')) return respostas.detalhe || NOTA;
       return respostas.lista || [];
     },
@@ -255,8 +260,25 @@ function montar(respostas = {}) {
   // ==========================================================================
   // O texto do OCR não é para ser interpretado por ninguém. A coluna mostra
   // os produtos do cadastro que combinam; o lido fica embaixo, como pista.
+  // O total fecha com as duas linhas (129,90 + 296,90). Assim o portão que
+  // este teste examina é o do FORNECEDOR — se a soma não fechasse, o botão
+  // já estaria travado por outro motivo e a asserção não provaria nada.
   const OCR = {
-    total_produtos: 949.7, soma_confere: false, campos_a_conferir: 1, avisos: [],
+    total_produtos: 426.8, soma_confere: true, campos_a_conferir: 1, avisos: [],
+    cabecalho: {
+      emitente_nome: 'SUINOAVES ALIMENTOS LTDA',
+      emitente_cnpj: '03425088000181',
+      numero: '427795', serie: '1',
+      data_emissao: '2026-09-08', valor_nota: 959.47,
+      destinatario_nome: 'CASA JOSEFINA LTDA',
+      origem: { emitente_cnpj: 'chave', numero: 'chave', serie: 'chave',
+                emitente_nome: 'foto', data_emissao: 'foto', valor_nota: 'foto' },
+      fornecedor: {
+        sugerido: 3,
+        candidatos: [{ fornecedor_id: 3, nome: 'SUINOAVES ALIMENTOS LTDA',
+                       cnpj: null, pontos: 100 }],
+      },
+    },
     linhas: [
       { descricao: 'AOS: EMBUTIDO DE FRANGO FINA', lidos: [129.9, 12.99, 10],
         quantidade: 10, valor_unitario: 12.99, valor_total: 129.9,
@@ -318,6 +340,104 @@ function montar(respostas = {}) {
      'a linha que fechou na conta não recebe a marca');
   ok(/confira no papel/.test(t6.alvo.querySelector('#nfe-ocr').textContent),
      'e a tela diz em palavras o que a marca significa');
+
+  // ==========================================================================
+  console.log('\n[7] O CABEÇALHO É O QUE FAZ ISSO VIRAR COMPRA');
+  // ==========================================================================
+  // Doze números conferidos sem fornecedor, sem número de nota e sem data não
+  // são uma compra: são uma lista de coisas.
+  const cab = t6.alvo.querySelector('#nfe-ocr .nfe-cabecalho-lido');
+  ok(!!cab, 'a conferência abre com o cabeçalho da nota');
+
+  const selForn = t6.alvo.querySelector('#nfe-cab-fornecedor');
+  ok(selForn && selForn.value === '3',
+     `o fornecedor sugerido já vem escolhido (${selForn && selForn.value})`);
+  ok(/SUINOAVES/.test(cab.textContent),
+     'e o nome lido da nota fica à vista para conferir com o papel');
+
+  const numero = t6.alvo.querySelector('#nfe-cab-numero');
+  ok(numero && numero.value === '427795', 'o número da nota vem preenchido');
+  ok(numero && numero.hasAttribute('readonly'),
+     'e não é editável, porque veio da chave e não de leitura');
+  ok(/confirmado pela chave/.test(cab.textContent),
+     'a tela diz de onde ele veio');
+
+  const data = t6.alvo.querySelector('#nfe-cab-data');
+  ok(data && data.value === '2026-09-08', 'a emissão vem preenchida');
+  ok(!data.hasAttribute('readonly'),
+     'e ESSA é editável — a chave só guarda mês e ano, o dia veio da foto');
+  ok(Number(t6.alvo.querySelector('#nfe-cab-valor').value) === 959.47,
+     'o total da nota, com frete e imposto, vem do rodapé');
+
+  // Sem fornecedor não se segue. Não é rigor: é que compra sem fornecedor
+  // não aparece em relatório nenhum e não casa com o pagamento depois.
+  ok(!t6.alvo.querySelector('#nfe-ocr-seguir').disabled,
+     'com a soma fechada e o fornecedor escolhido, dá para seguir');
+  selForn.value = '';
+  selForn.dispatchEvent(new t6.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 20));
+  const botao = t6.alvo.querySelector('#nfe-ocr-seguir');
+  ok(botao && botao.disabled, 'tirando o fornecedor, o botão de seguir trava');
+  ok(/Escolha o\s+fornecedor/.test(t6.alvo.querySelector('#nfe-ocr').textContent),
+     'e a tela diz por quê');
+
+  // Existindo no cadastro um com o nome IGUAL, cadastrar de novo é criar
+  // duplicata — e duplicata de fornecedor parte todo relatório em dois sem
+  // dar erro nenhum. A saída é a lista, não um cadastro novo.
+  ok(!t6.alvo.querySelector('#nfe-cab-criar'),
+     'com um nome idêntico no cadastro, NÃO se oferece cadastrar outro');
+
+  // ==========================================================================
+  console.log('\n[8] FORNECEDOR QUE NÃO ESTÁ NO CADASTRO');
+  // ==========================================================================
+  const NOVO = JSON.parse(JSON.stringify(OCR));
+  NOVO.cabecalho.emitente_nome = 'FRIGORIFICO BOA VISTA LTDA';
+  NOVO.cabecalho.fornecedor = { sugerido: null, candidatos: [] };
+  const t8 = montar({ arquivo: NOVO, lista: [] });
+  await t8.w.Paginas.nfe.render(t8.alvo);
+  await new Promise((r) => setTimeout(r, 30));
+  t8.alvo.querySelector('#nfe-ler-itens').checked = true;
+  const f8 = t8.alvo.querySelector('#nfe-foto');
+  Object.defineProperty(f8, 'files', { value: [{ name: 'n.jpg' }], configurable: true });
+  t8.w.api.postArquivo = async (url) => (url.includes('/itens')
+    ? NOVO : { encontrada: true, chave: CHAVE, origem: 'CODIGO_BARRAS' });
+  f8.dispatchEvent(new t8.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 90));
+
+  ok(t8.alvo.querySelector('#nfe-cab-fornecedor').value === '',
+     'sem parecido no cadastro, nada vem escolhido');
+  ok(t8.alvo.querySelector('#nfe-ocr-seguir').disabled,
+     'e o caminho fica travado');
+
+  const criar = t8.alvo.querySelector('#nfe-cab-criar');
+  ok(!!criar, 'aparece a opção de cadastrar o fornecedor da nota');
+  ok(!criar.checked, 'desmarcada: cadastrar é decisão, não efeito colateral');
+  ok(/FRIGORIFICO BOA VISTA/.test(
+       t8.alvo.querySelector('.nfe-cabecalho-lido').textContent),
+     'com o nome que veio da nota, não um campo em branco para digitar');
+
+  criar.checked = true;
+  criar.dispatchEvent(new t8.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 20));
+  ok(!t8.alvo.querySelector('#nfe-ocr-seguir').disabled,
+     'marcando para cadastrar, o caminho destrava');
+
+  // E o que vai para o servidor tem que ser o cabeçalho, não só os itens.
+  t8.alvo.querySelector('#nfe-ocr-seguir').click();
+  await new Promise((r) => setTimeout(r, 40));
+  const enviada = t8.pedidos.filter((p) => p[1] === '/nfe/manual').pop();
+  ok(!!enviada, 'a nota é enviada para /nfe/manual');
+  if (enviada) {
+    const corpo = enviada[2];
+    ok(corpo.criar_fornecedor === true && corpo.fornecedor_id === null,
+       'com o pedido de cadastrar o fornecedor da nota');
+    ok(corpo.numero === '427795' && corpo.serie === '1',
+       `com número e série (${corpo.numero}/${corpo.serie})`);
+    ok(corpo.data_emissao === '2026-09-08' && corpo.valor_nota === 959.47,
+       'com a data de emissão e o total da nota');
+    ok(corpo.emitente_cnpj === '03425088000181',
+       'e com o CNPJ, que é o que vai identificar o fornecedor da próxima vez');
+  }
 
   console.log('\n' + (falhas.length
     ? 'FALHAS:\n  ' + falhas.join('\n  ') : 'Tudo certo.'));

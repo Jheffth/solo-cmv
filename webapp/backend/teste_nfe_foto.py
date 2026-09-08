@@ -242,5 +242,232 @@ ok(not r['candidatos'] or r['sugerido'] is None,
    'texto que não é nada não vira sugestão')
 _db.close()
 
+# ==============================================================================
+print('\n[7] O CABEÇALHO — E A CHAVE MANDANDO NELE')
+# ==============================================================================
+# Doze números conferidos sem fornecedor, sem número de nota e sem data não
+# são uma compra: são uma lista de coisas.
+from servicos import chave_nfe, danfe_cabecalho                # noqa: E402
+
+CHAVE_REAL = '53260903425088000181550010004277951006747382'
+_chave = chave_nfe.validar(CHAVE_REAL)
+
+if os.path.exists(FOTO):
+    cab = danfe_cabecalho.ler(open(FOTO, 'rb').read(), _chave,
+                              valor_produtos=949.70)
+    ok(cab.emitente_nome == 'SUINOAVES ALIMENTOS LTDA',
+       f'o fornecedor sai do canhoto: {cab.emitente_nome!r}')
+    ok(cab.numero == '427795' and cab.serie == '1',
+       f'número e série vêm da chave: {cab.numero}/{cab.serie}')
+    ok(cab.data_emissao and cab.data_emissao.isoformat() == '2026-09-08',
+       f'a data de emissão é a do papel: {cab.data_emissao}')
+    ok(cab.valor_nota == 959.47,
+       f'e o total da nota, com frete e imposto: {cab.valor_nota}')
+    ok('JOSEFINA' in cab.destinatario_nome.upper(),
+       f'o destinatário é lido para conferir a loja: {cab.destinatario_nome!r}')
+
+    # A prova de que a chave manda: o quadro impresso diz 03.415.088/0001-81
+    # (o OCR lê o 2 como 1) e a chave diz 03.425.088/0001-81. Um dígito. É
+    # esse dígito que vira um segundo cadastro do mesmo fornecedor.
+    ok(cab.emitente_cnpj == '03425088000181',
+       f'o CNPJ vem da chave, não da leitura: {cab.emitente_cnpj}')
+    ok(cab.origem.get('emitente_cnpj') == 'chave',
+       'e a tela recebe de onde ele veio, para não pedir conferência à toa')
+
+    # Sem chave, o CNPJ fica VAZIO em vez de errado. Campo vazio é pergunta;
+    # CNPJ errado gravado no cadastro é dano silencioso.
+    sozinho = danfe_cabecalho.ler(open(FOTO, 'rb').read(), None,
+                                  valor_produtos=949.70)
+    ok(sozinho.emitente_cnpj == '',
+       'sem a chave, nenhum CNPJ é chutado a partir da foto')
+    ok(sozinho.emitente_nome == 'SUINOAVES ALIMENTOS LTDA',
+       'mas o nome continua saindo — ele não precisa de dígito verificador')
+
+# ==============================================================================
+print('\n[8] O FORNECEDOR DA NOTA VIRA O FORNECEDOR DO CADASTRO')
+# ==============================================================================
+r = nfe_importacao.candidatos_de_fornecedor(
+    _db2 := SessionLocal(), 'SUINOAVES ALIMENTOS LTDA', '', EMPRESA)
+ok(r['sugerido'] is not None,
+   f"o nome lido acha o cadastro: {[c['nome'] for c in r['candidatos'][:1]]}")
+
+# O empate por palavra genérica é o erro que quebra relatório por fornecedor:
+# "COMERCIO", "DISTRIBUIDORA" e "LTDA" estão em metade do cadastro.
+r = nfe_importacao.candidatos_de_fornecedor(
+    _db2, 'XPTO COMERCIO DE ALIMENTOS LTDA', '', EMPRESA)
+ok(r['sugerido'] is None,
+   'fornecedor desconhecido NÃO é casado por palavra genérica')
+
+# CNPJ não concorre com nome: ele encerra a discussão.
+_alvo = _db2.query(__import__('models').Fornecedor).filter_by(
+    empresa_id=EMPRESA).first()
+_guardado = _alvo.cnpj
+_alvo.cnpj = '99999999000191'
+r = nfe_importacao.candidatos_de_fornecedor(
+    _db2, 'NOME COMPLETAMENTE DIFERENTE SA', '99999999000191', EMPRESA)
+ok(r['sugerido'] == _alvo.id,
+   'com o CNPJ batendo, o nome não importa mais')
+
+# E o CNPJ da chave é gravado no cadastro — é isso que faz o casamento
+# virar exato daqui para a frente.
+_alvo.cnpj = None
+ok(nfe_importacao.fixar_cnpj(_alvo, '03425088000181') is None
+   and _alvo.cnpj == '03425088000181',
+   'cadastro sem CNPJ recebe o da chave')
+conflito = nfe_importacao.fixar_cnpj(_alvo, '11111111000191')
+ok(conflito and _alvo.cnpj == '03425088000181',
+   'e um CNPJ DIFERENTE não sobrescreve: vira aviso')
+ok('confira' in (conflito or '').lower(),
+   'porque isso é sinal de nota casada com o fornecedor errado')
+_alvo.cnpj = _guardado
+_db2.rollback()
+_db2.close()
+
+# ==============================================================================
+print('\n[9] A CONFERÊNCIA DA LOJA')
+# ==============================================================================
+# Compra entra em UMA loja, e a loja errada estraga duas apurações de CMV de
+# uma vez: sobra onde não entrou e falta onde entrou. A nota sabe para quem
+# foi vendida.
+from routers.nfe import _conferir_a_loja                       # noqa: E402
+from models import Unidade                                     # noqa: E402
+
+_db3 = SessionLocal()
+_lojas = _db3.query(Unidade).all()
+_por_nome = {l.nome.lower(): l for l in _lojas}
+_josefina = next((l for l in _lojas if l.nome.lower() == 'josefina'), None)
+_casa = next((l for l in _lojas if 'casa' in l.nome.lower()), None)
+
+if _josefina and _casa:
+    aviso = _conferir_a_loja(_db3, 'DESTINATARIO CASA JOSEFINA LTDA',
+                             _casa.id, _casa.empresa_id)
+    ok(aviso is None, 'nota da Casa Josefina lançada na Casa Josefina: silêncio')
+
+    # O alarme é conservador de propósito. "Josefina" está DENTRO de "Casa
+    # Josefina", então as duas casam com o texto — e alarme que dispara à toa
+    # é desligado pela pessoa em uma semana, e aí não avisa nem quando importa.
+    aviso = _conferir_a_loja(_db3, 'DESTINATARIO CASA JOSEFINA LTDA',
+                             _josefina.id, _josefina.empresa_id)
+    ok(aviso is None,
+       'com os dois nomes casando no texto, também fica calado')
+
+# Quando a loja escolhida NÃO aparece no destinatário e outra aparece, aí
+# fala. Com nomes que se contêm ("Josefina" dentro de "Casa Josefina") isso
+# nunca acontece, então o caso é montado com duas lojas de nomes distintos —
+# que é o desenho para o qual a conferência foi feita.
+_empresa = _lojas[0].empresa_id if _lojas else None
+if _empresa:
+    _a = Unidade(empresa_id=_empresa, nome='Asa Norte')
+    _b = Unidade(empresa_id=_empresa, nome='Taguatinga')
+    _db3.add_all([_a, _b])
+    _db3.flush()
+    aviso = _conferir_a_loja(_db3, 'DESTINATARIO REDE TAGUATINGA LTDA',
+                             _a.id, _empresa)
+    ok(aviso is not None,
+       'nota endereçada a outra loja com nome distinto DISPARA o aviso')
+    ok(aviso and 'CMV' in aviso,
+       'e o aviso diz o que quebra — o CMV das duas lojas')
+    ok(_conferir_a_loja(_db3, 'DESTINATARIO REDE TAGUATINGA LTDA',
+                        _b.id, _empresa) is None,
+       'na loja certa, silêncio')
+    _db3.rollback()
+
+ok(_conferir_a_loja(_db3, '', 1, None) is None,
+   'sem destinatário legível não há conferência, e não há alarme falso')
+_db3.close()
+
+# ==============================================================================
+print('\n[10] A ROTA INTEIRA, COM A NOTA DE VERDADE')
+# ==============================================================================
+# Os pedaços passando não provam que a compra sai lançável. Esta seção sobe
+# a aplicação e faz o caminho que a pessoa faz.
+import models                                                  # noqa: E402
+from database import engine                                    # noqa: E402
+models.Base.metadata.create_all(engine)
+
+from fastapi.testclient import TestClient                      # noqa: E402
+from auth.deps import get_current_user                         # noqa: E402
+import main                                                    # noqa: E402
+
+CHAVE_REAL = '53260903425088000181550010004277951006747382'
+_db4 = SessionLocal()
+_eu = _db4.query(models.Usuario).filter(models.Usuario.ativo.is_(True)).first()
+_loja = _db4.query(Unidade).filter(
+    Unidade.empresa_id == _eu.empresa_id).first() if _eu else None
+
+if _eu and _loja:
+    main.app.dependency_overrides[get_current_user] = lambda: _eu
+    cliente = TestClient(main.app)
+
+    if os.path.exists(FOTO):
+        resposta = cliente.post(
+            '/api/nfe/foto/itens',
+            files={'arquivo': ('nota.jpg', open(FOTO, 'rb').read(), 'image/jpeg')},
+            data={'chave': CHAVE_REAL, 'unidade_id': str(_loja.id)})
+        ok(resposta.status_code == 200,
+           f'a foto + chave voltam a nota inteira ({resposta.status_code})')
+        corpo = resposta.json()
+        cabecalho = corpo.get('cabecalho') or {}
+        ok(cabecalho.get('numero') == '427795'
+           and cabecalho.get('data_emissao') == '2026-09-08',
+           'com número e data no cabeçalho')
+        ok((cabecalho.get('fornecedor') or {}).get('sugerido') is not None,
+           'e com o fornecedor do cadastro já apontado')
+
+    _forn = _db4.query(models.Fornecedor).filter(
+        models.Fornecedor.nome == 'SUINOAVES ALIMENTOS LTDA').first()
+    if _forn:
+        _forn.cnpj = None
+        _db4.commit()
+        criada = cliente.post('/api/nfe/manual', json={
+            'unidade_id': _loja.id, 'chave': CHAVE_REAL,
+            'numero': '427795', 'serie': '1',
+            'data_emissao': '2026-09-08', 'valor_nota': 959.47,
+            'emitente_nome': 'SUINOAVES ALIMENTOS LTDA',
+            'emitente_cnpj': '03425088000181',
+            'fornecedor_id': _forn.id,
+            'itens': [
+                {'descricao': 'Linguiça de Frango Fina', 'quantidade': 10,
+                 'valor_unitario': 12.99, 'valor_total': 129.90},
+                {'descricao': 'Costelinha salgada', 'quantidade': 9.9,
+                 'valor_unitario': 29.99, 'valor_total': 296.90},
+                {'descricao': 'Panceta kg', 'quantidade': 15.1,
+                 'valor_unitario': 30.99, 'valor_total': 467.95},
+                {'descricao': 'Pe Salgado kg', 'quantidade': 5.0,
+                 'valor_unitario': 10.99, 'valor_total': 54.95}],
+        })
+        ok(criada.status_code == 200,
+           f'a nota conferida vira registro ({criada.status_code})')
+        if criada.status_code == 200:
+            nota = criada.json()
+            ok(nota.get('fornecedor') == 'SUINOAVES ALIMENTOS LTDA',
+               f"com o fornecedor do cadastro: {nota.get('fornecedor')}")
+            ok(nota.get('numero') == '427795' and nota.get('serie') == '1',
+               f"com número e série: {nota.get('numero')}/{nota.get('serie')}")
+            ok(nota.get('emissao') == '2026-09-08',
+               f"com a data de emissão: {nota.get('emissao')}")
+            ok(nota.get('valor_produtos') == 949.70,
+               f"e os produtos somando o da nota: {nota.get('valor_produtos')}")
+
+            # O total da nota (959,47) é MAIOR que os produtos (949,70). A
+            # diferença de 9,77 é o ICMS ST, que não entra no custo por esta
+            # via — e a pessoa precisa ser avisada, senão o custo parece
+            # completo e não está.
+            ok(any('9.77' in a or '9,77' in a for a in nota.get('avisos', [])),
+               'e a diferença de R$ 9,77 é explicada como frete e imposto')
+
+            _db4.expire_all()
+            ok(_db4.get(models.Fornecedor, _forn.id).cnpj == '03425088000181',
+               'o CNPJ da chave fica gravado no cadastro do fornecedor')
+
+            # Não deixar lixo no banco de desenvolvimento.
+            registro = _db4.get(models.NotaFiscalImportada, nota['id'])
+            if registro:
+                _db4.delete(registro)
+                _db4.commit()
+
+    main.app.dependency_overrides.pop(get_current_user, None)
+_db4.close()
+
 print('\n' + ('FALHAS:\n  ' + '\n  '.join(falhas) if falhas else 'Tudo certo.'))
 sys.exit(1 if falhas else 0)

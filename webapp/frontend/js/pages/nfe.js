@@ -17,6 +17,7 @@ window.Paginas = window.Paginas || {};
 window.Paginas.nfe = (function () {
   let notaAtual = null;
   let produtos = [];
+  let fornecedores = [];
 
   const brl = (v) => (v == null ? '—' : 'R$ ' + Number(v).toLocaleString(
     'pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -117,6 +118,23 @@ window.Paginas.nfe = (function () {
      ============================================================ */
   let ocr = null;
 
+  /* O que a PESSOA decidiu sobre o cabeçalho, separado do que foi lido.
+     Manter os dois lados faz a tela poder mostrar "lido: X" ao lado da
+     escolha — e é o que permite discordar da leitura sem apagá-la. */
+  let cabecalhoEscolhido = {};
+
+  function adotarCabecalho() {
+    const c = (ocr && ocr.cabecalho) || {};
+    cabecalhoEscolhido = {
+      fornecedor_id: (c.fornecedor || {}).sugerido || null,
+      criar_fornecedor: false,
+      numero: c.numero || '',
+      serie: c.serie || '',
+      data_emissao: c.data_emissao || '',
+      valor_nota: c.valor_nota ?? null,
+    };
+  }
+
   function somaConferida() {
     return (ocr.linhas || []).reduce((t, l) => t + (Number(l.valor_total) || 0), 0);
   }
@@ -174,6 +192,87 @@ window.Paginas.nfe = (function () {
       : 'lido da coluna da nota — confira no papel';
   }
 
+  /* O CABEÇALHO É O QUE FAZ ISSO VIRAR COMPRA.
+
+     Doze números conferidos sem fornecedor, sem número de nota e sem data
+     não são uma compra: são uma lista de coisas. É o cabeçalho que responde
+     de quem se comprou, em que documento e quando — e sem essas três a
+     compra não entra em relatório nenhum, não casa com o pagamento e não
+     tem como ser encontrada depois.
+
+     A hierarquia da tela segue de onde veio cada campo. O que a CHAVE
+     provou (CNPJ, número, série) aparece como fato, sem pedir conferência,
+     porque tem dígito verificador atrás. O que a foto leu aparece
+     editável. Misturar os dois faria a pessoa conferir de novo o que já
+     estava provado — e desconfiar por igual do que não estava. */
+  function blocoDoCabecalho() {
+    const c = ocr.cabecalho || {};
+    const f = c.fornecedor || {};
+    const lista = f.candidatos || [];
+    const veioDaChave = (campo) => (c.origem || {})[campo] === 'chave';
+    const marca = (campo) => (veioDaChave(campo)
+      ? '<small class="nfe-provado-chave">confirmado pela chave</small>'
+      : '');
+
+    const opcoes = `
+      <option value="">— escolha o fornecedor —</option>
+      ${lista.map((o) => `<option value="${o.fornecedor_id}"${
+        o.fornecedor_id === cabecalhoEscolhido.fornecedor_id ? ' selected' : ''
+      }>${escapar(o.nome)}${o.cnpj ? ' — ' + escapar(o.cnpj) : ''}</option>`).join('')}
+      ${fornecedores.filter((o) => !lista.some((p) => p.fornecedor_id === o.id))
+        .map((o) => `<option value="${o.id}"${
+          o.id === cabecalhoEscolhido.fornecedor_id ? ' selected' : ''
+        }>${escapar(o.nome)}</option>`).join('')}`;
+
+    const nomeLido = c.emitente_nome || '';
+    const podeCriar = nomeLido.length >= 4
+      && !lista.some((o) => o.pontos >= 100);
+
+    return `
+      <div class="nfe-cabecalho-lido">
+        <div class="nfe-campo-cab nfe-campo-cab--largo">
+          <label for="nfe-cab-fornecedor">Fornecedor</label>
+          <select class="nfe-forn" id="nfe-cab-fornecedor">${opcoes}</select>
+          ${nomeLido ? `<small class="nfe-lido">lido: ${escapar(nomeLido)}${
+            c.emitente_cnpj ? ' · CNPJ ' + escapar(c.emitente_cnpj) : ''}</small>` : ''}
+          ${!cabecalhoEscolhido.fornecedor_id && podeCriar ? `
+            <label class="nfe-check">
+              <input type="checkbox" id="nfe-cab-criar"${
+                cabecalhoEscolhido.criar_fornecedor ? ' checked' : ''}>
+              não está no cadastro — cadastrar ${escapar(nomeLido)}
+            </label>` : ''}
+          ${!cabecalhoEscolhido.fornecedor_id && !cabecalhoEscolhido.criar_fornecedor
+            ? '<small class="nfe-selo-conf">escolha de quem foi a compra</small>' : ''}
+        </div>
+        <div class="nfe-campo-cab">
+          <label for="nfe-cab-numero">Número da nota</label>
+          <input id="nfe-cab-numero" type="text" inputmode="numeric"
+                 value="${escapar(cabecalhoEscolhido.numero || '')}"
+                 ${veioDaChave('numero') ? 'readonly' : ''}>
+          ${marca('numero')}
+        </div>
+        <div class="nfe-campo-cab nfe-campo-cab--curto">
+          <label for="nfe-cab-serie">Série</label>
+          <input id="nfe-cab-serie" type="text" inputmode="numeric"
+                 value="${escapar(cabecalhoEscolhido.serie || '')}"
+                 ${veioDaChave('serie') ? 'readonly' : ''}>
+        </div>
+        <div class="nfe-campo-cab">
+          <label for="nfe-cab-data">Emissão</label>
+          <input id="nfe-cab-data" type="date"
+                 value="${escapar(cabecalhoEscolhido.data_emissao || '')}">
+          ${cabecalhoEscolhido.data_emissao ? '' :
+            '<small class="nfe-selo-conf">preencha a data</small>'}
+        </div>
+        <div class="nfe-campo-cab">
+          <label for="nfe-cab-valor">Total da nota</label>
+          <input id="nfe-cab-valor" class="nfe-n" type="number" step="0.01"
+                 value="${cabecalhoEscolhido.valor_nota ?? ''}">
+          <small class="nfe-lido">com frete e imposto</small>
+        </div>
+      </div>`;
+  }
+
   function chipsDeCandidatos(linha, indice, campo) {
     return (linha.lidos || []).slice(0, 6).map((v) =>
       `<button type="button" class="nfe-chip" data-i="${indice}"
@@ -189,6 +288,8 @@ window.Paginas.nfe = (function () {
     const alvoTotal = Number(ocr.total_produtos) || 0;
     const falta = Math.round((alvoTotal - soma) * 100) / 100;
     const fechou = alvoTotal > 0 && Math.abs(falta) < 0.02;
+    const temFornecedor = !!(cabecalhoEscolhido.fornecedor_id
+                             || cabecalhoEscolhido.criar_fornecedor);
 
     const placar = alvoTotal
       ? `<div class="nfe-placar ${fechou ? 'fechou' : ''}">
@@ -207,7 +308,10 @@ window.Paginas.nfe = (function () {
         <h3 class="card-titulo">Confira o que eu li da foto</h3>
         <p class="subtitulo">Os números vieram de leitura de imagem. Toque num
            valor lido para usá-lo, ou digite o que está no papel.</p>
-        ${(ocr.avisos || []).map((a) => `<p class="nfe-aviso">${escapar(a)}</p>`).join('')}
+        ${(ocr.avisos || []).map((a) => `<p class="nfe-aviso${
+          (ocr.cabecalho || {}).loja_divergente && /loja/i.test(a)
+            ? ' nfe-aviso--acao' : ''}">${escapar(a)}</p>`).join('')}
+        ${blocoDoCabecalho()}
         ${placar}
         <div class="tabela-rolavel">
           <table class="tabela-simples">
@@ -249,12 +353,15 @@ window.Paginas.nfe = (function () {
         </div>
         <div class="nfe-acoes">
           <button class="btn btn-primario" id="nfe-ocr-seguir" type="button"
-                  ${fechou ? '' : 'disabled'}>Seguir para casar os produtos</button>
+                  ${fechou && temFornecedor ? '' : 'disabled'}>Seguir para casar os produtos</button>
           <button class="btn" id="nfe-ocr-cancelar" type="button">Descartar leitura</button>
         </div>
         ${fechou ? '' : `<p class="nfe-aviso nfe-aviso--acao">Só dá para seguir
            quando a soma bater com o total impresso na nota. É essa conta que
            substitui a conferência linha a linha.</p>`}
+        ${temFornecedor ? '' : `<p class="nfe-aviso nfe-aviso--acao">Escolha o
+           fornecedor. Compra sem fornecedor não aparece em relatório nenhum e
+           não casa com o pagamento depois.</p>`}
       </div>`;
 
     ligarOcr(container);
@@ -281,11 +388,39 @@ window.Paginas.nfe = (function () {
         desenharOcr(container);
       });
     });
-    container.querySelectorAll('.nfe-prod').forEach((sel) => {
+    container.querySelectorAll('.nfe-prod[data-i]').forEach((sel) => {
       sel.addEventListener('change', () => {
         ocr.linhas[sel.dataset.i].produto_id = sel.value ? Number(sel.value) : null;
         desenharOcr(container);
       });
+    });
+
+    // ------------------------------------------------------ cabeçalho
+    const forn = container.querySelector('#nfe-cab-fornecedor');
+    if (forn) forn.addEventListener('change', () => {
+      cabecalhoEscolhido.fornecedor_id = forn.value ? Number(forn.value) : null;
+      // Escolher um do cadastro e pedir para criar outro são decisões que se
+      // excluem — deixar as duas ligadas criaria um fornecedor duplicado a
+      // cada nota.
+      if (cabecalhoEscolhido.fornecedor_id) cabecalhoEscolhido.criar_fornecedor = false;
+      desenharOcr(container);
+    });
+    const criar = container.querySelector('#nfe-cab-criar');
+    if (criar) criar.addEventListener('change', () => {
+      cabecalhoEscolhido.criar_fornecedor = criar.checked;
+      if (criar.checked) cabecalhoEscolhido.fornecedor_id = null;
+      desenharOcr(container);
+    });
+    [['#nfe-cab-numero', 'numero'], ['#nfe-cab-serie', 'serie'],
+     ['#nfe-cab-data', 'data_emissao']].forEach(([alvo, campo]) => {
+      const el = container.querySelector(alvo);
+      if (el) el.addEventListener('change', () => {
+        cabecalhoEscolhido[campo] = el.value || '';
+      });
+    });
+    const valor = container.querySelector('#nfe-cab-valor');
+    if (valor) valor.addEventListener('change', () => {
+      cabecalhoEscolhido.valor_nota = valor.value === '' ? null : Number(valor.value);
     });
 
     const cancelar = container.querySelector('#nfe-ocr-cancelar');
@@ -297,9 +432,18 @@ window.Paginas.nfe = (function () {
     if (seguir) seguir.addEventListener('click', async () => {
       seguir.disabled = true;
       try {
+        const lido = ocr.cabecalho || {};
         const nota = await api.post('/nfe/manual', {
           unidade_id: Number(UNIDADE_SELECIONADA),
           chave: (container.querySelector('#nfe-chave').value || '').replace(/\D/g, '') || null,
+          numero: cabecalhoEscolhido.numero || null,
+          serie: cabecalhoEscolhido.serie || null,
+          data_emissao: cabecalhoEscolhido.data_emissao || null,
+          valor_nota: cabecalhoEscolhido.valor_nota ?? null,
+          emitente_nome: lido.emitente_nome || null,
+          emitente_cnpj: lido.emitente_cnpj || null,
+          fornecedor_id: cabecalhoEscolhido.fornecedor_id || null,
+          criar_fornecedor: !!cabecalhoEscolhido.criar_fornecedor,
           itens: ocr.linhas
             .filter((l) => l.quantidade > 0 && l.valor_unitario > 0)
             .map((l) => {
@@ -597,11 +741,17 @@ window.Paginas.nfe = (function () {
         alvo.innerHTML = '';
 
         if (container.querySelector('#nfe-ler-itens').checked) {
-          alvo.innerHTML = '<span class="nfe-contando">Lendo a tabela de itens…</span>';
+          alvo.innerHTML = '<span class="nfe-contando">Lendo a nota…</span>';
           try {
             const corpo2 = new FormData();
             corpo2.append('arquivo', arquivo);
+            // A chave vai junto: no servidor ela é AUTORIDADE sobre o CNPJ
+            // do emitente, o número e a série, que assim não dependem de
+            // leitura. A loja vai para conferir contra o destinatário.
+            corpo2.append('chave', r.chave);
+            corpo2.append('unidade_id', String(UNIDADE_SELECIONADA));
             ocr = await api.postArquivo('/nfe/foto/itens', corpo2);
+            adotarCabecalho();
             alvo.innerHTML = '';
             desenharOcr(container);
             container.querySelector('#nfe-ocr').scrollIntoView({ behavior: 'smooth' });
@@ -659,6 +809,14 @@ window.Paginas.nfe = (function () {
     async render(container) {
       container.innerHTML = html();
       produtos = await api.get('/produtos');
+      // O catálogo inteiro de fornecedores fica junto porque a lista de
+      // parecidos pode não ter o certo, e quem não achou o dele entre as
+      // sugestões não pode ficar sem saída.
+      try {
+        fornecedores = await api.get('/fornecedores');
+      } catch (e) {
+        fornecedores = [];
+      }
       ligarEntrada(container);
       await carregarLista(container);
     },
