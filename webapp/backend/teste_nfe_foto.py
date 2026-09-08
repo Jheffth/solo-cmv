@@ -143,5 +143,42 @@ doc = inspect.getdoc(router_nfe.nota_conferida) or ''
 ok('ICMS ST' in doc and 'XML' in doc,
    'a rota da nota conferida avisa que o ST fica de fora')
 
+# ==============================================================================
+print('\n[6] O NOME LIDO VIRA PRODUTO DO CADASTRO')
+# ==============================================================================
+# A descrição crua do OCR não serve para ninguém escolher nada. O que serve
+# é o produto que ela provavelmente é — e, quando dois empatam, a escolha.
+import os as _os                                            # noqa: E402
+_os.environ.setdefault('DATABASE_URL', 'sqlite:///' + _os.path.join(BACKEND, 'solo_cmv.db'))
+from database import SessionLocal                           # noqa: E402
+from models import Produto                                  # noqa: E402
+from servicos import nfe_importacao                         # noqa: E402
+
+_db = SessionLocal()
+_p = _db.query(Produto).first()
+EMPRESA = _p.empresa_id if _p else None
+
+def achar(texto):
+    return nfe_importacao.candidatos_para_texto(_db, texto, EMPRESA)
+
+r = achar('PANCETA FOOD -3\u00a5L')
+ok(r['sugerido'] is not None,
+   f"texto sujo com um só parecido vem escolhido: {r['candidatos'][:1]}")
+
+r = achar('eee) COSTELA SALGADA - 2VL')
+nomes = [c['nome'] for c in r['candidatos'][:2]]
+ok(len(r['candidatos']) >= 2, f'costela acha mais de um: {nomes}')
+ok(r['sugerido'] is None,
+   'e com empate NÃO escolhe sozinho — a decisão é de quem tem a nota')
+
+r = achar('ere PE SALGADO \u00ab BVL 0" <5 EPSON oF SST a6"')
+ok(r['candidatos'] and 'salgado' in r['candidatos'][0]['nome'].lower(),
+   f"lixo em volta não atrapalha: {r['candidatos'][:1]}")
+
+r = achar('xyzqwk 999')
+ok(not r['candidatos'] or r['sugerido'] is None,
+   'texto que não é nada não vira sugestão')
+_db.close()
+
 print('\n' + ('FALHAS:\n  ' + '\n  '.join(falhas) if falhas else 'Tudo certo.'))
 sys.exit(1 if falhas else 0)

@@ -250,6 +250,57 @@ function montar(respostas = {}) {
   ok(/código de barras/.test(t5b.alvo.querySelector('#nfe-foto-retorno').textContent),
      'foto ruim recebe a dica do que mudar na próxima tentativa');
 
+  // ==========================================================================
+  console.log('\n[6] A COLUNA DO NOME É UMA ESCOLHA DE PRODUTO');
+  // ==========================================================================
+  // O texto do OCR não é para ser interpretado por ninguém. A coluna mostra
+  // os produtos do cadastro que combinam; o lido fica embaixo, como pista.
+  const OCR = {
+    total_produtos: 949.7, soma_confere: false, campos_a_conferir: 1, avisos: [],
+    linhas: [
+      { descricao: 'AOS: EMBUTIDO DE FRANGO FINA', lidos: [129.9, 12.99, 10],
+        quantidade: 10, valor_unitario: 12.99, valor_total: 129.9,
+        quantidade_confirmada: true, total_confirmado: true,
+        produto_id: 8,
+        produtos: [{ produto_id: 8, nome: 'Linguiça de Frango Fina', unidade_medida: 'und', pontos: 5 }] },
+      { descricao: 'eee) COSTELA SALGADA - 2VL', lidos: [296.9, 29.99],
+        quantidade: null, valor_unitario: null, valor_total: null,
+        quantidade_confirmada: false, total_confirmado: false,
+        produto_id: null,
+        produtos: [{ produto_id: 7, nome: 'Costela bovina', unidade_medida: 'Kg', pontos: 2 },
+                   { produto_id: 9, nome: 'Costelinha salgada', unidade_medida: 'kg', pontos: 2 }] },
+    ],
+  };
+  const t6 = montar({ arquivo: OCR, lista: [] });
+  await t6.w.Paginas.nfe.render(t6.alvo);
+  await new Promise((r) => setTimeout(r, 30));
+  t6.alvo.querySelector('#nfe-ler-itens').checked = true;
+  const f6 = t6.alvo.querySelector('#nfe-foto');
+  Object.defineProperty(f6, 'files', { value: [{ name: 'n.jpg' }], configurable: true });
+
+  // a foto devolve a chave e, com a caixa marcada, também os itens
+  t6.w.api.postArquivo = async (url) => (url.includes('/itens')
+    ? OCR : { encontrada: true, chave: CHAVE, origem: 'CODIGO_BARRAS' });
+  f6.dispatchEvent(new t6.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 90));
+
+  const seletores = t6.alvo.querySelectorAll('#nfe-ocr .nfe-prod');
+  ok(seletores.length === 2, `a coluna do nome virou seletor (${seletores.length})`);
+  ok(seletores[0] && seletores[0].value === '8',
+     'o item com um só parecido já vem escolhido');
+  ok(seletores[1] && seletores[1].value === '',
+     'e o que tem dois parecidos NÃO vem escolhido — a decisão é da pessoa');
+
+  const texto6 = t6.alvo.querySelector('#nfe-ocr').textContent;
+  ok(/Costela bovina/.test(texto6) && /Costelinha salgada/.test(texto6),
+     'as duas opções aparecem para escolher');
+  ok(/mais de um parecido/.test(texto6),
+     'com o aviso de que há empate');
+  ok(/lido:/.test(texto6),
+     'e o texto cru do OCR fica como pista, não como campo principal');
+  ok(!t6.alvo.querySelector('#nfe-ocr .nfe-desc'),
+     'o campo de texto livre para o nome não existe mais');
+
   console.log('\n' + (falhas.length
     ? 'FALHAS:\n  ' + falhas.join('\n  ') : 'Tudo certo.'));
   process.exit(falhas.length ? 1 : 0);

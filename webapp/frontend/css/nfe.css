@@ -234,3 +234,16 @@ tr.nfe-provado { background: rgba(28, 122, 60, .05); }
   font-size: .7rem;
   color: var(--gold);
 }
+
+/* O produto escolhido é o dado; o texto lido é só pista para conferir com o
+   papel. A hierarquia visual tem que dizer isso — senão a pessoa lê o lixo
+   do OCR achando que precisa entendê-lo. */
+.nfe-prod { width: 100%; max-width: 280px; font-size: .85rem; }
+.nfe-lido {
+  display: block;
+  margin-top: .2rem;
+  font-size: .68rem;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  opacity: .75;
+}

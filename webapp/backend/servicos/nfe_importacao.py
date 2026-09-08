@@ -121,6 +121,53 @@ def _sugerir_produto(db: Session, descricao: str, codigo_fornecedor: str,
     return exatos[0].produto_id if len(exatos) == 1 else None
 
 
+def candidatos_para_texto(db: Session, texto: str, empresa_id: Optional[int],
+                          limite: int = 5) -> dict:
+    """Os produtos do catálogo que combinam com um texto sujo de OCR.
+
+    POR QUE ISTO EXISTE
+    A tela mostrava a descrição crua da leitura — "eee) COSTELA SALGADA -
+    2VL", "ere PE SALGADO « BVL 0" <5 EPSON". Aquilo não é nome de nada: é
+    lixo de borda de tabela misturado com o produto. Pedir que alguém leia
+    isso e digite o nome certo joga fora justamente o trabalho que a
+    máquina deveria ter feito.
+
+    A busca tolerante já sabia resolver isto — é a mesma que o bot usa para
+    achar produto por nome no chat. Medido nas quatro linhas da foto de
+    referência, com todo o lixo junto:
+
+        "PANCETA FOOD -3¥L"        -> Panceta kg          (único)
+        "ere PE SALGADO « BVL 0"   -> Pe Salgado kg       (destacado)
+        "eee) COSTELA SALGADA"     -> Costela bovina  E  Costelinha salgada
+                                      empatados — e aí a escolha é da pessoa
+
+    QUANDO PRÉ-SELECIONAR
+    Só quando o primeiro colocado se destaca do segundo. Empate é dúvida
+    real, e resolver dúvida por sorteio é como se cria compra lançada no
+    produto errado — que ninguém percebe, porque o valor total fecha.
+    """
+    achados = servico_busca.buscar(db, texto, empresa_id=empresa_id,
+                                   limite=max(limite, 5))
+    candidatos = [{
+        "produto_id": c.produto_id,
+        "nome": c.nome,
+        "unidade_medida": c.unidade_medida,
+        "pontos": round(c.pontos, 1),
+    } for c in achados[:limite]]
+
+    sugerido = None
+    if candidatos:
+        primeiro = candidatos[0]["pontos"]
+        segundo = candidatos[1]["pontos"] if len(candidatos) > 1 else 0.0
+        # 1,5x de folga sobre o segundo: abaixo disso os dois são igualmente
+        # plausíveis para quem está olhando a nota, e a máquina não sabe mais
+        # que a pessoa.
+        if primeiro >= 2.0 and (segundo == 0 or primeiro >= segundo * 1.5):
+            sugerido = candidatos[0]["produto_id"]
+
+    return {"candidatos": candidatos, "sugerido": sugerido}
+
+
 def _fator_sugerido(item: nfe_xml.ItemNota, produto: Optional[Produto]) -> float:
     """Quantas unidades NOSSAS cabem numa unidade da nota.
 

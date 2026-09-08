@@ -121,6 +121,46 @@ window.Paginas.nfe = (function () {
     return (ocr.linhas || []).reduce((t, l) => t + (Number(l.valor_total) || 0), 0);
   }
 
+  /* O NOME LIDO NÃO É PARA SER LIDO POR NINGUÉM.
+
+     "eee) COSTELA SALGADA - 2VL" e "ere PE SALGADO « BVL 0" <5 EPSON" é o
+     que o OCR devolve, e pedir que alguém interprete isso e digite o nome
+     certo joga fora o trabalho que a máquina deveria ter feito.
+
+     Então a coluna mostra os PRODUTOS DO CADASTRO que combinam, já
+     ordenados. Quando um se destaca, vem escolhido; quando dois empatam —
+     "Costela bovina" e "Costelinha salgada" — a lista fica aberta e quem
+     está com a nota na mão decide. O texto lido continua embaixo, pequeno,
+     como pista para conferir contra o papel. */
+  function seletorDeProduto(linha, indice) {
+    const lista = linha.produtos || [];
+    if (!lista.length) {
+      return `<select class="nfe-prod" data-i="${indice}">
+                <option value="">— nenhum parecido; escolha —</option>
+                ${produtos.map((p) => `<option value="${p.id}">${escapar(p.nome)}</option>`).join('')}
+              </select>`;
+    }
+    // Os parecidos primeiro, o catálogo inteiro depois: quem não achou o
+    // dele entre as sugestões não pode ficar sem saída.
+    const ids = new Set(lista.map((p) => p.produto_id));
+    return `
+      <select class="nfe-prod" data-i="${indice}">
+        <option value="">— escolha o produto —</option>
+        <optgroup label="parecidos com o que foi lido">
+          ${lista.map((p) => `<option value="${p.produto_id}"${
+            p.produto_id === linha.produto_id ? ' selected' : ''}>${
+            escapar(p.nome)}${p.unidade_medida ? ' (' + escapar(p.unidade_medida) + ')' : ''}</option>`).join('')}
+        </optgroup>
+        <optgroup label="todos os produtos">
+          ${produtos.filter((p) => !ids.has(p.id)).map((p) =>
+            `<option value="${p.id}">${escapar(p.nome)}</option>`).join('')}
+        </optgroup>
+      </select>
+      ${lista.length > 1 && !linha.produto_id
+        ? '<small class="nfe-selo-conf">mais de um parecido — escolha qual é</small>'
+        : ''}`;
+  }
+
   function chipsDeCandidatos(linha, indice, campo) {
     return (linha.lidos || []).slice(0, 6).map((v) =>
       `<button type="button" class="nfe-chip" data-i="${indice}"
@@ -165,8 +205,9 @@ window.Paginas.nfe = (function () {
             <tbody>
               ${(ocr.linhas || []).map((l, i) => `
                 <tr class="${l.quantidade_confirmada ? 'nfe-provado' : ''}">
-                  <td>
-                    <input class="nfe-desc" data-i="${i}" value="${escapar(l.descricao || '')}">
+                  <td>${seletorDeProduto(l, i)}
+                    <small class="nfe-lido" title="o que a leitura devolveu">
+                      lido: ${escapar((l.descricao || '').slice(0, 52))}</small>
                     ${l.quantidade_confirmada
                       ? '<small class="nfe-selo-ok">fechou sozinha: qtd x preço = total</small>'
                       : '<small class="nfe-selo-conf">confira no papel</small>'}
@@ -224,9 +265,10 @@ window.Paginas.nfe = (function () {
         desenharOcr(container);
       });
     });
-    container.querySelectorAll('.nfe-desc').forEach((campo) => {
-      campo.addEventListener('change', () => {
-        ocr.linhas[campo.dataset.i].descricao = campo.value;
+    container.querySelectorAll('.nfe-prod').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        ocr.linhas[sel.dataset.i].produto_id = sel.value ? Number(sel.value) : null;
+        desenharOcr(container);
       });
     });
 
@@ -244,12 +286,21 @@ window.Paginas.nfe = (function () {
           chave: (container.querySelector('#nfe-chave').value || '').replace(/\D/g, '') || null,
           itens: ocr.linhas
             .filter((l) => l.quantidade > 0 && l.valor_unitario > 0)
-            .map((l) => ({
-              descricao: l.descricao || 'item da nota',
-              quantidade: Number(l.quantidade),
-              valor_unitario: Number(l.valor_unitario),
-              valor_total: Number(l.valor_total),
-            })),
+            .map((l) => {
+              // A descrição gravada é a do PRODUTO escolhido, não o lixo do
+              // OCR: é ela que vai aparecer no histórico da nota daqui a um
+              // ano, e "ere PE SALGADO « BVL 0" não ajuda ninguém.
+              const escolhido = (l.produtos || []).find(
+                (p) => p.produto_id === l.produto_id);
+              return {
+                descricao: (escolhido && escolhido.nome)
+                  || l.descricao || 'item da nota',
+                quantidade: Number(l.quantidade),
+                valor_unitario: Number(l.valor_unitario),
+                valor_total: Number(l.valor_total),
+                produto_id: l.produto_id || null,
+              };
+            }),
         });
         ocr = null;
         desenharOcr(container);

@@ -127,12 +127,18 @@ async def chave_da_foto(arquivo: UploadFile = File(...),
 
 @router.post("/foto/itens")
 async def itens_da_foto(arquivo: UploadFile = File(...),
+                        db: Session = Depends(get_db),
                         usuario: Usuario = Depends(requer(Capacidade.LANCAR_COMPRA))):
     """Lê a TABELA DE ITENS da foto — o caminho de quem não tem o XML.
 
     Devolve o que foi lido com cada campo marcado como provado ou não, e o
     total impresso na nota para a tela conferir a soma. Não grava nada: o
     que sai daqui é rascunho, e vira nota só depois que alguém confirma.
+
+    E JÁ VEM COM OS PRODUTOS CANDIDATOS. A descrição crua do OCR ("eee)
+    COSTELA SALGADA - 2VL") não serve para ninguém escolher nada; o que
+    serve é o produto do catálogo que ela provavelmente é. A busca tolerante
+    resolve isso — a mesma que o bot usa no chat.
     """
     dados = await arquivo.read()
     if not dados:
@@ -141,11 +147,24 @@ async def itens_da_foto(arquivo: UploadFile = File(...),
         raise HTTPException(400, "A foto passa de 8 MB. Tire outra com menos "
                                  "resolução.")
     try:
-        return danfe_itens.ler(dados).como_dicionario()
+        rascunho = danfe_itens.ler(dados).como_dicionario()
     except danfe.LeitorIndisponivel as erro:
         raise HTTPException(503, str(erro))
     except ValueError as erro:
         raise HTTPException(400, str(erro))
+
+    for linha in rascunho.get("linhas", []):
+        achado = nfe_importacao.candidatos_para_texto(
+            db, linha.get("descricao") or "", usuario.empresa_id)
+        linha["produtos"] = achado["candidatos"]
+        linha["produto_id"] = achado["sugerido"]
+    sem_palpite = sum(1 for l in rascunho.get("linhas", [])
+                      if not l.get("produtos"))
+    if sem_palpite:
+        rascunho.setdefault("avisos", []).append(
+            f"{sem_palpite} linha(s) não bateram com nenhum produto do "
+            f"cadastro. Escolha na lista ou deixe de fora.")
+    return rascunho
 
 
 class ItemDigitado(BaseModel):
@@ -153,6 +172,7 @@ class ItemDigitado(BaseModel):
     quantidade: float
     valor_unitario: float
     valor_total: Optional[float] = None
+    produto_id: Optional[int] = None
 
 
 class NotaDigitada(BaseModel):
@@ -220,6 +240,17 @@ def nota_conferida(dados: NotaDigitada, db: Session = Depends(get_db),
                                             origem="FOTO")
     except nfe_importacao.ErroImportacao as erro:
         raise HTTPException(409, str(erro))
+
+    # O produto que a pessoa escolheu na leitura vale mais que o palpite do
+    # de-para: ela estava com a nota na mão. Sobrescreve o que `registrar`
+    # tiver adivinhado, na ordem dos itens.
+    escolhidos = [i.produto_id for i in dados.itens]
+    for item, produto_id in zip(sorted(registro.itens,
+                                       key=lambda i: i.numero_item or 0),
+                                escolhidos):
+        if produto_id:
+            item.produto_id = produto_id
+    db.commit()
     return _detalhe(db, registro, avisos=lida.avisos)
 
 
