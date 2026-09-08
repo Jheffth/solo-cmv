@@ -263,9 +263,11 @@ function montar(respostas = {}) {
         quantidade_confirmada: true, total_confirmado: true,
         produto_id: 8,
         produtos: [{ produto_id: 8, nome: 'Linguiça de Frango Fina', unidade_medida: 'und', pontos: 5 }] },
+      // Preenchida pela coluna da nota, mas sem multiplicação que feche:
+      // é o caso que a tela precisa mostrar como sugestão, não como dado.
       { descricao: 'eee) COSTELA SALGADA - 2VL', lidos: [296.9, 29.99],
-        quantidade: null, valor_unitario: null, valor_total: null,
-        quantidade_confirmada: false, total_confirmado: false,
+        quantidade: 9.9, valor_unitario: 29.99, valor_total: 296.9,
+        quantidade_confirmada: false, total_confirmado: true,
         produto_id: null,
         produtos: [{ produto_id: 7, nome: 'Costela bovina', unidade_medida: 'Kg', pontos: 2 },
                    { produto_id: 9, nome: 'Costelinha salgada', unidade_medida: 'kg', pontos: 2 }] },
@@ -300,6 +302,22 @@ function montar(respostas = {}) {
      'e o texto cru do OCR fica como pista, não como campo principal');
   ok(!t6.alvo.querySelector('#nfe-ocr .nfe-desc'),
      'o campo de texto livre para o nome não existe mais');
+
+  // Agora que a coluna preenche quase tudo, a linha entre "preenchido" e
+  // "conferido" é a única coisa que segura o fluxo. Se ela sumir, um número
+  // sugerido passa a parecer um número provado — e é assim que erro de OCR
+  // vira estoque.
+  const linhas6 = t6.alvo.querySelectorAll('#nfe-ocr tbody tr');
+  const provada = linhas6[0].querySelectorAll('.nfe-n');
+  const suposta = linhas6[1].querySelectorAll('.nfe-n');
+  ok(suposta.length === 3 && [...suposta].every((i) => i.value !== ''),
+     'a linha que não fechou vem com os três campos preenchidos');
+  ok([...suposta].every((i) => i.classList.contains('nfe-sugerido')),
+     'e todos marcados como sugestão, não como conferidos');
+  ok([...provada].every((i) => !i.classList.contains('nfe-sugerido')),
+     'a linha que fechou na conta não recebe a marca');
+  ok(/confira no papel/.test(t6.alvo.querySelector('#nfe-ocr').textContent),
+     'e a tela diz em palavras o que a marca significa');
 
   console.log('\n' + (falhas.length
     ? 'FALHAS:\n  ' + falhas.join('\n  ') : 'Tudo certo.'));

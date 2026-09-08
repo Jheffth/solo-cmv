@@ -29,33 +29,41 @@ AS DUAS CONTAS QUE A PRÓPRIA NOTA OFERECE
 2. quantidade x valor unitário = valor do item. Confirma a quantidade, que é
    o número que vai virar estoque.
 
-POR QUE A CONFERÊNCIA FINAL É NA TELA, E NÃO AQUI
--------------------------------------------------
-A primeira versão tentava confirmar a nota inteira sozinha, achando a
-combinação de valores que fecha no total impresso. Funciona quando o OCR lê
-todos os valores — e não foi o caso: na foto de referência o 54,95 do PE
-SALGADO não saiu em NENHUMA das três passadas, e sem ele nada fecha.
+3. A COLUNA. A DANFE é uma tabela: quantidade, valor unitário e valor total
+   ficam sempre nas mesmas três colunas, uma linha embaixo da outra. Guardar
+   ONDE cada número estava dá identidade a todos de uma vez.
 
-As saídas que sobraram eram piores que o problema:
+   Foi o que faltava na primeira versão. Ela lia os números certos — 296,90 e
+   29,99 apareciam na tela, em botão — e deixava os campos vazios, porque não
+   sabia qual era quantidade e qual era base de cálculo do ICMS. Oito números
+   soltos numa linha são oito números.
 
-  · derivar o que falta por subtração (949,70 - os outros = 54,95) inventa um
-    número que ninguém leu e o marca como conferido;
-  · afrouxar a busca até algo fechar. Testei: fechou em 40,00 somando 20+20,
-    e 40,00 era o PESO BRUTO, lido do bloco de transporte.
+   As colunas não são adivinhadas por posição fixa; foto torta move tudo.
+   São eleitas pela conta: o trio certo é o que faz q x vu = total em mais
+   linhas e cuja coluna de totais soma até o impresso sem estourar. Na nota de
+   referência isso importou — a BC do ICMS era IGUAL ao valor do item na
+   primeira linha, e só a soma da coluna inteira desempatou.
 
-Então a divisão de trabalho é outra. Aqui se entrega o que foi LIDO, com o
-que a aritmética conseguiu provar marcado como provado. A tela mostra o total
-impresso e vai somando enquanto a pessoa confirma — quando a soma fecha, a
-nota fecha. A conta continua sendo feita; quem tem o papel na mão é que
-fornece o dado que faltou.
+O QUE A COLUNA MUDOU NA POSTURA DO ARQUIVO
+------------------------------------------
+Com identidade, contas que antes eram chute viram aritmética. 296,90 dividido
+pelo preço da MESMA linha dá a quantidade que ninguém conseguiu ler; e a
+última linha sem valor sai da subtração, porque as outras três parcelas estão
+numa coluna, não são "os maiores números de cada linha".
 
-O ganho real: em vez de digitar quatro descrições e doze números, a pessoa
-escolhe entre números já lidos e vê a nota fechar na hora.
+O que NÃO mudou é o que decide. Confirmado continua saindo de um jeito só:
+três números lidos, cada um na sua coluna, e a multiplicação bate. Quantidade
+deduzida por divisão é preenchida e MARCADA — ela responde "quanto teria que
+ser", que não é a mesma pergunta que "quanto está escrito no papel".
+
+E a régua final continua sendo a tela: o total impresso somando enquanto a
+pessoa confirma. O ganho é que a pessoa agora confere doze números já no
+lugar, em vez de digitá-los.
 """
 import logging
 import re
 from dataclasses import dataclass, field
-from itertools import product
+from itertools import combinations, product
 from typing import List, Optional
 
 from servicos import danfe
@@ -73,6 +81,14 @@ MAX_CANDIDATOS_POR_LINHA = 8
 # torta e nota rasgada movem tudo — por isso são faixas largas e sobrepostas.
 FAIXA_ITENS = (0.45, 0.64)
 FAIXA_TOTAIS = (0.34, 0.50)
+
+# Recorte e escala de cada passada. Mudar qualquer um dos dois faz o OCR
+# acertar números DIFERENTES — é essa discordância que a coluna resolve.
+PASSADAS = ((0.45, 0.64, 4), (0.47, 0.62, 3), (0.49, 0.61, 5))
+
+# Meia largura de uma coluna, em fração da página. Colunas de DANFE ficam a
+# ~0,055 uma da outra; 0,028 encosta na vizinha sem invadi-la.
+RAIO_COLUNA = 0.028
 
 _NUMERO = re.compile(r"\d{1,3}(?:\.\d{3})*,\d{2,4}|\d+,\d{2,4}")
 
@@ -108,18 +124,72 @@ def _preparar(imagem, escala: int = 4):
                                  cv2.THRESH_BINARY, 41, 12)
 
 
-def _ocr(imagem) -> str:
+def _pytesseract():
     try:
         import pytesseract
     except ImportError:
         raise danfe.LeitorIndisponivel(
             "A leitura de itens por foto precisa do tesseract, que não está "
             "neste servidor. Use o XML da nota enquanto isso.")
+    return pytesseract
+
+
+def _ocr(imagem) -> str:
     try:
-        return pytesseract.image_to_string(imagem, config="--psm 6")
+        return _pytesseract().image_to_string(imagem, config="--psm 6")
+    except danfe.LeitorIndisponivel:
+        raise
     except Exception as erro:
         log.exception("OCR da tabela falhou")
         raise danfe.LeitorIndisponivel(f"A leitura falhou: {erro}")
+
+
+@dataclass
+class LinhaOcr:
+    """Uma linha física da imagem: o texto dela e ONDE cada número estava.
+
+    A posição é a informação que a leitura por texto jogava fora — e é
+    justamente ela que diz qual número é quantidade e qual é base de cálculo
+    do ICMS. Sem ela, oito números numa linha são oito números.
+    """
+    y: float
+    texto: str
+    numeros: List[tuple] = field(default_factory=list)   # (x_centro, valor)
+
+
+def _ocr_com_posicao(imagem) -> List[LinhaOcr]:
+    """O OCR devolvendo também a coluna de cada número.
+
+    Usa o agrupamento em linhas do próprio tesseract em vez de fatiar por
+    coordenada: a foto de nota é sempre torta, e numa faixa inclinada o y de
+    um número da ponta direita já invade a linha de baixo. O tesseract junta
+    por linha de texto, que é o que interessa.
+    """
+    pt = _pytesseract()
+    try:
+        dados = pt.image_to_data(imagem, config="--psm 6",
+                                 output_type=pt.Output.DICT)
+    except Exception as erro:
+        log.exception("OCR posicionado falhou")
+        raise danfe.LeitorIndisponivel(f"A leitura falhou: {erro}")
+
+    largura = max(1, imagem.shape[1])
+    altura = max(1, imagem.shape[0])
+    agrupadas = {}
+    for i, bruto in enumerate(dados["text"]):
+        palavra = (bruto or "").strip()
+        if not palavra:
+            continue
+        chave = (dados["block_num"][i], dados["par_num"][i], dados["line_num"][i])
+        linha = agrupadas.setdefault(chave, LinhaOcr(y=dados["top"][i] / altura,
+                                                     texto=""))
+        linha.texto = (linha.texto + " " + palavra).strip()
+        centro = (dados["left"][i] + dados["width"][i] / 2) / largura
+        for achado in _NUMERO.findall(palavra):
+            valor = _para_float(achado)
+            if valor is not None and valor > 0:
+                linha.numeros.append((centro, round(valor, 4)))
+    return sorted(agrupadas.values(), key=lambda l: l.y)
 
 
 # ==============================================================================
@@ -207,35 +277,36 @@ def _limpar_descricao(bruto: str) -> str:
     return ""
 
 
-def _linhas_com_produto(texto: str) -> List[LinhaLida]:
-    """As linhas que parecem item, e não cabeçalho ou rodapé fiscal.
+def _linha_de_produto(bruta: str) -> Optional[LinhaLida]:
+    """A linha vira item, ou não vira nada.
 
     O critério é ter ao menos três números com casas decimais e alguma letra
     — a linha do "Fonte IBPT" tem números mas é continuação, e o cabeçalho
     tem letras mas não tem valores.
     """
-    achadas = []
-    for bruta in texto.split("\n"):
-        limpa = bruta.strip()
-        if len(limpa) < 12:
-            continue
-        numeros = [n for n in (_para_float(t) for t in _NUMERO.findall(limpa))
-                   if n is not None and n > 0]
-        if len(numeros) < 3:
-            continue
-        # Descrição: o que vem antes do primeiro número longo, sem o código
-        # do produto que abre a linha.
-        antes = _NUMERO.split(limpa)[0]
-        descricao = _limpar_descricao(antes)
-        if len(descricao) < 4:
-            continue
-        # "Fonte IBPT", "pRedBC", "pIcmsSt" são continuação fiscal do item
-        # acima, não itens novos.
-        if re.search(r"IBPT|pRedBC|IcmsSt|CEST", limpa, re.I):
-            continue
-        achadas.append(LinhaLida(texto=limpa, descricao=descricao[:120],
-                                 candidatos=numeros))
-    return achadas
+    limpa = bruta.strip()
+    if len(limpa) < 12:
+        return None
+    numeros = [n for n in (_para_float(t) for t in _NUMERO.findall(limpa))
+               if n is not None and n > 0]
+    if len(numeros) < 3:
+        return None
+    # Descrição: o que vem antes do primeiro número longo, sem o código
+    # do produto que abre a linha.
+    descricao = _limpar_descricao(_NUMERO.split(limpa)[0])
+    if len(descricao) < 4:
+        return None
+    # "Fonte IBPT", "pRedBC", "pIcmsSt" são continuação fiscal do item
+    # acima, não itens novos.
+    if re.search(r"IBPT|pRedBC|IcmsSt|CEST", limpa, re.I):
+        return None
+    return LinhaLida(texto=limpa, descricao=descricao[:120], candidatos=numeros)
+
+
+def _linhas_com_produto(texto: str) -> List[LinhaLida]:
+    """As linhas que parecem item, e não cabeçalho ou rodapé fiscal."""
+    achadas = (_linha_de_produto(b) for b in texto.split("\n"))
+    return [l for l in achadas if l is not None]
 
 
 def _ler_itens_em_varias_passadas(imagem) -> List[LinhaLida]:
@@ -252,35 +323,38 @@ def _ler_itens_em_varias_passadas(imagem) -> List[LinhaLida]:
     fecharem a conta.
     """
     passadas = []
-    for topo, base, escala in ((0.45, 0.64, 4), (0.47, 0.62, 3), (0.49, 0.61, 5)):
+    for topo, base, escala in PASSADAS:
         recorte = imagem[int(imagem.shape[0] * topo):int(imagem.shape[0] * base), :]
         if recorte.size == 0:
             continue
         try:
-            linhas = _linhas_com_produto(_ocr(_preparar(recorte, escala)))
+            fisicas = _ocr_com_posicao(_preparar(recorte, escala))
         except danfe.LeitorIndisponivel:
             raise
         except Exception:
             log.exception("passada de OCR falhou (escala %s)", escala)
             continue
-        if linhas:
-            passadas.append(linhas)
+        itens = [(_linha_de_produto(f.texto), f) for f in fisicas]
+        itens = [(l, f) for l, f in itens if l is not None]
+        if itens:
+            passadas.append((itens, fisicas))
 
     if not passadas:
-        return []
+        return [], []
 
     # A passada com MAIS linhas vira o esqueleto: perder um item é pior que
     # ler um número a mais, porque item que não aparece não é conferido.
-    base = max(passadas, key=len)
-    for outra in passadas:
-        if outra is base or len(outra) != len(base):
+    itens_base, _ = max(passadas, key=lambda p: len(p[0]))
+    base = [l for l, _ in itens_base]
+    for itens, _ in passadas:
+        if itens is itens_base or len(itens) != len(base):
             continue
-        for principal, extra in zip(base, outra):
+        for principal, (extra, _f) in zip(base, itens):
             principal.candidatos.extend(extra.candidatos)
     for linha in base:
         linha.candidatos = sorted({round(v, 2) for v in linha.candidatos},
                                   reverse=True)
-    return base
+    return base, [fisicas for _, fisicas in passadas]
 
 
 # ==============================================================================
@@ -364,6 +438,222 @@ def _fechar_por_multiplicacao(linha: LinhaLida) -> bool:
 
 
 
+# ==============================================================================
+# AS COLUNAS
+# ==============================================================================
+# Por que isto existe:
+#
+# A conferência por multiplicação prova UMA linha quando ela tem os três
+# números certos. Na foto de referência isso valeu para uma de quatro. As
+# outras três tinham os números legíveis na tela — 296,90 e 29,99 estavam ali,
+# em botão — e mesmo assim os campos ficavam vazios, porque nada dizia QUAL
+# número era quantidade e qual era base de cálculo do ICMS.
+#
+# A DANFE diz. Ela é uma tabela: quantidade, valor unitário e valor total
+# ficam sempre nas mesmas três colunas, uma linha embaixo da outra. Descobrir
+# essas três colunas resolve a identidade de todo mundo de uma vez.
+#
+# E as colunas não são adivinhadas por posição fixa — foto torta move tudo.
+# São escolhidas pela conta: o trio de colunas certo é o que faz
+# quantidade x preço = total em mais linhas, e cuja coluna de totais soma até
+# o total impresso sem estourar. Continua valendo a regra da casa: a posição
+# sugere, a aritmética decide.
+# ==============================================================================
+def _casar_linhas(linhas: List[LinhaLida], fisicas: List[LinhaOcr]) -> List[Optional[int]]:
+    """Para cada linha física do OCR, de qual item ela é — ou None.
+
+    Primeiro pelos valores: a linha física que repete dois números de um item
+    é aquele item. Depois pela ordem: uma linha física órfã espremida entre o
+    item 1 e o item 3 só pode ser o item 2. A ordem das linhas na página é
+    fixa, então usá-la para tapar buraco não inventa nada.
+
+    Sem o segundo passo, a linha da COSTELA se perdia numa das passadas — e
+    era justamente a passada que tinha lido o 29,99 certo.
+    """
+    def perto(a, b):
+        return abs(a - b) <= max(0.02, abs(b) * 0.005)
+
+    alvos: List[Optional[int]] = []
+    for fisica in fisicas:
+        pontos = [sum(1 for _x, v in fisica.numeros
+                      if any(perto(v, c) for c in linha.candidatos))
+                  for linha in linhas]
+        melhor = max(range(len(linhas)), key=lambda i: pontos[i]) if linhas else 0
+        alvos.append(melhor if linhas and pontos[melhor] >= 2 else None)
+
+    for i, alvo in enumerate(alvos):
+        if alvo is not None or len(fisicas[i].numeros) < 2:
+            continue
+        anterior = max([a for a in alvos[:i] if a is not None], default=-1)
+        seguinte = min([a for a in alvos[i + 1:] if a is not None],
+                       default=len(linhas))
+        if seguinte - anterior == 2:      # só cabe um item no buraco
+            alvos[i] = anterior + 1
+    return alvos
+
+
+def _grade_de_celulas(linhas: List[LinhaLida],
+                      passadas: List[List[LinhaOcr]]):
+    """(colunas, grade) — o que cada passada leu em cada coluna de cada item.
+
+    A célula é um CONJUNTO, não um valor: três passadas discordam, e guardar
+    a discordância é o que permite a aritmética escolher depois. Foi assim que
+    o 30,99 do PANCETA sobreviveu — duas passadas leram 30,59 e 30,95.
+    """
+    por_linha = [{} for _ in linhas]
+    for fisicas in passadas:
+        for fisica, alvo in zip(fisicas, _casar_linhas(linhas, fisicas)):
+            if alvo is None:
+                continue
+            for x, valor in fisica.numeros:
+                por_linha[alvo].setdefault(x, set()).add(valor)
+
+    todos_x = sorted(x for celulas in por_linha for x in celulas)
+    if not todos_x:
+        return [], []
+    colunas, grupo = [], [todos_x[0]]
+    for x in todos_x[1:]:
+        if x - grupo[-1] < RAIO_COLUNA:
+            grupo.append(x)
+        else:
+            colunas.append(sum(grupo) / len(grupo))
+            grupo = [x]
+    colunas.append(sum(grupo) / len(grupo))
+
+    grade = [[sorted({v for x, vs in celulas.items()
+                      if abs(x - c) < RAIO_COLUNA for v in vs})
+              for c in colunas]
+             for celulas in por_linha]
+    return colunas, grade
+
+
+def _escolher_colunas(grade, total_impresso: Optional[float]):
+    """Quais três colunas são quantidade, valor unitário e valor total.
+
+    Duas provas, nesta ordem:
+
+    1. Em quantas linhas existe q x vu = total entre os números daquelas três
+       colunas. Tolerância larga (1,2%) porque aqui a conta é indício, não
+       veredicto — o valor exato é escolhido depois.
+    2. Empate desfeito pela soma da coluna de totais. Na nota de referência a
+       base de cálculo do ICMS era IGUAL ao valor do item na primeira linha,
+       então as duas colunas empatavam na prova 1; a soma separou (894,75
+       contra 397,60, para um total impresso de 949,70).
+
+    A ordem das colunas na página entra como restrição: na DANFE a quantidade
+    vem antes do preço, que vem antes do total. Isso derruba sozinho a maioria
+    dos trios absurdos.
+    """
+    melhor = None
+    for a, b, c in combinations(range(len(grade[0]) if grade else 0), 3):
+        votos = sum(1 for linha in grade
+                    if any(abs(q * u - t) <= max(TOLERANCIA, t * 0.012)
+                           for q in linha[a] for u in linha[b] for t in linha[c]))
+        if not votos:
+            continue
+        soma = sum(max(linha[c]) for linha in grade if linha[c])
+        # Estourar o total impresso desclassifica: coluna de item nenhuma
+        # soma mais que a nota inteira.
+        if total_impresso and soma > total_impresso * 1.02:
+            votos -= 5
+        if melhor is None or (votos, soma) > melhor[0]:
+            melhor = ((votos, soma), (a, b, c))
+    return melhor[1] if melhor else None
+
+
+def _quantidade_mais_simples(total: float, preco: float):
+    """A quantidade mais REDONDA que, vezes o preço, dá o total no centavo.
+
+    Existe quase sempre mais de uma resposta: 296,90 / 39,55 = 7,507 fecha
+    tão bem quanto 296,90 / 29,99 = 9,9. O que separa as duas é que nota de
+    fornecedor não vende 7,507 caixas de nada.
+
+    Então a busca vai de zero casas para cima e para na primeira que fecha —
+    e é isso que faz o preço certo ganhar do preço mal lido, sem precisar
+    saber qual dos dois o OCR errou.
+    """
+    if not preco or preco <= 0 or not total or total <= 0:
+        return None, 99
+    for casas in (0, 1, 2, 3, 4):
+        quantidade = round(total / preco, casas)
+        if quantidade > 0 and abs(quantidade * preco - total) <= 0.015:
+            return quantidade, casas
+    return None, 99
+
+
+def _preencher_por_coluna(linhas: List[LinhaLida], grade, trio) -> int:
+    """Põe cada número no seu campo. Devolve quantas linhas fecharam a conta.
+
+    Confirmado só sai daqui de um jeito: os três números foram LIDOS, cada um
+    na sua coluna, e a multiplicação bate. Quantidade deduzida por divisão é
+    preenchida, mas segue marcada para conferir — ela é a resposta certa para
+    a pergunta "quanto teria que ser", que não é a mesma pergunta que "quanto
+    está escrito no papel".
+    """
+    a, b, c = trio
+    fechadas = 0
+    for linha, celulas in zip(linhas, grade):
+        quantidades, precos, totais = celulas[a], celulas[b], celulas[c]
+
+        trinca = next(((q, u, t) for q in quantidades for u in precos
+                       for t in totais if abs(q * u - t) < 0.015), None)
+        if trinca:
+            linha.quantidade, linha.valor_unitario, linha.valor_total = trinca
+            linha.quantidade_confirmada = linha.total_confirmado = True
+            fechadas += 1
+            continue
+
+        if precos and totais:
+            candidatas = [(_quantidade_mais_simples(t, u), u, t)
+                          for u in precos for t in totais]
+            (quantidade, casas), preco, total = min(
+                candidatas, key=lambda x: (x[0][1], -x[1]))
+            if quantidade is not None:
+                linha.quantidade = quantidade
+                linha.valor_unitario, linha.valor_total = preco, total
+                continue
+
+        # Sem par que feche, o que foi lido ainda serve como ponto de partida.
+        if linha.quantidade is None and quantidades:
+            linha.quantidade = max(quantidades)
+        if linha.valor_unitario is None and precos:
+            linha.valor_unitario = max(precos)
+        if linha.valor_total is None and totais:
+            linha.valor_total = max(totais)
+    return fechadas
+
+
+def _fechar_o_que_falta(linhas: List[LinhaLida], total_impresso: float) -> bool:
+    """A última linha sem valor sai da subtração — quando é UMA só.
+
+    Isto era proibido antes, e por bom motivo: derivar um número que ninguém
+    leu e apresentá-lo como conferido é exatamente o erro que este arquivo
+    existe para evitar.
+
+    O que mudou foi de onde vêm as outras parcelas. Agora cada uma está na
+    coluna de totais, uma embaixo da outra — não são "os maiores números de
+    cada linha". Com isso a subtração deixa de ser chute e vira o que sempre
+    foi na conta de papel: a parcela que falta.
+
+    E ela continua sem ser confirmada. Aparece no campo, marcada, para a
+    pessoa bater com o papel — porque continua sendo a única linha da nota
+    que ninguém leu.
+    """
+    sem_valor = [l for l in linhas if l.valor_total is None]
+    if len(sem_valor) != 1 or not total_impresso:
+        return False
+    linha = sem_valor[0]
+    resto = round(total_impresso
+                  - sum(l.valor_total for l in linhas if l is not linha), 2)
+    if resto <= 0:
+        return False
+    linha.valor_total = resto
+    if linha.valor_unitario:
+        quantidade, _casas = _quantidade_mais_simples(resto, linha.valor_unitario)
+        if quantidade is not None:
+            linha.quantidade = quantidade
+    return True
+
 
 # ==============================================================================
 # ENTRADA
@@ -381,7 +671,7 @@ def ler(dados: bytes) -> RascunhoDaFoto:
                                   escala=3))
     numeros_do_rodape = _numeros_do_bloco(texto_totais)
 
-    rascunho.linhas = _ler_itens_em_varias_passadas(imagem)
+    rascunho.linhas, passadas = _ler_itens_em_varias_passadas(imagem)
 
     if not rascunho.linhas:
         rascunho.avisos.append(
@@ -394,17 +684,47 @@ def ler(dados: bytes) -> RascunhoDaFoto:
     # que seja compatível com os itens lidos.
     rascunho.total_produtos = _total_plausivel(rascunho.linhas, numeros_do_rodape)
 
-    # Confirmação POR LINHA: quando três números da mesma linha fecham uma
-    # multiplicação, a chance de três erros de OCR conspirarem é desprezível.
-    # É a única confirmação automática que sobrevive à medição.
+    # PRIMEIRO a coluna: ela dá identidade a cada número, e sem identidade a
+    # multiplicação tem que adivinhar quem é quem dentro da linha.
+    colunas, grade = _grade_de_celulas(rascunho.linhas, passadas)
+    trio = _escolher_colunas(grade, rascunho.total_produtos) if grade else None
+    if trio:
+        _preencher_por_coluna(rascunho.linhas, grade, trio)
+        log.info("colunas da tabela: quantidade=%.3f unitário=%.3f total=%.3f",
+                 *(colunas[i] for i in trio))
+        _fechar_o_que_falta(rascunho.linhas, rascunho.total_produtos)
+
+    # DEPOIS a multiplicação solta, para o que a coluna não alcançou: quando
+    # três números da mesma linha fecham uma multiplicação, a chance de três
+    # erros de OCR conspirarem é desprezível.
     for linha in rascunho.linhas:
-        _fechar_por_multiplicacao(linha)
+        if not linha.quantidade_confirmada:
+            _fechar_por_multiplicacao(linha)
 
     prontas = sum(1 for l in rascunho.linhas if l.quantidade_confirmada)
     if prontas:
         rascunho.avisos.append(
             f"{prontas} de {len(rascunho.linhas)} linha(s) fecharam sozinhas "
             f"(quantidade x preço bate com o total do item).")
+
+    # A soma da COLUNA de totais contra o total impresso. É a prova mais
+    # forte que existe nesta via: quatro valores lidos em passadas diferentes
+    # baterem no centavo com um quinto número lido noutro canto da folha não
+    # acontece por acaso.
+    valores_da_coluna = [l.valor_total for l in rascunho.linhas]
+    if (rascunho.total_produtos and all(v is not None for v in valores_da_coluna)
+            and abs(sum(valores_da_coluna) - rascunho.total_produtos) < TOLERANCIA):
+        rascunho.soma_confere = True
+        for linha in rascunho.linhas:
+            linha.total_confirmado = True
+        rascunho.avisos.append(
+            f"A soma dos itens fecha nos R$ {rascunho.total_produtos:.2f} "
+            f"impressos na nota — os valores estão conferidos por conta, não "
+            f"por leitura.")
+        rascunho.avisos.append(
+            "As quantidades vieram da coluna da nota; as que não fecharam "
+            "sozinhas estão marcadas para você bater com o papel.")
+        return _fechamento(rascunho)
 
     alvo, valores = _achar_total_que_fecha(rascunho.linhas, numeros_do_rodape)
     if alvo and valores:
@@ -423,6 +743,10 @@ def ler(dados: bytes) -> RascunhoDaFoto:
             "Não achei o total impresso nesta foto, então não há conta para "
             "conferir. Confira cada linha contra o papel.")
 
+    return _fechamento(rascunho)
+
+
+def _fechamento(rascunho: RascunhoDaFoto) -> RascunhoDaFoto:
     faltando = rascunho.campos_a_conferir
     if faltando:
         rascunho.avisos.append(

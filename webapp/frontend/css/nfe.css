@@ -219,6 +219,15 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 .nfe-chip:hover { border-color: var(--navy); color: var(--navy); }
 
 .nfe-n { width: 110px; text-align: right; font-size: .85rem; }
+
+/* Sugerido é diferente de conferido. O número veio da coluna certa da nota,
+   o que já poupa a digitação — mas a conta não fechou nele, então a borda
+   dourada continua pedindo o olho de quem tem o papel. Tirar esta marca é
+   transformar "achamos que é isso" em "está conferido". */
+.nfe-n.nfe-sugerido {
+  border-color: var(--gold);
+  background: rgba(176, 141, 62, .06);
+}
 .nfe-desc { width: 100%; font-size: .85rem; }
 
 /* Linha que fechou sozinha (qtd x preço = total) fica marcada. Não é

@@ -161,6 +161,19 @@ window.Paginas.nfe = (function () {
         : ''}`;
   }
 
+  /* Campo preenchido pela coluna da nota, mas não provado pela conta. O
+     número está lá para poupar digitação — não para ser aceito de olho
+     fechado. Sem a marca, preenchido vira sinônimo de conferido, que é
+     justamente o erro que este fluxo existe para não cometer. */
+  function sugerido(linha) {
+    return linha.quantidade_confirmada ? '' : 'nfe-sugerido';
+  }
+  function dica(linha) {
+    return linha.quantidade_confirmada
+      ? 'quantidade x preço bate com o total do item'
+      : 'lido da coluna da nota — confira no papel';
+  }
+
   function chipsDeCandidatos(linha, indice, campo) {
     return (linha.lidos || []).slice(0, 6).map((v) =>
       `<button type="button" class="nfe-chip" data-i="${indice}"
@@ -213,17 +226,20 @@ window.Paginas.nfe = (function () {
                       : '<small class="nfe-selo-conf">confira no papel</small>'}
                   </td>
                   <td class="num">
-                    <input class="nfe-n" type="number" step="0.0001" data-i="${i}"
+                    <input class="nfe-n ${sugerido(l)}" type="number" step="0.0001"
+                           data-i="${i}" title="${dica(l)}"
                            data-campo="quantidade" value="${l.quantidade ?? ''}">
                     <div class="nfe-chips">${chipsDeCandidatos(l, i, 'quantidade')}</div>
                   </td>
                   <td class="num">
-                    <input class="nfe-n" type="number" step="0.0001" data-i="${i}"
+                    <input class="nfe-n ${sugerido(l)}" type="number" step="0.0001"
+                           data-i="${i}" title="${dica(l)}"
                            data-campo="valor_unitario" value="${l.valor_unitario ?? ''}">
                     <div class="nfe-chips">${chipsDeCandidatos(l, i, 'valor_unitario')}</div>
                   </td>
                   <td class="num">
-                    <input class="nfe-n" type="number" step="0.01" data-i="${i}"
+                    <input class="nfe-n ${sugerido(l)}" type="number" step="0.01"
+                           data-i="${i}" title="${dica(l)}"
                            data-campo="valor_total" value="${l.valor_total ?? ''}">
                     <div class="nfe-chips">${chipsDeCandidatos(l, i, 'valor_total')}</div>
                   </td>

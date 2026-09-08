@@ -90,6 +90,53 @@ ok(danfe_itens._combinar_para_o_total(ambiguas, 30.0) is None,
    '10+20 e 20+10 fecham nos mesmos 30 — nada é confirmado')
 
 # ==============================================================================
+print('\n[3b] A COLUNA DIZ QUEM É QUEM')
+# ==============================================================================
+# O problema que motivou esta parte: os números apareciam legíveis na tela e
+# os campos ficavam vazios, porque nada dizia qual número era quantidade e
+# qual era base de cálculo do ICMS. A DANFE diz — em coluna.
+
+# Armadilha real da nota de referência: na primeira linha a BC do ICMS é
+# IGUAL ao valor do item (129,90 nas duas), então a multiplicação fecha com
+# as DUAS colunas. Quem desempata é a soma da coluna contra o total impresso.
+grade = [
+    #  q      vu       total     BC ICMS   ICMS
+    [[10.0], [12.99], [129.90], [129.90], [23.98]],
+    [[9.9],  [29.99], [296.90], [103.92], [20.78]],
+]
+trio = danfe_itens._escolher_colunas(grade, 446.80)
+ok(trio == (0, 1, 2),
+   f'a coluna de totais ganha da BC do ICMS pela soma ({trio})')
+
+# E sem essa trava a coluna errada passa: se o total impresso não for
+# conhecido, o empate fica de pé — então o desempate TEM que vir do total.
+ok(danfe_itens._escolher_colunas(grade, 949.70) != (0, 1, 3),
+   'e a coluna de BC nunca é eleita coluna de valor')
+
+# 296,90 / 39,55 = 7,507 fecha no centavo tão bem quanto 296,90 / 29,99 = 9,9.
+# Fornecedor de alimento não vende 7,507 caixas: a quantidade mais redonda é
+# a que revela qual dos dois preços o OCR leu certo.
+ok(danfe_itens._quantidade_mais_simples(296.90, 29.99) == (9.9, 1),
+   '29,99 dá quantidade de uma casa (9,9)')
+q_torta, casas_tortas = danfe_itens._quantidade_mais_simples(296.90, 39.55)
+ok(casas_tortas > 1,
+   f'39,55 só fecha com {casas_tortas} casas ({q_torta}) — e por isso perde')
+
+# A subtração só é permitida para UMA linha. Duas incógnitas numa equação é
+# palpite, e palpite aqui vira estoque.
+duas = [LinhaLida(texto='', descricao='a', candidatos=[]),
+        LinhaLida(texto='', descricao='b', candidatos=[]),
+        LinhaLida(texto='', descricao='c', candidatos=[])]
+duas[0].valor_total = 100.0
+ok(not danfe_itens._fechar_o_que_falta(duas, 300.0),
+   'com duas linhas em branco a subtração se recusa a chutar')
+duas[1].valor_total = 150.0
+ok(danfe_itens._fechar_o_que_falta(duas, 300.0) and duas[2].valor_total == 50.0,
+   'com uma só, o resto da soma é aritmética e não chute (50,00)')
+ok(duas[2].precisa_conferir,
+   'e mesmo assim ela continua marcada para conferir')
+
+# ==============================================================================
 print('\n[4] A FOTO DE VERDADE')
 # ==============================================================================
 if not os.path.exists(FOTO):
@@ -111,13 +158,28 @@ else:
            f'e a que fecha está CERTA: {p.quantidade} x {p.valor_unitario} '
            f'= {p.valor_total}')
 
-    # O que não fechou tem que ficar vazio e marcado, não preenchido com
-    # palpite. Campo vazio é uma pergunta; palpite errado é uma armadilha.
+    # O que não fechou sozinho vem PREENCHIDO pela coluna e MARCADO. Campo
+    # vazio obriga a digitar tudo de novo olhando o papel; campo preenchido e
+    # marcado pede só a conferência. O que não pode é preenchido e calado.
     abertas = [l for l in r.linhas if not l.quantidade_confirmada]
     ok(all(l.precisa_conferir for l in abertas),
        f'as outras {len(abertas)} ficam marcadas para conferir')
     ok(all(not l.quantidade_confirmada for l in abertas),
        'nenhuma delas é dada por confirmada')
+
+    # E o preenchimento tem que estar CERTO — é o ponto do exercício. Estes
+    # doze números vieram da nota de papel, conferidos contra o XML.
+    ESPERADO = [(10.0, 12.99, 129.90), (9.9, 29.99, 296.90),
+                (15.1, 30.99, 467.95), (5.0, 10.99, 54.95)]
+    lido = [(l.quantidade, l.valor_unitario, l.valor_total) for l in r.linhas]
+    for i, (esperado, obtido) in enumerate(zip(ESPERADO, lido), 1):
+        ok(all(a is not None and abs(a - b) < 0.011
+               for a, b in zip(obtido, esperado)),
+           f'linha {i}: {obtido[0]} x {obtido[1]} = {obtido[2]} '
+           f'(nota: {esperado[0]} x {esperado[1]} = {esperado[2]})')
+
+    ok(r.soma_confere,
+       'e a coluna de valores soma exatamente o total impresso')
 
     # As descrições servem para a pessoa RECONHECER o item na hora de casar
     # com o produto. Não precisam estar perfeitas; precisam ser legíveis.
