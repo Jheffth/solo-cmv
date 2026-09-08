@@ -339,6 +339,37 @@ def _codigo_pareamento_canal(conexao):
         print("[MIGRACAO] codigos_pareamento: coluna 'whatsapp_jid' adicionada.")
 
 
+def _nota_importada_conferencia(conexao):
+    """Campos que a importação de NF-e passou a precisar.
+
+    A tabela existia desde o primeiro modelo, vazia, esperando a Fase 10.
+    Quando a importação foi escrita de verdade, ela ganhou emitente, série,
+    origem e as marcas de quem aprovou — e `create_all` não altera tabela
+    que já existe. Sem esta migração o servidor sobe e quebra no primeiro
+    uso, com "no such column".
+    """
+    if not _tabela_existe(conexao, "notas_fiscais_importadas"):
+        return
+    ja_tem = _colunas(conexao, "notas_fiscais_importadas")
+    novas = {
+        "serie": "VARCHAR(10)",
+        "emitente_cnpj": "VARCHAR(14)",
+        "emitente_nome": "VARCHAR(180)",
+        "valor_produtos": "FLOAT",
+        "origem": "VARCHAR(20)",
+        "mensagem": TEXTO_LIVRE,
+        "criado_por_id": "INTEGER",
+        "processado_por_id": "INTEGER",
+        "processado_em": "DATETIME",
+    }
+    for coluna, tipo in novas.items():
+        if coluna in ja_tem:
+            continue
+        conexao.execute(text(
+            f"ALTER TABLE notas_fiscais_importadas ADD COLUMN {coluna} {tipo}"))
+        print(f"[MIGRACAO] notas_fiscais_importadas: coluna '{coluna}' adicionada.")
+
+
 def aplicar_migracoes():
     with engine.begin() as conexao:
         _usuario_escopo_unidades(conexao)
@@ -347,6 +378,7 @@ def aplicar_migracoes():
         _usuario_telegram(conexao)
         _usuario_whatsapp(conexao)
         _codigo_pareamento_canal(conexao)
+        _nota_importada_conferencia(conexao)
         # A tabela `execucoes_backup` é criada pelo create_all — não há nada
         # a migrar. Fica registrado aqui para quem procurar não concluir que
         # foi esquecimento.

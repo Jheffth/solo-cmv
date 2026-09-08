@@ -255,9 +255,19 @@ for entrada, esperado in (('12,5', 12.5), ('12.5', 12.5), ('8', 8.0),
 ok(ler_quantidade('batata') is None, '"batata" não é quantidade')
 ok(ler_quantidade('-3') is None, 'negativo é recusado')
 
-nome, qtd = separar_nome_e_numero('gengibre 8')
+# O terceiro retorno é o MODO: "gengibre 8" soma ao que já foi contado,
+# "gengibre = 8" substitui. A distinção existe porque quem conta em duas
+# prateleiras soma, e quem recontou substitui — e confundir os dois estraga
+# a contagem sem dar erro.
+nome, qtd, modo = separar_nome_e_numero('gengibre 8')
 ok(nome == 'gengibre' and qtd == 8.0, 'gengibre 8 → (gengibre, 8)')
-nome, qtd = separar_nome_e_numero('batata doce')
+ok(modo == 'SOMAR', f'e o modo padrão é somar ({modo})')
+
+_n, _q, _m = separar_nome_e_numero('gengibre = 8')
+ok(_m == 'SUBSTITUIR' and _q == 8.0,
+   f'com "=" na frente, substitui em vez de somar ({_m})')
+
+nome, qtd, _ = separar_nome_e_numero('batata doce')
 ok(nome == 'batata doce' and qtd is None, 'sem número, fica só o nome')
 
 
@@ -371,10 +381,11 @@ ok('pular' in str(tg_ope.botoes_da_ultima()),
 primeiro = tg_ope.ultima
 tg_ope.limpar()
 conv_ope.atender(CHAT_OPE, '12,5')
-ok(tg_ope.enviadas and tg_ope.enviadas[0]['texto'].startswith('✓'),
-   f'a contagem entra: "{tg_ope.enviadas[0]["texto"] if tg_ope.enviadas else ""}"')
-ok('12,5' in tg_ope.enviadas[0]['texto'],
-   'a confirmação repete a quantidade')
+_conf = tg_ope.enviadas[0]['texto'] if tg_ope.enviadas else ''
+ok('registrada' in _conf.lower() or _conf.startswith('✓'),
+   f'a contagem entra: "{_conf[:60]}"')
+ok('12,5' in _conf or '12.5' in _conf,
+   'a confirmação repete a quantidade — é a checagem de que foi no item certo')
 ok(len(tg_ope.enviadas) >= 2, 'e já pergunta o próximo item')
 
 # Busca por nome, fora de ordem
@@ -428,7 +439,9 @@ conv_ope.atender(CHAT_OPE, '/contar')
 api_bot = APIdeTeste(segredo=SEGREDO)
 rodar(tg_fila, api_bot, SEGREDO, limite_de_voltas=3)
 
-confirmacoes = [m for m in tg_fila.enviadas if m['texto'].startswith('✓')]
+# Idem: reconhecer a confirmação pelo CONTEÚDO, não pelo prefixo.
+confirmacoes = [m for m in tg_fila.enviadas
+                if 'registrada' in m['texto'].lower() or m['texto'].startswith('✓')]
 ok(len(confirmacoes) == 1,
    f'o update repetido virou UMA confirmação, não duas ({len(confirmacoes)})')
 

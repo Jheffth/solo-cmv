@@ -10,6 +10,12 @@ async function apiFetch(caminho, opcoes = {}) {
   const headers = Object.assign({ 'Content-Type': 'application/json' }, opcoes.headers || {});
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  // `undefined` explícito significa "deixa o navegador decidir" — é como o
+  // envio de arquivo pede o boundary do multipart. `delete` porque o fetch
+  // mandaria a string "undefined" como valor do cabeçalho.
+  Object.keys(headers).forEach((k) => {
+    if (headers[k] === undefined) delete headers[k];
+  });
 
   const resp = await fetch(API_BASE + caminho, Object.assign({}, opcoes, { headers }));
 
@@ -56,11 +62,25 @@ async function apiBaixar(caminho) {
   return resp.blob();
 }
 
+/* Envio de arquivo (foto de nota, XML). O `Content-Type` vai VAZIO de
+   propósito: com FormData quem monta o cabeçalho é o navegador, porque ele
+   precisa incluir o `boundary` que separa as partes. Escrever
+   "multipart/form-data" na mão omite o boundary, e o servidor recebe um
+   corpo que não consegue separar — erro 422 sem explicação nenhuma. */
+async function apiEnviarArquivo(caminho, formData) {
+  return apiFetch(caminho, {
+    method: 'POST',
+    body: formData,
+    headers: { 'Content-Type': undefined },
+  });
+}
+
 const api = {
   get: (caminho) => apiFetch(caminho, { method: 'GET' }),
   post: (caminho, dados) => apiFetch(caminho, { method: 'POST', body: JSON.stringify(dados) }),
   put: (caminho, dados) => apiFetch(caminho, { method: 'PUT', body: JSON.stringify(dados) }),
   del: (caminho) => apiFetch(caminho, { method: 'DELETE' }),
+  postArquivo: apiEnviarArquivo,
   baixar: apiBaixar,
 };
 

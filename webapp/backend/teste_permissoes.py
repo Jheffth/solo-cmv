@@ -291,6 +291,10 @@ A_VARRER = [
     '/api/perdas/motivos',
     '/api/usuarios/poderes',
     '/api/whatsapp/status',
+    # A lista de notas mostra o valor total de cada uma — dinheiro de
+    # verdade. Está aqui para a varredura provar que o operador NÃO a
+    # alcança; quem a alcança é quem lança compra, e esse vê a nota na mão.
+    '/api/nfe',
     '/api/perfil',
     # Rotas do canal Telegram. Entraram aqui porque a checagem de cobertura
     # as acusou — que é o serviço que ela presta: rota nova não passa

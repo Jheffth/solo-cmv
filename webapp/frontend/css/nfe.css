@@ -1,0 +1,159 @@
+/* ==========================================================================
+   NOTAS FISCAIS — a tela de importar compra
+   ==========================================================================
+   O que esta tela precisa deixar claro, em ordem de importância:
+
+   1. QUAL nota é essa. Antes de qualquer consulta, o CNPJ e o número na
+      cara — é o que faz alguém perceber que digitou a nota errada enquanto
+      isso ainda custa uma tecla, e não um lançamento no estoque.
+   2. QUE O CUSTO NÃO É O DA NOTA. O acréscimo de ICMS ST aparece em
+      destaque ao lado do valor unitário, porque é a informação que ninguém
+      espera e a que mais estraga o CMV quando passa batida.
+   3. O QUE VAI ENTRAR NO ESTOQUE. A coluna final mostra a quantidade já
+      convertida, na nossa unidade — 10 bandejas viram 5 kg antes de alguém
+      clicar em qualquer coisa.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- entrada */
+.nfe-abas {
+  display: flex;
+  gap: .4rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+.nfe-aba {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: .45rem 1rem;
+  font-size: .9rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+.nfe-aba.ativa {
+  border-color: var(--navy);
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.nfe-painel label {
+  display: block;
+  font-size: .8rem;
+  color: var(--muted);
+  margin-bottom: .4rem;
+}
+
+.nfe-dica {
+  font-size: .87rem;
+  color: var(--muted);
+  margin-bottom: .9rem;
+}
+
+/* A chave é DIGITADA a partir de um papel, e o olho perde a posição no meio
+   de 44 números. Monoespaçada, grande e espaçada em blocos de quatro — que
+   é como ela vem impressa na DANFE, para a conferência ser visual. */
+.nfe-campo-chave {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  letter-spacing: .06em;
+  padding: .8rem .9rem;
+}
+
+.nfe-retorno { margin-top: .8rem; min-height: 1.2rem; }
+.nfe-contando { font-size: .85rem; color: var(--muted); }
+
+.nfe-erro {
+  font-size: .87rem;
+  color: var(--red);
+}
+/* A recusa da SEFAZ é longa de propósito: diz o que falta e qual caminho
+   funciona hoje. Precisa de espaço para ser lida, não de uma linha cortada. */
+.nfe-erro--bloco {
+  display: block;
+  padding: .9rem 1rem;
+  background: rgba(166, 35, 31, .07);
+  border-left: 3px solid var(--red);
+  border-radius: 0 8px 8px 0;
+  line-height: 1.55;
+}
+
+/* A nota identificada pela chave, antes de qualquer consulta. */
+.nfe-identificada {
+  padding: .9rem 1rem;
+  background: rgba(31, 59, 87, .05);
+  border-left: 3px solid var(--navy);
+  border-radius: 0 8px 8px 0;
+  font-size: .9rem;
+  line-height: 1.6;
+}
+.nfe-identificada strong { color: var(--navy); }
+.nfe-proximo { color: var(--muted); font-style: italic; }
+
+.nfe-acoes {
+  display: flex;
+  gap: .6rem;
+  margin-top: 1.1rem;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------ conferência */
+.nfe-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.nfe-aviso {
+  margin: 0 0 .7rem;
+  padding: .7rem .9rem;
+  font-size: .87rem;
+  background: rgba(176, 141, 62, .12);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  line-height: 1.5;
+}
+/* O aviso que exige ação é outro assunto do que o aviso informativo. */
+.nfe-aviso--acao {
+  background: rgba(166, 35, 31, .08);
+  border-left-color: var(--red);
+}
+
+.nfe-codigo {
+  display: block;
+  font-size: .74rem;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* O acréscimo do ICMS ST. Vermelho e colado no valor unitário porque é
+   exatamente ali que a pessoa está comparando com a nota impressa — e a
+   pergunta "por que está diferente?" precisa ter a resposta ao lado. */
+.nfe-acrescimo {
+  display: block;
+  font-size: .74rem;
+  color: var(--red);
+  font-weight: 600;
+}
+
+.nfe-produto { width: 100%; max-width: 260px; font-size: .85rem; }
+.nfe-fator { width: 84px; text-align: right; font-size: .85rem; }
+
+.nfe-final small {
+  display: block;
+  font-size: .74rem;
+  color: var(--muted);
+}
+
+/* Ignorado continua visível, apagado: é decisão tomada, não item sumido.
+   Some da tela e ninguém lembra por que a soma não bate com a nota. */
+tr.nfe-ignorado { opacity: .42; }
+tr.nfe-ignorado td:first-child { text-decoration: line-through; }
+
+@media (max-width: 820px) {
+  .nfe-produto { max-width: none; }
+  .nfe-campo-chave { font-size: .92rem; letter-spacing: .02em; }
+}

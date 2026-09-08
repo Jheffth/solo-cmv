@@ -29,7 +29,10 @@ window.NAV_ITEMS = [
   // Convidar, promover, rebaixar, suspender e excluir num lugar só.
   { chave: 'equipe',      rotulo: 'Equipe',               icone: 'usuarios',    emBreve: false, exige: 'ADMINISTRAR_ACESSO' },
   { chave: 'relatorios',  rotulo: 'Relatórios',           icone: 'relatorios', emBreve: false, exige: 'VER_CMV' },
-  { chave: 'nfe',         rotulo: 'Notas Fiscais (NF-e)',  icone: 'nfe',        emBreve: true },
+  // Sai do "em breve": a importação por chave, foto e XML já funciona.
+  // A busca automática na SEFAZ é que continua esperando o certificado —
+  // e a própria tela diz isso, em vez de o menu esconder a seção inteira.
+  { chave: 'nfe',         rotulo: 'Notas Fiscais (NF-e)',  icone: 'nfe',        emBreve: false, exige: 'LANCAR_COMPRA' },
   { chave: 'unidades',    rotulo: 'Unidades',             icone: 'unidades',    emBreve: false, exige: 'CRIAR_UNIDADE' },
 ];
 

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Reconstrução fiel da NF-e 427.795 da Suinoaves para a Casa Josefina,
+     montada a partir da DANFE impressa (08/09/2026). Serve de caso de teste
+     do parser: os valores, o ICMS ST de um item só e as unidades mistas
+     (BD e KG) são os da nota de verdade. NÃO é o XML oficial da SEFAZ. -->
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+ <NFe>
+  <infNFe versao="4.00" Id="NFe53260903425088000181550010004277951006747382">
+   <ide>
+    <cUF>53</cUF><natOp>VENDA DE PRODUCAO DO ESTABELECIMENTO</natOp>
+    <mod>55</mod><serie>1</serie><nNF>427795</nNF>
+    <dhEmi>2026-09-08T07:30:00-03:00</dhEmi><tpNF>1</tpNF>
+   </ide>
+   <emit>
+    <CNPJ>03425088000181</CNPJ>
+    <xNome>SUINOAVES ALIMENTOS LTDA</xNome>
+    <IE>0740254800185</IE>
+   </emit>
+   <dest>
+    <CNPJ>56885622000107</CNPJ>
+    <xNome>4322-CASA JOSEFINA LTDA</xNome>
+   </dest>
+
+   <det nItem="1">
+    <prod>
+     <cProd>1105</cProd>
+     <xProd>EMBUTIDO DE FRANGO FINA RESFRIADA BANDEJA 500 G - 10VL</xProd>
+     <NCM>16010000</NCM><CFOP>5401</CFOP>
+     <uCom>BD</uCom><qCom>10.0000</qCom><vUnCom>12.9900</vUnCom>
+     <vProd>129.90</vProd>
+     <uTrib>KG</uTrib><qTrib>5.0000</qTrib><vUnTrib>25.9800</vUnTrib>
+     <indTot>1</indTot>
+    </prod>
+    <imposto>
+     <ICMS><ICMS10>
+      <vBC>129.90</vBC><pICMS>20.00</pICMS><vICMS>25.98</vICMS>
+      <vBCST>178.77</vBCST><pICMSST>20.00</pICMSST><vICMSST>9.77</vICMSST>
+     </ICMS10></ICMS>
+    </imposto>
+   </det>
+
+   <det nItem="2">
+    <prod>
+     <cProd>44</cProd><xProd>COSTELA SALGADA - 2VL</xProd>
+     <NCM>02101900</NCM><CFOP>5101</CFOP>
+     <uCom>KG</uCom><qCom>9.9000</qCom><vUnCom>29.9900</vUnCom>
+     <vProd>296.90</vProd>
+     <uTrib>KG</uTrib><qTrib>9.9000</qTrib><vUnTrib>29.9900</vUnTrib>
+     <indTot>1</indTot>
+    </prod>
+    <imposto>
+     <ICMS><ICMS20>
+      <pRedBC>35.00</pRedBC><vBC>103.92</vBC><pICMS>20.00</pICMS><vICMS>20.78</vICMS>
+     </ICMS20></ICMS>
+    </imposto>
+   </det>
+
+   <det nItem="3">
+    <prod>
+     <cProd>1077</cProd><xProd>PANCETA FOOD - 3VL</xProd>
+     <NCM>02032900</NCM><CFOP>5101</CFOP>
+     <uCom>KG</uCom><qCom>15.1000</qCom><vUnCom>30.9900</vUnCom>
+     <vProd>467.95</vProd>
+     <uTrib>KG</uTrib><qTrib>15.1000</qTrib><vUnTrib>30.9900</vUnTrib>
+     <indTot>1</indTot>
+    </prod>
+    <imposto>
+     <ICMS><ICMS20>
+      <pRedBC>35.00</pRedBC><vBC>163.78</vBC><pICMS>20.00</pICMS><vICMS>32.76</vICMS>
+     </ICMS20></ICMS>
+    </imposto>
+   </det>
+
+   <det nItem="4">
+    <prod>
+     <cProd>25</cProd><xProd>PE SALGADO - 1VL</xProd>
+     <NCM>02101900</NCM><CFOP>5101</CFOP>
+     <uCom>KG</uCom><qCom>5.0000</qCom><vUnCom>10.9900</vUnCom>
+     <vProd>54.95</vProd>
+     <uTrib>KG</uTrib><qTrib>5.0000</qTrib><vUnTrib>10.9900</vUnTrib>
+     <indTot>1</indTot>
+    </prod>
+    <imposto>
+     <ICMS><ICMS20>
+      <pRedBC>35.00</pRedBC><vBC>19.23</vBC><pICMS>20.00</pICMS><vICMS>3.85</vICMS>
+     </ICMS20></ICMS>
+    </imposto>
+   </det>
+
+   <total>
+    <ICMSTot>
+     <vBC>416.83</vBC><vICMS>83.37</vICMS>
+     <vBCST>178.77</vBCST><vST>9.77</vST>
+     <vProd>949.70</vProd>
+     <vFrete>0.00</vFrete><vSeg>0.00</vSeg><vDesc>0.00</vDesc><vOutro>0.00</vOutro>
+     <vIPI>0.00</vIPI><vPIS>0.84</vPIS><vCOFINS>3.90</vCOFINS>
+     <vNF>959.47</vNF>
+    </ICMSTot>
+   </total>
+  </infNFe>
+ </NFe>
+</nfeProc>

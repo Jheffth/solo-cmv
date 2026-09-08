@@ -9,8 +9,20 @@ WORKDIR /app
 # compose). O bookworm entrega o 15, que casa. Se um dia o servidor subir
 # para 16, este pacote sobe junto — senão o pg_dump recusa a conexão com
 # "server version mismatch", e a rotina de backup para em silêncio.
+#
+# tesseract é a RESERVA da leitura de nota: quando o código de barras está
+# amassado ou fora de foco, o sistema tenta os 44 dígitos impressos. O pacote
+# de português melhora o reconhecimento do resto da página; os dígitos em si
+# saem do modelo padrão.
+#
+# libgl1 e libglib2.0-0 são exigidos pelo OpenCV mesmo na versão headless —
+# sem eles o import estoura com "libGL.so.1: cannot open shared object file",
+# e o erro aparece só quando alguém manda a primeira foto.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
+        tesseract-ocr tesseract-ocr-por \
+        libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .

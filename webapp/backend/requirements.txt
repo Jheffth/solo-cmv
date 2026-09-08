@@ -21,3 +21,16 @@ python-dateutil>=2.9.0
 pydantic>=2.9.0
 # Relatório PDF do inventário (routers/inventario.py)
 reportlab>=4.0.0
+
+# ---------------------------------------------------------------- NF-e
+# Ler a chave de acesso de uma foto de DANFE (servicos/danfe.py).
+#
+# opencv-headless, e não o opencv completo: a versão cheia arrasta GTK e
+# ~200 MB de dependência de interface gráfica, para um servidor que nunca
+# vai abrir uma janela.
+#
+# zxing-cpp faz o Code-128, que é o formato do código de barras da DANFE —
+# o leitor embutido do OpenCV só lê EAN/UPC, e por isso não serve aqui.
+opencv-python-headless>=4.10
+zxing-cpp>=2.2
+pytesseract>=0.3.10

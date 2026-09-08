@@ -196,8 +196,19 @@ class TipoDespesaExtra(str, enum.Enum):
 
 
 class StatusNotaFiscal(str, enum.Enum):
+    """Ciclo de vida da nota importada.
+
+    AGUARDANDO_XML -> só a chave foi informada; os itens ainda não vieram
+    CONFERINDO     -> itens lidos, esperando alguém casar produto e aprovar
+    PROCESSADA     -> virou movimento de compra no estoque
+    DESCARTADA     -> conferida e recusada; fica no histórico, não some
+    ERRO           -> a leitura falhou; a mensagem diz por quê
+    """
+    AGUARDANDO_XML = "AGUARDANDO_XML"
+    CONFERINDO = "CONFERINDO"
     PENDENTE = "PENDENTE"
     PROCESSADA = "PROCESSADA"
+    DESCARTADA = "DESCARTADA"
     ERRO = "ERRO"
 
 
@@ -685,18 +696,93 @@ class CertificadoDigital(Base):
 
 
 class NotaFiscalImportada(Base):
+    """Uma nota em processo de virar compra.
+
+    A NOTA ENTRA ANTES DE VIRAR MOVIMENTO, e é isso que a torna útil. Entre
+    a chegada e o estoque existe uma conferência: casar cada descrição do
+    fornecedor com um produto nosso, e confirmar a conversão de unidade.
+    Importar direto seria rápido e criaria estoque errado em silêncio.
+
+    O XML fica guardado inteiro. É o documento fiscal, e quando alguém
+    perguntar daqui a um ano de onde saiu um custo, a resposta é o arquivo —
+    não a nossa interpretação dele.
+    """
     __tablename__ = "notas_fiscais_importadas"
 
     id = Column(Integer, primary_key=True)
     unidade_id = Column(Integer, ForeignKey("unidades.id"), nullable=False)
-    chave_acesso = Column(String(60), nullable=True)
+    chave_acesso = Column(String(60), nullable=True, index=True)
     numero = Column(String(30), nullable=True)
+    serie = Column(String(10), nullable=True)
     fornecedor_id = Column(Integer, ForeignKey("fornecedores.id"), nullable=True)
+    emitente_cnpj = Column(String(14), nullable=True)
+    emitente_nome = Column(String(180), nullable=True)
     data_emissao = Column(Date, nullable=True)
     valor_total = Column(Float, nullable=True)
+    valor_produtos = Column(Float, nullable=True)
     status = Column(Enumerado(StatusNotaFiscal), nullable=False, default=StatusNotaFiscal.PENDENTE)
+    origem = Column(String(20), nullable=True)      # CHAVE | FOTO | XML | SEFAZ
+    mensagem = Column(Text, nullable=True)          # o erro, quando houver
     xml_bruto = Column(Text, nullable=True)
+
+    criado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
+    processado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    processado_em = Column(DateTime, nullable=True)
+
+    itens = relationship("ItemNotaImportada", back_populates="nota",
+                         cascade="all, delete-orphan")
+    unidade = relationship("Unidade")
+    fornecedor = relationship("Fornecedor")
+
+
+class ItemNotaImportada(Base):
+    """Uma linha da nota, esperando virar movimento.
+
+    Guarda o que o FORNECEDOR escreveu (descrição, código, unidade dele) ao
+    lado do que NÓS decidimos (produto, fator de conversão). Os dois juntos
+    são o que permite aprender: na próxima nota do mesmo fornecedor, a mesma
+    descrição já vem casada.
+
+    `custo_unitario` aqui é o desembolso — com ICMS ST, frete e rateio já
+    dentro. Não é o vUnCom da nota, e a diferença entre os dois é o que
+    fazia o CMV nascer subestimado. Ver servicos/nfe_xml.py.
+    """
+    __tablename__ = "itens_nota_importada"
+
+    id = Column(Integer, primary_key=True)
+    nota_id = Column(Integer, ForeignKey("notas_fiscais_importadas.id"),
+                     nullable=False, index=True)
+
+    # ---- como veio na nota
+    numero_item = Column(Integer, nullable=True)
+    codigo_fornecedor = Column(String(60), nullable=True)
+    descricao = Column(String(255), nullable=False)
+    unidade_nota = Column(String(10), nullable=True)
+    quantidade_nota = Column(Float, nullable=False, default=0.0)
+    valor_unitario_nota = Column(Float, nullable=True)
+    acrescimos = Column(Float, nullable=False, default=0.0)   # ST, frete, IPI…
+    custo_total = Column(Float, nullable=False, default=0.0)
+    custo_unitario = Column(Float, nullable=False, default=0.0)
+
+    # ---- o que decidimos
+    produto_id = Column(Integer, ForeignKey("produtos.id"), nullable=True)
+    fator_conversao = Column(Float, nullable=False, default=1.0)
+    ignorar = Column(Boolean, default=False, nullable=False)
+
+    nota = relationship("NotaFiscalImportada", back_populates="itens")
+    produto = relationship("Produto")
+
+    @property
+    def quantidade_final(self) -> float:
+        """Na unidade do NOSSO estoque, não na do fornecedor."""
+        return round((self.quantidade_nota or 0) * (self.fator_conversao or 1), 4)
+
+    @property
+    def custo_final(self) -> float:
+        """Custo por unidade nossa. Dez bandejas a R$13,97 viram 5 kg a R$27,93."""
+        qtd = self.quantidade_final
+        return round((self.custo_total or 0) / qtd, 6) if qtd else 0.0
 
 
 # ==============================================================================

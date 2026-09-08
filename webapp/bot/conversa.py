@@ -499,11 +499,24 @@ class Conversa:
         if not contexto.get("inventario_id"):
             return self.tg.enviar(chat_id, "Mande /contar para começar.")
 
-        # Só um número: é a quantidade do item da vez.
+        # SÓ UM NÚMERO É A QUANTIDADE DO ITEM DA VEZ, e este teste precisa vir
+        # ANTES de separar nome e número.
+        #
+        # `separar_nome_e_numero("12,5")` devolve ("12,5", None, "CONSULTAR"):
+        # sem espaço no meio, não há o que separar, então o texto inteiro sai
+        # como NOME. A condição `not nome` nunca era verdadeira, e responder
+        # "12,5" caía na busca de produto — "Não achei nada com 12,5".
+        #
+        # É o caminho de menor esforço do bot inteiro, o que a pessoa usa 42
+        # vezes por inventário. Perdê-lo não dá erro: só devolve uma resposta
+        # sem sentido, e quem está contando conclui que o bot não presta.
+        quantidade_pura = ler_quantidade(texto)
+        if quantidade_pura is not None and contexto.get("aguardando"):
+            return self._registrar(chat_id, contexto["aguardando"],
+                                   quantidade_pura, contexto, estado, api,
+                                   modo="SOMAR")
+
         nome, quantidade, modo = separar_nome_e_numero(texto)
-        if not nome and quantidade is not None and contexto.get("aguardando"):
-            return self._registrar(chat_id, contexto["aguardando"], quantidade,
-                                   contexto, estado, api, modo=modo)
 
         # Nome + número numa linha só: "gengibre 8" ou "tomate = 12".
         candidatos = self._buscar(api, nome, contexto["inventario_id"])
@@ -875,7 +888,10 @@ class Conversa:
         # número evita que "validade" vire parte do nome do produto.
         termo, motivo = self._separar_motivo(resto, contexto["motivos"])
         contexto["motivo"] = motivo
-        nome, quantidade = separar_nome_e_numero(termo)
+        # O terceiro retorno (SOMAR/SUBSTITUIR) só faz sentido na contagem,
+        # onde a pessoa conta a mesma coisa em duas prateleiras. Perda não
+        # acumula: cada uma é um fato próprio, com motivo próprio.
+        nome, quantidade, _ = separar_nome_e_numero(termo)
         contexto["quantidade"] = quantidade
         self._gravar(chat_id, modo="PERDA", contexto=contexto)
         return self._perda_escolher_item(chat_id, nome, contexto, api)
@@ -922,7 +938,10 @@ class Conversa:
         termo, motivo = self._separar_motivo(texto, motivos)
         if motivo:
             contexto["motivo"] = motivo
-        nome, quantidade = separar_nome_e_numero(termo)
+        # O terceiro retorno (SOMAR/SUBSTITUIR) só faz sentido na contagem,
+        # onde a pessoa conta a mesma coisa em duas prateleiras. Perda não
+        # acumula: cada uma é um fato próprio, com motivo próprio.
+        nome, quantidade, _ = separar_nome_e_numero(termo)
         if quantidade is not None:
             contexto["quantidade"] = quantidade
         if not nome:
@@ -1076,7 +1095,7 @@ class Conversa:
             return self._req_lancar(chat_id, contexto["produto_id"], quantidade,
                                     contexto, api)
 
-        nome, quantidade = separar_nome_e_numero(texto)
+        nome, quantidade, _ = separar_nome_e_numero(texto)
         candidatos = self._buscar(api, nome, None)
         if not candidatos:
             return self.tg.enviar(
