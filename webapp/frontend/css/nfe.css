@@ -157,3 +157,80 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
   .nfe-produto { max-width: none; }
   .nfe-campo-chave { font-size: .92rem; letter-spacing: .02em; }
 }
+
+/* ==========================================================================
+   CONFERÊNCIA DA LEITURA POR FOTO
+   ==========================================================================
+   Esta tela existe porque OCR erra. Ela não esconde isso — mostra o que foi
+   lido, deixa escolher, e só libera quando a conta fecha. O placar é o
+   centro: é ele, e não a leitura, que autoriza seguir.
+   ========================================================================== */
+.nfe-check {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .9rem;
+  font-size: .87rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.nfe-check input { width: auto; }
+
+.nfe-placar {
+  display: flex;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 1rem 0;
+  padding: .85rem 1.1rem;
+  background: rgba(176, 141, 62, .12);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  font-size: .92rem;
+}
+/* Verde só quando a soma fecha. É o único sinal de "pode seguir" da tela,
+   e por isso não pode aparecer em mais nenhuma situação. */
+.nfe-placar.fechou {
+  background: rgba(28, 122, 60, .12);
+  border-left-color: var(--verde, #1C7A3C);
+}
+.nfe-falta { font-weight: 600; }
+.nfe-placar.fechou .nfe-falta { color: var(--verde, #1C7A3C); }
+
+/* Os números que o OCR leu, como botões. Escolher é mais rápido e erra
+   menos que digitar olhando o papel — e mantém o original à vista. */
+.nfe-chips {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 3px;
+}
+.nfe-chip {
+  padding: 1px 6px;
+  font-size: .7rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.nfe-chip:hover { border-color: var(--navy); color: var(--navy); }
+
+.nfe-n { width: 110px; text-align: right; font-size: .85rem; }
+.nfe-desc { width: 100%; font-size: .85rem; }
+
+/* Linha que fechou sozinha (qtd x preço = total) fica marcada. Não é
+   decoração: diz onde NÃO é preciso olhar o papel. */
+tr.nfe-provado { background: rgba(28, 122, 60, .05); }
+.nfe-selo-ok {
+  display: block;
+  font-size: .7rem;
+  color: var(--verde, #1C7A3C);
+}
+.nfe-selo-conf {
+  display: block;
+  font-size: .7rem;
+  color: var(--gold);
+}

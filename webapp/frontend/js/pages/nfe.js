@@ -80,6 +80,10 @@ window.Paginas.nfe = (function () {
              esticada. Se não der, digite os números à mão.</p>
           <input id="nfe-foto" type="file" accept="image/*" capture="environment">
           <div id="nfe-foto-retorno" class="nfe-retorno"></div>
+          <label class="nfe-check">
+            <input type="checkbox" id="nfe-ler-itens">
+            Ler também a tabela de itens (quando não houver XML)
+          </label>
         </div>
 
         <div class="nfe-painel" data-painel="xml" hidden>
@@ -90,12 +94,172 @@ window.Paginas.nfe = (function () {
         </div>
       </div>
 
+      <div id="nfe-ocr"></div>
       <div id="nfe-conferencia"></div>
 
       <div class="card">
         <h3 class="card-titulo">Últimas notas</h3>
         <div id="nfe-lista"><p class="estado-vazio">Carregando…</p></div>
       </div>`;
+  }
+
+  /* ============================================================
+     CONFERÊNCIA DOS NÚMEROS LIDOS DA FOTO
+
+     O OCR propõe, a pessoa dispõe, e a SOMA decide. A nota traz o total dos
+     produtos impresso; a tela vai somando o que foi confirmado e mostra a
+     diferença em tempo real. Quando ela zera, a nota fecha — e é essa conta,
+     não a leitura, que autoriza seguir.
+
+     Os números lidos viram botões ao lado de cada campo. Escolher entre
+     valores já lidos é muito mais rápido, e menos sujeito a erro, do que
+     digitar do zero olhando o papel.
+     ============================================================ */
+  let ocr = null;
+
+  function somaConferida() {
+    return (ocr.linhas || []).reduce((t, l) => t + (Number(l.valor_total) || 0), 0);
+  }
+
+  function chipsDeCandidatos(linha, indice, campo) {
+    return (linha.lidos || []).slice(0, 6).map((v) =>
+      `<button type="button" class="nfe-chip" data-i="${indice}"
+               data-campo="${campo}" data-valor="${v}">${brl(v).replace('R$ ', '')}</button>`
+    ).join('');
+  }
+
+  function desenharOcr(container) {
+    const alvo = container.querySelector('#nfe-ocr');
+    if (!ocr) { alvo.innerHTML = ''; return; }
+
+    const soma = somaConferida();
+    const alvoTotal = Number(ocr.total_produtos) || 0;
+    const falta = Math.round((alvoTotal - soma) * 100) / 100;
+    const fechou = alvoTotal > 0 && Math.abs(falta) < 0.02;
+
+    const placar = alvoTotal
+      ? `<div class="nfe-placar ${fechou ? 'fechou' : ''}">
+           <span>Somado: <strong>${brl(soma)}</strong></span>
+           <span>Nota diz: <strong>${brl(alvoTotal)}</strong></span>
+           <span class="nfe-falta">${fechou
+             ? 'a soma fechou'
+             : (falta > 0 ? `faltam ${brl(falta)}` : `sobram ${brl(-falta)}`)}</span>
+         </div>`
+      : `<div class="nfe-placar">
+           <span>Não achei o total impresso — confira cada linha no papel.</span>
+         </div>`;
+
+    alvo.innerHTML = `
+      <div class="card">
+        <h3 class="card-titulo">Confira o que eu li da foto</h3>
+        <p class="subtitulo">Os números vieram de leitura de imagem. Toque num
+           valor lido para usá-lo, ou digite o que está no papel.</p>
+        ${(ocr.avisos || []).map((a) => `<p class="nfe-aviso">${escapar(a)}</p>`).join('')}
+        ${placar}
+        <div class="tabela-rolavel">
+          <table class="tabela-simples">
+            <thead><tr>
+              <th>Item lido</th><th class="num">Quantidade</th>
+              <th class="num">Valor unitário</th><th class="num">Total do item</th>
+            </tr></thead>
+            <tbody>
+              ${(ocr.linhas || []).map((l, i) => `
+                <tr class="${l.quantidade_confirmada ? 'nfe-provado' : ''}">
+                  <td>
+                    <input class="nfe-desc" data-i="${i}" value="${escapar(l.descricao || '')}">
+                    ${l.quantidade_confirmada
+                      ? '<small class="nfe-selo-ok">fechou sozinha: qtd x preço = total</small>'
+                      : '<small class="nfe-selo-conf">confira no papel</small>'}
+                  </td>
+                  <td class="num">
+                    <input class="nfe-n" type="number" step="0.0001" data-i="${i}"
+                           data-campo="quantidade" value="${l.quantidade ?? ''}">
+                    <div class="nfe-chips">${chipsDeCandidatos(l, i, 'quantidade')}</div>
+                  </td>
+                  <td class="num">
+                    <input class="nfe-n" type="number" step="0.0001" data-i="${i}"
+                           data-campo="valor_unitario" value="${l.valor_unitario ?? ''}">
+                    <div class="nfe-chips">${chipsDeCandidatos(l, i, 'valor_unitario')}</div>
+                  </td>
+                  <td class="num">
+                    <input class="nfe-n" type="number" step="0.01" data-i="${i}"
+                           data-campo="valor_total" value="${l.valor_total ?? ''}">
+                    <div class="nfe-chips">${chipsDeCandidatos(l, i, 'valor_total')}</div>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="nfe-acoes">
+          <button class="btn btn-primario" id="nfe-ocr-seguir" type="button"
+                  ${fechou ? '' : 'disabled'}>Seguir para casar os produtos</button>
+          <button class="btn" id="nfe-ocr-cancelar" type="button">Descartar leitura</button>
+        </div>
+        ${fechou ? '' : `<p class="nfe-aviso nfe-aviso--acao">Só dá para seguir
+           quando a soma bater com o total impresso na nota. É essa conta que
+           substitui a conferência linha a linha.</p>`}
+      </div>`;
+
+    ligarOcr(container);
+  }
+
+  function ligarOcr(container) {
+    container.querySelectorAll('.nfe-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        ocr.linhas[chip.dataset.i][chip.dataset.campo] = Number(chip.dataset.valor);
+        desenharOcr(container);
+      });
+    });
+    container.querySelectorAll('.nfe-n').forEach((campo) => {
+      campo.addEventListener('change', () => {
+        const linha = ocr.linhas[campo.dataset.i];
+        linha[campo.dataset.campo] = campo.value === '' ? null : Number(campo.value);
+        // Preencher dois dos três já determina o terceiro. Calcular poupa
+        // digitação e, mais importante, mantém a linha coerente — total que
+        // não é quantidade x preço é erro que a soma esconde.
+        const q = Number(linha.quantidade), vu = Number(linha.valor_unitario);
+        if (campo.dataset.campo !== 'valor_total' && q > 0 && vu > 0) {
+          linha.valor_total = Math.round(q * vu * 100) / 100;
+        }
+        desenharOcr(container);
+      });
+    });
+    container.querySelectorAll('.nfe-desc').forEach((campo) => {
+      campo.addEventListener('change', () => {
+        ocr.linhas[campo.dataset.i].descricao = campo.value;
+      });
+    });
+
+    const cancelar = container.querySelector('#nfe-ocr-cancelar');
+    if (cancelar) cancelar.addEventListener('click', () => {
+      ocr = null; desenharOcr(container);
+    });
+
+    const seguir = container.querySelector('#nfe-ocr-seguir');
+    if (seguir) seguir.addEventListener('click', async () => {
+      seguir.disabled = true;
+      try {
+        const nota = await api.post('/nfe/manual', {
+          unidade_id: Number(UNIDADE_SELECIONADA),
+          chave: (container.querySelector('#nfe-chave').value || '').replace(/\D/g, '') || null,
+          itens: ocr.linhas
+            .filter((l) => l.quantidade > 0 && l.valor_unitario > 0)
+            .map((l) => ({
+              descricao: l.descricao || 'item da nota',
+              quantidade: Number(l.quantidade),
+              valor_unitario: Number(l.valor_unitario),
+              valor_total: Number(l.valor_total),
+            })),
+        });
+        ocr = null;
+        desenharOcr(container);
+        desenharNota(container, nota);
+        await carregarLista(container);
+      } catch (erro) {
+        alert(erro.message || 'Não foi possível criar a nota.');
+        seguir.disabled = false;
+      }
+    });
   }
 
   // ------------------------------------------------------------- conferência
@@ -364,6 +528,20 @@ window.Paginas.nfe = (function () {
         campo.value = formatarChave(r.chave);
         campo.dispatchEvent(new Event('input'));
         alvo.innerHTML = '';
+
+        if (container.querySelector('#nfe-ler-itens').checked) {
+          alvo.innerHTML = '<span class="nfe-contando">Lendo a tabela de itens…</span>';
+          try {
+            const corpo2 = new FormData();
+            corpo2.append('arquivo', arquivo);
+            ocr = await api.postArquivo('/nfe/foto/itens', corpo2);
+            alvo.innerHTML = '';
+            desenharOcr(container);
+            container.querySelector('#nfe-ocr').scrollIntoView({ behavior: 'smooth' });
+          } catch (e2) {
+            alvo.innerHTML = `<span class="nfe-erro">${escapar(e2.message)}</span>`;
+          }
+        }
       } catch (erro) {
         alvo.innerHTML = `<span class="nfe-erro">${escapar(erro.message)}</span>`;
       }

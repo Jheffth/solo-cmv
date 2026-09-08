@@ -22,7 +22,8 @@ pegou a nota certa, e o dígito verificador pega o erro de digitação antes de
 qualquer viagem à rede.
 """
 import logging
-from typing import Optional
+import re
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -32,7 +33,8 @@ from database import get_db
 from models import (ItemNotaImportada, NotaFiscalImportada, Produto,
                     StatusNotaFiscal, Usuario)
 from auth.deps import get_current_user
-from servicos import chave_nfe, danfe, nfe_importacao, nfe_xml, sefaz
+from servicos import (chave_nfe, danfe, danfe_itens, nfe_importacao,
+                      nfe_xml, sefaz)
 from servicos import escopo as servico_escopo
 from servicos.permissoes import Capacidade, requer
 
@@ -121,6 +123,104 @@ async def chave_da_foto(arquivo: UploadFile = File(...),
         raise HTTPException(503, str(erro))
     except ValueError as erro:
         raise HTTPException(400, str(erro))
+
+
+@router.post("/foto/itens")
+async def itens_da_foto(arquivo: UploadFile = File(...),
+                        usuario: Usuario = Depends(requer(Capacidade.LANCAR_COMPRA))):
+    """Lê a TABELA DE ITENS da foto — o caminho de quem não tem o XML.
+
+    Devolve o que foi lido com cada campo marcado como provado ou não, e o
+    total impresso na nota para a tela conferir a soma. Não grava nada: o
+    que sai daqui é rascunho, e vira nota só depois que alguém confirma.
+    """
+    dados = await arquivo.read()
+    if not dados:
+        raise HTTPException(400, "O arquivo chegou vazio.")
+    if len(dados) > TAMANHO_MAXIMO:
+        raise HTTPException(400, "A foto passa de 8 MB. Tire outra com menos "
+                                 "resolução.")
+    try:
+        return danfe_itens.ler(dados).como_dicionario()
+    except danfe.LeitorIndisponivel as erro:
+        raise HTTPException(503, str(erro))
+    except ValueError as erro:
+        raise HTTPException(400, str(erro))
+
+
+class ItemDigitado(BaseModel):
+    descricao: str
+    quantidade: float
+    valor_unitario: float
+    valor_total: Optional[float] = None
+
+
+class NotaDigitada(BaseModel):
+    unidade_id: int
+    chave: Optional[str] = None
+    numero: Optional[str] = None
+    emitente_nome: Optional[str] = None
+    emitente_cnpj: Optional[str] = None
+    itens: List[ItemDigitado]
+
+
+@router.post("/manual")
+def nota_conferida(dados: NotaDigitada, db: Session = Depends(get_db),
+                   usuario: Usuario = Depends(requer(Capacidade.LANCAR_COMPRA))):
+    """Cria a nota a partir dos itens que a PESSOA confirmou.
+
+    É onde o caminho da foto encontra o do XML: daqui em diante os dois são
+    idênticos — casar produto, converter unidade, aprovar. A diferença é só
+    a procedência, e ela fica gravada (`origem`) porque importa saber depois
+    se aquele custo veio do documento fiscal ou de uma leitura conferida.
+
+    O ICMS ST NÃO ENTRA por aqui, e é uma limitação honesta desta via: ele
+    não é legível numa foto de celular com confiança suficiente. O custo sai
+    o da tabela — para a nota da Suinoaves, R$ 12,99 e não R$ 13,97. Quem
+    quiser o custo com imposto dentro precisa do XML.
+    """
+    unidade = _unidade_permitida(db, usuario, dados.unidade_id)
+    if not dados.itens:
+        raise HTTPException(400, "Nenhum item conferido.")
+
+    chave = ""
+    if dados.chave:
+        try:
+            chave = chave_nfe.validar(dados.chave).digitos
+        except chave_nfe.ChaveInvalida as erro:
+            raise HTTPException(400, str(erro))
+
+    itens = [nfe_xml.ItemNota(
+        numero=i + 1, codigo_fornecedor="", descricao=item.descricao[:255],
+        ncm="", cfop="", ean=None,
+        unidade_comercial="UN",
+        quantidade_comercial=item.quantidade,
+        valor_unitario_comercial=item.valor_unitario,
+        valor_produto=round(item.valor_total
+                            if item.valor_total is not None
+                            else item.quantidade * item.valor_unitario, 2),
+    ) for i, item in enumerate(dados.itens)]
+
+    lida = nfe_xml.NotaLida(
+        chave=chave,
+        numero=dados.numero or "", serie="",
+        emissao=None,
+        emitente_cnpj=re.sub(r"\D", "", dados.emitente_cnpj or ""),
+        emitente_nome=dados.emitente_nome or "",
+        destinatario_cnpj="", destinatario_nome="",
+        valor_produtos=round(sum(i.valor_produto for i in itens), 2),
+        valor_nota=round(sum(i.custo_total for i in itens), 2),
+        itens=itens,
+        avisos=["Nota montada a partir de leitura por foto, conferida à mão. "
+                "Sem o XML, o ICMS ST não entra no custo."],
+    )
+
+    try:
+        registro = nfe_importacao.registrar(db, lida, unidade, usuario,
+                                            origem="FOTO")
+    except nfe_importacao.ErroImportacao as erro:
+        raise HTTPException(409, str(erro))
+    return _detalhe(db, registro, avisos=lida.avisos)
 
 
 # ==============================================================================
