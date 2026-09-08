@@ -331,21 +331,22 @@ def registrar(db: Session, nota: nfe_xml.NotaLida, unidade_id: int,
     mão, e ela não é revista aqui: quem viu o papel sabe mais que qualquer
     casamento por nome.
     """
-    ja = db.query(NotaFiscalImportada).filter(
-        NotaFiscalImportada.chave_acesso == nota.chave).first()
-    if ja and ja.status == StatusNotaFiscal.PROCESSADA:
-        raise ErroImportacao(
-            f"A nota {nota.numero} já foi importada e lançada em "
-            f"{ja.processado_em:%d/%m/%Y}. Importar de novo duplicaria as "
-            f"compras no estoque.")
-    # ANULADA é o caso em que reimportar é justamente o que se quer: a nota
-    # foi lançada, tirada do estoque, e agora volta. A trava acima vale só
-    # para a que ESTÁ no estoque — é ela que duplicaria a compra.
-    if ja:
-        # Reimportar uma nota que ainda está em conferência é normal — a
-        # pessoa mandou o XML de novo. Substituir é melhor que empilhar.
-        db.delete(ja)
-        db.flush()
+    if nota.chave:
+        ja = db.query(NotaFiscalImportada).filter(
+            NotaFiscalImportada.chave_acesso == nota.chave).first()
+        if ja and ja.status == StatusNotaFiscal.PROCESSADA:
+            raise ErroImportacao(
+                f"A nota {nota.numero} já foi importada e lançada em "
+                f"{ja.processado_em:%d/%m/%Y}. Importar de novo duplicaria as "
+                f"compras no estoque.")
+        # ANULADA é o caso em que reimportar é justamente o que se quer: a nota
+        # foi lançada, tirada do estoque, e agora volta. A trava acima vale só
+        # para a que ESTÁ no estoque — é ela que duplicaria a compra.
+        if ja:
+            # Reimportar uma nota que ainda está em conferência é normal — a
+            # pessoa mandou o XML de novo. Substituir é melhor que empilhar.
+            db.delete(ja)
+            db.flush()
 
     if fornecedor is None:
         fornecedor = _achar_ou_criar_fornecedor(

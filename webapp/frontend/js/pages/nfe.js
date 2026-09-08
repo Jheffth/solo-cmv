@@ -572,6 +572,10 @@ window.Paginas.nfe = (function () {
               : `<span class="nfe-dica">Esta nota já está no estoque. Anular é
                    coisa da diretoria.</span>`)
             : '<button class="btn" id="nfe-descartar" type="button">Descartar</button>'}
+          ${typeof window.pode === 'function' && window.pode('ANULAR_NOTA')
+              ? `<button class="btn btn-perigo" id="nfe-excluir-perm" type="button" style="margin-left: auto;">
+                   Excluir Permanente</button>`
+              : ''}
         </div>
       </div>`;
 
@@ -664,6 +668,32 @@ window.Paginas.nfe = (function () {
           alert(erro.message || 'Não foi possível anular.');
           anular.disabled = false;
           anular.textContent = 'Anular esta nota';
+        }
+      });
+    }
+
+    const excluirPerm = container.querySelector('#nfe-excluir-perm');
+    if (excluirPerm) {
+      excluirPerm.addEventListener('click', async () => {
+        if (!confirm(
+          `Excluir PERMANENTEMENTE a nota ${notaAtual.numero || ''}?\n\n`
+          + `Esta ação vai APAGAR O REGISTRO DESTA NOTA do sistema, liberando a chave e a foto `
+          + `para serem enviadas novamente se desejar.\n\n`
+          + `Se a nota já estava no estoque, seus itens serão revertidos e um rastro de exclusão `
+          + `ficará registrado nas movimentações.\n\nTem certeza absoluta?`)) return;
+
+        excluirPerm.disabled = true;
+        excluirPerm.textContent = 'Excluindo…';
+        try {
+          const r = await api.del('/nfe/' + notaAtual.id);
+          alert(r.mensagem || 'Nota excluída permanentemente.');
+          notaAtual = null;
+          container.querySelector('#nfe-conferencia').innerHTML = '';
+          await carregarLista(container);
+        } catch (erro) {
+          alert(erro.message || 'Não foi possível excluir a nota.');
+          excluirPerm.disabled = false;
+          excluirPerm.textContent = 'Excluir Permanente';
         }
       });
     }

@@ -687,7 +687,7 @@ class Anulacao(BaseModel):
 def anular(nota_id: int, dados: Optional[Anulacao] = None,
            db: Session = Depends(get_db),
            usuario: Usuario = Depends(requer(Capacidade.ANULAR_NOTA))):
-    """Tira a nota INTEIRA do estoque e do CMV, e a deixa relançável.
+    """Tira a nota INTEIRA do estoque e do CMV, e a deixa relancável.
 
     A operação que faltava. Até aqui uma compra lançada errada não tinha
     volta: descartar recusa antes de entrar, e aprovar não tem inverso. Quem
@@ -707,3 +707,23 @@ def anular(nota_id: int, dados: Optional[Anulacao] = None,
         raise HTTPException(409, str(erro))
     return {"status": nota.status.value, "movimentos_removidos": quantos,
             "avisos": avisos}
+
+
+@router.delete("/{nota_id}")
+def excluir_permanentemente(nota_id: int, db: Session = Depends(get_db),
+                            usuario: Usuario = Depends(requer(Capacidade.ANULAR_NOTA))):
+    """Exclui a nota definitivamente. Se ela já virou compra, desfaz os movimentos e deixa rastro."""
+    nota = _buscar(db, nota_id)
+    
+    # Se já foi processada, o estorno padrão garante o rastro no estoque (MovimentoExcluido)
+    if nota.status == StatusNotaFiscal.PROCESSADA:
+        try:
+            servico_exclusao.anular_nota(db, nota, usuario, "Exclusão permanente de NFe")
+        except servico_exclusao.ErroExclusao as erro:
+            raise HTTPException(409, str(erro))
+            
+    # Independente do estado anterior (CONFERINDO, DESCARTADA, ANULADA, ERRO, etc.), 
+    # deleta o registro físico para liberar geral a chave/foto.
+    db.delete(nota)
+    db.commit()
+    return {"status": "excluida", "mensagem": "Nota excluída permanentemente com sucesso."}
