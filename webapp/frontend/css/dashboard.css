@@ -20,17 +20,17 @@
 
 .seletor-mes { display: flex; align-items: center; gap: .3rem; }
 .seletor-mes .mes-atual {
-  font-size: 1.05rem; font-weight: 700; color: var(--navy);
+  font-size: var(--t-titulo); font-weight: 700; color: var(--navy);
   min-width: 140px; text-align: center;
 }
-.seletor-mes .btn-icone { font-size: 1.3rem; line-height: 1; padding: .1rem .5rem; }
+.seletor-mes .btn-icone { font-size: var(--t-titulo); line-height: 1; padding: .1rem .5rem; }
 .seletor-mes .btn-icone:hover { color: var(--navy); background: var(--bg); }
 
 /* A procedência do número: sem dizer de quais inventários o CMV saiu,
    ninguém consegue defender o número numa reunião. */
 .procedencia {
   display: flex; align-items: center; gap: .5rem;
-  font-size: .8rem; color: var(--muted);
+  font-size: var(--t-mini); color: var(--muted);
   flex: 1 1 260px; min-width: 0;
 }
 .procedencia svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--gold); }
@@ -44,11 +44,11 @@
   display: flex; align-items: center; gap: .6rem;
   width: 100%; text-align: left; cursor: pointer;
   border: 1px solid transparent; border-radius: var(--radius);
-  padding: .6rem .85rem; font-size: .86rem; font-family: inherit;
+  padding: .6rem .85rem; font-size: var(--t-pequeno); font-family: inherit;
 }
 .pendencia svg { width: 17px; height: 17px; flex-shrink: 0; }
 .pendencia-texto { flex: 1; min-width: 0; }
-.pendencia-rota { font-size: .76rem; opacity: .75; text-transform: capitalize; white-space: nowrap; }
+.pendencia-rota { font-size: var(--t-mini); opacity: .75; text-transform: capitalize; white-space: nowrap; }
 
 .pendencia.urgente { background: var(--perigo-fundo); color: var(--perigo-forte); border-color: var(--perigo-linha); }
 .pendencia.urgente:hover { background: var(--perigo-fundo); }
@@ -68,11 +68,11 @@
   display: flex; align-items: baseline; gap: .5rem;
   flex-wrap: wrap; margin-top: .15rem;
 }
-.kpi-variacao { font-size: .74rem; white-space: nowrap; }
+.kpi-variacao { font-size: var(--t-mini); white-space: nowrap; }
 .kpi-variacao.boa { color: var(--sucesso); }
 .kpi-variacao.ruim { color: var(--red); }
 .kpi-variacao.neutra { color: var(--muted); }
-.kpi-meta { font-size: .74rem; color: var(--muted); }
+.kpi-meta { font-size: var(--t-mini); color: var(--muted); }
 
 .sparkline { width: 100%; height: 24px; margin-top: .4rem; display: block; }
 
@@ -83,7 +83,7 @@
 .grid-tendencia { display: grid; grid-template-columns: 1.65fr 1fr; gap: 1.2rem; }
 .grid-detalhe { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.2rem; }
 
-.card-subtitulo { font-size: .78rem; color: var(--muted); margin: .1rem 0 0; }
+.card-subtitulo { font-size: var(--t-mini); color: var(--muted); margin: .1rem 0 0; }
 
 /* Altura fixa: sem isto o Chart.js cresce a cada redesenho (bug clássico
    de canvas responsivo dentro de container sem altura definida). */
@@ -92,7 +92,7 @@
 
 .composicao-numeros {
   display: flex; justify-content: center; gap: 1.4rem;
-  font-size: .82rem; color: var(--muted); margin-top: .5rem;
+  font-size: var(--t-mini); color: var(--muted); margin-top: .5rem;
 }
 .composicao-numeros strong { color: var(--navy); }
 .ponto {
@@ -107,7 +107,7 @@
 .barras-itens { display: flex; flex-direction: column; gap: .6rem; }
 .barra-cabecalho {
   display: flex; justify-content: space-between; gap: .6rem;
-  font-size: .82rem; margin-bottom: .22rem;
+  font-size: var(--t-mini); margin-bottom: .22rem;
 }
 .barra-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .barra-valor { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -139,7 +139,7 @@
 }
 @media (max-width: 600px) {
   .painel-contexto { gap: .6rem; }
-  .seletor-mes .mes-atual { min-width: 110px; font-size: .95rem; }
+  .seletor-mes .mes-atual { min-width: 110px; font-size: var(--t-corpo); }
   .painel-contexto .btn { width: 100%; }
   .pendencia-rota { display: none; }
   .area-grafico, .area-grafico.alto { height: 200px; }
@@ -161,7 +161,7 @@
 .cobertura {
   display: flex; align-items: center; gap: .6rem;
   padding: .6rem .85rem; border-radius: var(--radius);
-  font-size: .84rem; margin-bottom: 1.1rem;
+  font-size: var(--t-pequeno); margin-bottom: 1.1rem;
 }
 .cobertura svg { width: 17px; height: 17px; flex-shrink: 0; }
 .cobertura.completa { background: var(--sucesso-fundo); color: var(--sucesso); border: 1px solid var(--sucesso-linha); }
@@ -178,7 +178,7 @@ table.tabela-simples tr.fora em { font-style: italic; }
   background: var(--atencao-fundo); border: 1px solid var(--atencao-linha);
   border-radius: var(--radius);
   padding: .65rem .9rem; margin-bottom: 1rem;
-  font-size: .83rem; color: var(--atencao);
+  font-size: var(--t-pequeno); color: var(--atencao);
 }
 .faixa-regional svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--gold); }
 
@@ -190,7 +190,7 @@ table.tabela-simples tr.fora em { font-style: italic; }
   border: 1px solid var(--info-linha);
   border-radius: var(--raio-pilula);
   padding: .12rem .55rem;
-  font-size: .74rem; font-weight: 600;
+  font-size: var(--t-mini); font-weight: 600;
   white-space: nowrap;
 }
 
@@ -203,8 +203,8 @@ table.tabela-simples tr.fora em { font-style: italic; }
   background: var(--bg); border-radius: var(--radius);
   padding: .55rem .85rem; min-width: 150px;
 }
-.faixa-unidade strong { color: var(--navy); font-size: 1.05rem; }
-.faixa-unidade small { color: var(--muted); font-size: .74rem; }
+.faixa-unidade strong { color: var(--navy); font-size: var(--t-titulo); }
+.faixa-unidade small { color: var(--muted); font-size: var(--t-mini); }
 
 /* ---------------------------------------------- selo de proteção dos dados */
 /* Discreto de propósito: informa, não alarma. O alarme é a pendência lá em
@@ -218,7 +218,7 @@ table.tabela-simples tr.fora em { font-style: italic; }
   border-radius: var(--raio);
   background: var(--sucesso-fundo);
   color: var(--sucesso);
-  font-size: .82rem;
+  font-size: var(--t-mini);
   line-height: 1.4;
 }
 .selo-protecao svg { flex: 0 0 auto; width: 15px; height: 15px; }
@@ -232,7 +232,7 @@ table.tabela-simples tr.fora em { font-style: italic; }
    deste uso é em celular, no meio do serviço, com a mão ocupada. */
 .titulo-seccao {
   margin: 1.4rem 0 .8rem;
-  font-size: 1.05rem;
+  font-size: var(--t-titulo);
   color: var(--tinta-2);
   font-weight: 600;
 }
@@ -274,5 +274,5 @@ table.tabela-simples tr.fora em { font-style: italic; }
   border-radius: var(--raio);
   background: rgba(239, 159, 39, .1);
   border-left: 3px solid var(--atencao);
-  font-size: .9rem;
+  font-size: var(--t-corpo);
 }

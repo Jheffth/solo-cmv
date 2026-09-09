@@ -26,7 +26,7 @@
   border: 1px solid var(--border);
   border-radius: var(--raio-pilula);
   padding: .45rem 1rem;
-  font-size: .9rem;
+  font-size: var(--t-corpo);
   cursor: pointer;
   color: var(--muted);
 }
@@ -38,13 +38,13 @@
 
 .nfe-painel label {
   display: block;
-  font-size: .8rem;
+  font-size: var(--t-mini);
   color: var(--muted);
   margin-bottom: .4rem;
 }
 
 .nfe-dica {
-  font-size: .87rem;
+  font-size: var(--t-pequeno);
   color: var(--muted);
   margin-bottom: .9rem;
 }
@@ -55,16 +55,16 @@
 .nfe-campo-chave {
   width: 100%;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 1.05rem;
+  font-size: var(--t-titulo);
   letter-spacing: .06em;
   padding: .8rem .9rem;
 }
 
 .nfe-retorno { margin-top: .8rem; min-height: 1.2rem; }
-.nfe-contando { font-size: .85rem; color: var(--muted); }
+.nfe-contando { font-size: var(--t-pequeno); color: var(--muted); }
 
 .nfe-erro {
-  font-size: .87rem;
+  font-size: var(--t-pequeno);
   color: var(--red);
 }
 /* A recusa da SEFAZ é longa de propósito: diz o que falta e qual caminho
@@ -84,7 +84,7 @@
   background: rgba(100, 17, 28, .05);
   border-left: 3px solid var(--navy);
   border-radius: 0 var(--raio-p) var(--raio-p) 0;
-  font-size: .9rem;
+  font-size: var(--t-corpo);
   line-height: 1.6;
 }
 .nfe-identificada strong { color: var(--navy); }
@@ -110,7 +110,7 @@
 .nfe-aviso {
   margin: 0 0 .7rem;
   padding: .7rem .9rem;
-  font-size: .87rem;
+  font-size: var(--t-pequeno);
   background: rgba(236, 110, 69, .12);
   border-left: 3px solid var(--gold);
   border-radius: 0 var(--raio-p) var(--raio-p) 0;
@@ -124,7 +124,7 @@
 
 .nfe-codigo {
   display: block;
-  font-size: .74rem;
+  font-size: var(--t-mini);
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -134,17 +134,17 @@
    pergunta "por que está diferente?" precisa ter a resposta ao lado. */
 .nfe-acrescimo {
   display: block;
-  font-size: .74rem;
+  font-size: var(--t-mini);
   color: var(--red);
   font-weight: 600;
 }
 
-.nfe-produto { width: 100%; max-width: 260px; font-size: .85rem; }
-.nfe-fator { width: 84px; text-align: right; font-size: .85rem; }
+.nfe-produto { width: 100%; max-width: 260px; font-size: var(--t-pequeno); }
+.nfe-fator { width: 84px; text-align: right; font-size: var(--t-pequeno); }
 
 .nfe-final small {
   display: block;
-  font-size: .74rem;
+  font-size: var(--t-mini);
   color: var(--muted);
 }
 
@@ -155,7 +155,7 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 
 @media (max-width: 820px) {
   .nfe-produto { max-width: none; }
-  .nfe-campo-chave { font-size: .92rem; letter-spacing: .02em; }
+  .nfe-campo-chave { font-size: var(--t-corpo); letter-spacing: .02em; }
 }
 
 /* ==========================================================================
@@ -170,7 +170,7 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
   align-items: center;
   gap: .5rem;
   margin-top: .9rem;
-  font-size: .87rem;
+  font-size: var(--t-pequeno);
   color: var(--muted);
   cursor: pointer;
 }
@@ -199,11 +199,11 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 .nfe-campo-cab--curto { flex: 0 1 90px; min-width: 80px; }
 .nfe-campo-cab label {
   display: block;
-  font-size: .78rem;
+  font-size: var(--t-mini);
   color: var(--muted);
   margin-bottom: .3rem;
 }
-.nfe-campo-cab input, .nfe-campo-cab select { width: 100%; font-size: .88rem; }
+.nfe-campo-cab input, .nfe-campo-cab select { width: 100%; font-size: var(--t-pequeno); }
 .nfe-campo-cab .nfe-n { width: 100%; text-align: left; }
 
 /* Campo que a chave provou não pede conferência — e precisa PARECER que não
@@ -218,7 +218,7 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 .nfe-provado-chave {
   display: block;
   margin-top: .2rem;
-  font-size: .7rem;
+  font-size: var(--t-micro);
   color: var(--sucesso);
 }
 
@@ -232,7 +232,7 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
   background: rgba(236, 110, 69, .12);
   border-left: 3px solid var(--gold);
   border-radius: 0 var(--raio-p) var(--raio-p) 0;
-  font-size: .92rem;
+  font-size: var(--t-corpo);
 }
 /* Verde só quando a soma fecha. É o único sinal de "pode seguir" da tela,
    e por isso não pode aparecer em mais nenhuma situação. */
@@ -254,7 +254,7 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 }
 .nfe-chip {
   padding: 1px 6px;
-  font-size: .7rem;
+  font-size: var(--t-micro);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--muted);
   background: none;
@@ -271,11 +271,11 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
    que se aprende calado se corrige tarde. */
 .nfe-chips--codigo { justify-content: flex-start; margin-top: .25rem; }
 .nfe-rotulo-chip {
-  font-size: .66rem;
+  font-size: var(--t-micro);
   color: var(--muted);
   align-self: center;
 }
-.nfe-chip-cod { font-size: .66rem; padding: 0 5px; }
+.nfe-chip-cod { font-size: var(--t-micro); padding: 0 5px; }
 .nfe-chip-cod.escolhido {
   border-color: var(--navy);
   color: var(--navy);
@@ -288,12 +288,12 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 .nfe-conciliado {
   display: block;
   margin-top: .25rem;
-  font-size: .68rem;
+  font-size: var(--t-micro);
   color: var(--sucesso);
   font-weight: 600;
 }
 
-.nfe-n { width: 110px; text-align: right; font-size: .85rem; }
+.nfe-n { width: 110px; text-align: right; font-size: var(--t-pequeno); }
 
 /* Sugerido é diferente de conferido. O número veio da coluna certa da nota,
    o que já poupa a digitação — mas a conta não fechou nele, então a borda
@@ -303,30 +303,30 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
   border-color: var(--gold);
   background: rgba(236, 110, 69, .07);
 }
-.nfe-desc { width: 100%; font-size: .85rem; }
+.nfe-desc { width: 100%; font-size: var(--t-pequeno); }
 
 /* Linha que fechou sozinha (qtd x preço = total) fica marcada. Não é
    decoração: diz onde NÃO é preciso olhar o papel. */
 tr.nfe-provado { background: rgba(63, 107, 74, .06); }
 .nfe-selo-ok {
   display: block;
-  font-size: .7rem;
+  font-size: var(--t-micro);
   color: var(--sucesso);
 }
 .nfe-selo-conf {
   display: block;
-  font-size: .7rem;
+  font-size: var(--t-micro);
   color: var(--gold);
 }
 
 /* O produto escolhido é o dado; o texto lido é só pista para conferir com o
    papel. A hierarquia visual tem que dizer isso — senão a pessoa lê o lixo
    do OCR achando que precisa entendê-lo. */
-.nfe-prod { width: 100%; max-width: 280px; font-size: .85rem; }
+.nfe-prod { width: 100%; max-width: 280px; font-size: var(--t-pequeno); }
 .nfe-lido {
   display: block;
   margin-top: .2rem;
-  font-size: .68rem;
+  font-size: var(--t-micro);
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   opacity: .75;

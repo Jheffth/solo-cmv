@@ -117,7 +117,7 @@
 }
 
 .auth-assinatura {
-  font-size: .82rem;
+  font-size: var(--t-mini);
   letter-spacing: .22em;
   text-transform: uppercase;
   color: rgba(238, 213, 180, .62);
@@ -167,7 +167,7 @@
 
 .auth-caixa .auth-sub {
   color: var(--cj-tinta-2);
-  font-size: .92rem;
+  font-size: var(--t-corpo);
   margin: 0 0 2.2rem;
 }
 
@@ -194,7 +194,7 @@
   width: 100%;
   height: 56px;
   padding: 1.35rem .95rem .5rem;
-  font-size: 1rem;
+  font-size: var(--t-corpo);
   font-family: inherit;
   color: var(--cj-tinta);
   background: #fff;
@@ -208,14 +208,14 @@
 
 .campo input:focus {
   border-color: var(--cj-carmim);
-  box-shadow: 0 0 0 4px rgba(166, 24, 59, .12);
+  box-shadow: var(--anel-foco);
 }
 
 .campo label {
   position: absolute;
   left: 1rem;
   top: 1.05rem;
-  font-size: 1rem;
+  font-size: var(--t-corpo);
   color: var(--cj-tinta-2);
   pointer-events: none;
   transform-origin: left top;
@@ -260,7 +260,7 @@
 .campo .campo-codigo {
   padding: .5rem .95rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 1.15rem;
+  font-size: var(--t-titulo);
   letter-spacing: .14em;
   text-align: center;
   text-transform: uppercase;
@@ -269,7 +269,7 @@
 .form-dica {
   display: block;
   margin: -.6rem 0 1.1rem;
-  font-size: .78rem;
+  font-size: var(--t-mini);
   color: var(--cj-tinta-2);
 }
 
@@ -281,7 +281,7 @@
   height: 54px;
   margin-top: .5rem;
   font-family: "Tanker", "Oswald", "Archivo Narrow", "Arial Narrow", sans-serif;
-  font-size: 1.05rem;
+  font-size: var(--t-titulo);
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--cj-creme);
@@ -293,7 +293,7 @@
 }
 .btn-marca:hover {
   background: var(--marca-forte);
-  box-shadow: 0 8px 20px -8px rgba(166, 24, 59, .7);
+  box-shadow: var(--sombra);
 }
 .btn-marca:active { transform: translateY(1px); }
 .btn-marca:disabled {
@@ -312,7 +312,7 @@
 .auth-erro {
   margin: .9rem 0 0;
   padding: .7rem .9rem;
-  font-size: .87rem;
+  font-size: var(--t-pequeno);
   color: var(--cj-vinho);
   background: rgba(236, 110, 69, .13);
   border-left: 3px solid var(--cj-coral);
@@ -324,7 +324,7 @@
   margin-top: 2rem;
   padding-top: 1.3rem;
   border-top: 1px solid var(--cj-linha);
-  font-size: .88rem;
+  font-size: var(--t-pequeno);
   color: var(--cj-tinta-2);
   text-align: center;
 }
@@ -341,7 +341,7 @@
   margin-top: 1.4rem;
   padding-top: .8rem;
   border-top: 1px dashed var(--cj-linha);
-  font-size: .74rem;
+  font-size: var(--t-mini);
   color: var(--cj-tinta-2);
   text-align: left;
 }
@@ -367,7 +367,7 @@
   align-items: baseline;
   gap: 1rem;
   padding: .4rem 0;
-  font-size: .9rem;
+  font-size: var(--t-corpo);
 }
 .convite-linha + .convite-linha { border-top: 1px solid rgba(117, 48, 23, .12); }
 .convite-linha span { color: var(--cj-terra); }
@@ -376,7 +376,7 @@
 .selo-cargo {
   display: inline-block;
   padding: .18rem .6rem;
-  font-size: .74rem;
+  font-size: var(--t-mini);
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--cj-creme);

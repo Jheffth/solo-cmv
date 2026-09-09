@@ -8,7 +8,7 @@
 
 /* Descrição do relatório escolhido, logo abaixo das abas */
 .rel-descricao {
-  font-size: .84rem;
+  font-size: var(--t-pequeno);
   color: var(--muted);
   margin: -.4rem 0 1rem;
 }
@@ -19,7 +19,7 @@
   display: inline-flex;
   align-items: center;
   gap: .45rem;
-  font-size: .8rem;
+  font-size: var(--t-mini);
   color: var(--muted);
 }
 .rel-procedencia svg { width: 15px; height: 15px; color: var(--gold); flex-shrink: 0; }
@@ -32,7 +32,7 @@
   min-width: 20px;
   text-align: center;
   font-weight: 700;
-  font-size: .78rem;
+  font-size: var(--t-mini);
   border-radius: var(--raio-p);
   padding: .1rem .3rem;
 }
@@ -48,7 +48,7 @@
 /* ---------- Comparativo ---------- */
 .rel-delta-pct {
   display: block;
-  font-size: .72rem;
+  font-size: var(--t-micro);
   font-weight: 400;
   opacity: .8;
 }
@@ -65,6 +65,6 @@
 #rel-conteudo table.tabela-simples { min-width: 620px; }
 
 @media (max-width: 900px) {
-  .rel-procedencia { font-size: .76rem; }
+  .rel-procedencia { font-size: var(--t-mini); }
   #rel-abas { overflow-x: auto; }
 }

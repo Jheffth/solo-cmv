@@ -15,14 +15,14 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--raio-g);
-  box-shadow: 0 24px 60px rgba(42, 26, 28, .28);
+  box-shadow: var(--sombra-g);
   display: none;
   flex-direction: column;
   overflow: hidden;
 }
 
 .lancador-janela.visible { display: flex; }
-.lancador-janela.dragging { box-shadow: 0 30px 70px rgba(42, 26, 28, .38); user-select: none; }
+.lancador-janela.dragging { box-shadow: var(--sombra-g); user-select: none; }
 
 /* ---------- Cabeçalho (área de arrasto) ---------- */
 .lancador-header {
@@ -39,10 +39,10 @@
   z-index: 50;
 }
 .lancador-header svg { width: 18px; height: 18px; flex-shrink: 0; }
-.lancador-header .titulo { font-weight: 700; font-size: .95rem; white-space: nowrap; }
+.lancador-header .titulo { font-weight: 700; font-size: var(--t-corpo); white-space: nowrap; }
 .lancador-header .unidade-atual {
   margin-left: auto;
-  font-size: .72rem;
+  font-size: var(--t-micro);
   opacity: .9;
   background: rgba(255, 255, 255, .14);
   padding: .2rem .55rem;
@@ -100,7 +100,7 @@
 /* Rótulo de seção */
 .modal-inventario .mai-secao {
   display: block;
-  font-size: .72rem;
+  font-size: var(--t-micro);
   font-weight: 700;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -119,7 +119,7 @@
   border: 1px solid var(--border);
   border-radius: var(--raio);
   cursor: pointer;
-  font-size: .85rem;
+  font-size: var(--t-pequeno);
   color: var(--text);
   transition: border-color .12s, background .12s;
 }
@@ -130,12 +130,12 @@
 }
 .modal-inventario label.mai-geral .mai-geral-texto { line-height: 1.35; }
 .modal-inventario label.mai-geral strong { color: var(--navy); }
-.modal-inventario label.mai-geral small { display: block; color: var(--muted); font-size: .76rem; }
+.modal-inventario label.mai-geral small { display: block; color: var(--muted); font-size: var(--t-mini); }
 
 /* Barra de ações da lista de famílias */
 .mai-cat-acoes { display: flex; align-items: center; gap: .35rem; margin-bottom: .45rem; }
 .mai-cat-titulo {
-  font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  font-size: var(--t-micro); font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
   color: var(--muted); margin-right: auto;
 }
 .mai-cat-titulo .contagem-sel { color: var(--gold); text-transform: none; letter-spacing: 0; }
@@ -157,7 +157,7 @@
   align-items: center;
   gap: .5rem;
   margin: 0;
-  font-size: .83rem;
+  font-size: var(--t-pequeno);
   color: var(--text);
   padding: .34rem .45rem;
   border-radius: var(--raio-p);
@@ -182,16 +182,16 @@
   border-bottom: 1px solid var(--border);
 }
 .inv-linha { display: flex; gap: .7rem; align-items: flex-end; }
-.inv-bloco label { font-size: .73rem; color: var(--muted); display: block; margin-bottom: .22rem; }
+.inv-bloco label { font-size: var(--t-micro); color: var(--muted); display: block; margin-bottom: .22rem; }
 .inv-numero { width: 210px; flex-shrink: 0; }
 .inv-desc { flex: 1; min-width: 0; }
 .inv-numero-campo { display: flex; gap: .35rem; }
 .inv-numero-campo input { width: 100%; font-family: "Consolas", "SF Mono", monospace; letter-spacing: .05em; }
-.inv-numero-campo .btn { padding: .55rem .8rem; font-size: .82rem; white-space: nowrap; }
-.inv-bloco input { font-size: .86rem; }
+.inv-numero-campo .btn { padding: .55rem .8rem; font-size: var(--t-mini); white-space: nowrap; }
+.inv-bloco input { font-size: var(--t-pequeno); }
 .inv-desc input[readonly] { background: var(--bg); color: var(--text); cursor: default; }
 
-.inv-estado { font-size: .78rem; margin-top: .5rem; }
+.inv-estado { font-size: var(--t-mini); margin-top: .5rem; }
 .inv-estado.ok { color: var(--sucesso); }
 .inv-estado.erro { color: var(--red); }
 
@@ -210,7 +210,7 @@
   z-index: 2;
 }
 .lancador-trava svg { width: 34px; height: 34px; color: var(--gold); margin-bottom: .6rem; }
-.lancador-trava p { font-size: .84rem; color: var(--muted); max-width: 330px; line-height: 1.5; margin: 0; }
+.lancador-trava p { font-size: var(--t-pequeno); color: var(--muted); max-width: 330px; line-height: 1.5; margin: 0; }
 .lancador-janela.travado .lancador-corpo { filter: saturate(.25); }
 
 /* ---------- Código do produto (campo próprio) ---------- */
@@ -239,7 +239,7 @@ input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo
   border: none;
   padding: .7rem .5rem;
   cursor: pointer;
-  font-size: .82rem;
+  font-size: var(--t-mini);
   font-weight: 600;
   color: var(--muted);
   display: flex;
@@ -266,12 +266,12 @@ input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo
   margin-bottom: .8rem;
 }
 .lancador-grid.col-2 { grid-template-columns: 1fr 1fr; }
-.lancador-corpo label { font-size: .74rem; color: var(--muted); display: block; margin-bottom: .22rem; }
+.lancador-corpo label { font-size: var(--t-mini); color: var(--muted); display: block; margin-bottom: .22rem; }
 .lancador-corpo input,
-.lancador-corpo select { width: 100%; font-size: .86rem; }
+.lancador-corpo select { width: 100%; font-size: var(--t-pequeno); }
 
 .lancador-dica {
-  font-size: .76rem;
+  font-size: var(--t-mini);
   color: var(--muted);
   background: var(--bg);
   border-left: 3px solid var(--gold);
@@ -283,7 +283,7 @@ input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo
 /* Aviso não-bloqueante (ex.: comida + bebida não fecham com o total) */
 .lancador-aviso {
   margin-top: .75rem;
-  font-size: .77rem;
+  font-size: var(--t-mini);
   color: var(--atencao);
   background: var(--atencao-fundo);
   border: 1px solid var(--atencao-linha);
@@ -310,13 +310,13 @@ input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: var(--t-titulo);
   line-height: 1;
 }
 .nf-item-remover:hover { color: var(--red); border-color: var(--red); }
 .nf-total {
   text-align: right;
-  font-size: .86rem;
+  font-size: var(--t-pequeno);
   color: var(--navy);
   font-weight: 700;
   margin-top: .5rem;
@@ -334,7 +334,7 @@ input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo
   background: var(--bg);
 }
 .lancador-rodape .btn { margin-left: auto; }
-.lancador-msg { font-size: .8rem; flex: 1; min-width: 0; }
+.lancador-msg { font-size: var(--t-mini); flex: 1; min-width: 0; }
 .lancador-msg.sucesso { color: var(--sucesso); }
 .lancador-msg.erro { color: var(--red); }
 
@@ -367,11 +367,11 @@ input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo
     gap: .4rem;
   }
   .lancador-header .titulo {
-    font-size: .88rem;
+    font-size: var(--t-pequeno);
   }
   .lancador-header .unidade-atual {
     max-width: 85px;
-    font-size: .66rem;
+    font-size: var(--t-micro);
     padding: .15rem .45rem;
     margin-left: auto;
   }
@@ -382,7 +382,7 @@ input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo
     min-height: 36px;
     background: var(--perigo); /* Vermelho/tijolo Casa Josefina destacado */
     border: 1.5px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    box-shadow: var(--sombra);
     border-radius: var(--raio);
     margin-left: .35rem;
   }

@@ -28,7 +28,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding: .35rem 0;
-  font-size: .9rem;
+  font-size: var(--t-corpo);
   line-height: 1.35;
 }
 .convite-linha + .convite-linha {
@@ -58,7 +58,7 @@
   gap: .55rem;
   padding: .4rem 0;
   cursor: pointer;
-  font-size: .92rem;
+  font-size: var(--t-corpo);
   line-height: 1.35;
 }
 .check-linha input { margin-top: .18rem; flex: 0 0 auto; }
@@ -91,7 +91,7 @@
   display: block;
   margin-top: .3rem;
   color: var(--tinta-2);
-  font-size: .82rem;
+  font-size: var(--t-mini);
 }
 
 .aviso-sucesso {
@@ -100,13 +100,13 @@
   border-radius: var(--raio);
   padding: .7rem .9rem;
   margin-bottom: 1rem;
-  font-size: .9rem;
+  font-size: var(--t-corpo);
 }
 
 /* ------------------------------------------------------ lista */
 .codigo-convite {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: .86rem;
+  font-size: var(--t-pequeno);
   letter-spacing: .02em;
   white-space: nowrap;
 }
@@ -115,7 +115,7 @@
   display: inline-block;
   padding: .15rem .5rem;
   border-radius: var(--raio-pilula);
-  font-size: .76rem;
+  font-size: var(--t-mini);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -136,7 +136,7 @@ tr.estado-expirado, tr.estado-revogado { opacity: .55; }
   padding: .25rem .45rem;
   cursor: pointer;
   line-height: 1;
-  font-size: .9rem;
+  font-size: var(--t-corpo);
 }
 .btn-icone:hover { background: var(--fundo-suave, rgba(0, 0, 0, .05)); }
 .btn-icone.btn-perigo:hover {
@@ -173,7 +173,7 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
   padding-top: 1rem;
   border-top: 1px solid var(--borda, rgba(0, 0, 0, .08));
   text-align: center;
-  font-size: .88rem;
+  font-size: var(--t-pequeno);
   color: var(--tinta-2);
 }
 .login-rodape a {
@@ -188,7 +188,7 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
    chance de trocar 5 por S na conferência visual. */
 .campo-codigo {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 1.05rem;
+  font-size: var(--t-titulo);
   letter-spacing: .12em;
   text-align: center;
   text-transform: uppercase;
@@ -197,7 +197,7 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
 /* ------------------------------------------------------ tela Equipe */
 /* Dizer em voz alta o que a pessoa pode fazer, antes de ela tentar. */
 .faixa-poderes { border-left: 3px solid var(--info); border-radius: 0 var(--raio-p) var(--raio-p) 0; }
-.badge-nivel { font-size: .8rem; padding: .2rem .6rem; }
+.badge-nivel { font-size: var(--t-mini); padding: .2rem .6rem; }
 
 .abas-equipe { display: flex; gap: .4rem; margin: 1rem 0 .8rem; }
 .aba-equipe {
@@ -206,7 +206,7 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
   border-radius: var(--raio-pilula);
   padding: .4rem .95rem;
   cursor: pointer;
-  font-size: .9rem;
+  font-size: var(--t-corpo);
 }
 .aba-equipe.ativa {
   border-color: var(--info);
@@ -217,14 +217,14 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
 /* Sem permissão, aparece o MOTIVO no lugar dos botões. Botão morto não
    ensina nada; "mesmo nível que o seu" ensina. */
 .motivo-bloqueio {
-  font-size: .82rem;
+  font-size: var(--t-mini);
   color: var(--tinta-2);
   font-style: italic;
   white-space: nowrap;
 }
 
 .sel-papel {
-  font-size: .82rem;
+  font-size: var(--t-mini);
   padding: .2rem .4rem;
   max-width: 130px;
   margin-right: .35rem;
@@ -278,7 +278,7 @@ tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: no
   align-items: baseline;
   padding: .4rem 0;
   border-bottom: 1px solid var(--borda, rgba(0, 0, 0, .06));
-  font-size: .92rem;
+  font-size: var(--t-corpo);
 }
 .perfil-acesso > div:last-child { border-bottom: none; }
 .perfil-acesso span:first-child { color: var(--tinta-2); }
@@ -316,13 +316,13 @@ tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: no
   color: var(--info);
 }
 .wpp-codigo strong { color: var(--sucesso); }
-.tg-codigo p, .wpp-codigo p { margin: .6rem 0 .4rem; font-size: .92rem; }
+.tg-codigo p, .wpp-codigo p { margin: .6rem 0 .4rem; font-size: var(--t-corpo); }
 .tg-codigo code, .wpp-codigo code {
   background: rgba(0, 0, 0, .06);
   padding: .15rem .4rem;
   border-radius: var(--raio-p);
 }
-.tg-codigo small, .wpp-codigo small { color: var(--tinta-2); font-size: .82rem; }
+.tg-codigo small, .wpp-codigo small { color: var(--tinta-2); font-size: var(--t-mini); }
 
 .qrcode-box {
   text-align: center;

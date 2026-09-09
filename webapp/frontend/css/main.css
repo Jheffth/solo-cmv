@@ -28,10 +28,30 @@ body {
 /* Título em vinho, não em preto: 12,4:1 sobre o papel, e é a cor que a
    pessoa acabou de ver na tela de login. A continuidade é o ponto. */
 h1, h2, h3 { margin: 0 0 .4rem 0; color: var(--marca-fundo); font-weight: 600; }
-h1 { font-size: 1.32rem; }
+h1 { font-size: var(--t-pagina); }
 h2 { font-size: var(--t-titulo); }
 h3 { font-size: var(--t-corpo); }
 p { margin: 0 0 .6rem 0; }
+
+/* NÚMERO ALINHA COM NÚMERO.
+
+   Este é um sistema de contagem e de CMV: metade da tela é coluna de valor,
+   e numa fonte proporcional o "1" é mais estreito que o "8" — então
+   R$ 1.111,11 e R$ 8.888,88 têm larguras diferentes e a vírgula dança de
+   linha para linha. Com algarismos tabulares todo dígito ocupa a mesma
+   caixa, as casas decimais empilham, e dá para comparar a coluna de olho em
+   vez de ler número por número.
+
+   É a mudança de tipografia que mais rende aqui — mais que qualquer fonte
+   bonita, que ninguém repara numa tabela de estoque. */
+table.tabela-simples td.num,
+table.tabela-simples th.num,
+.kpi-card .valor,
+.codigo-item,
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
 
 /* O login não mora mais aqui. Ele é o `.auth` de `marca.css` desde que a
    marca entrou, e este bloco continuava presente sem nada apontar para ele
@@ -61,7 +81,7 @@ p { margin: 0 0 .6rem 0; }
   display: flex; flex-direction: column;
   min-height: 0;   /* deixa o #menu-lateral rolar por conta própria */
 }
-.sidebar-brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.1rem .9rem; font-weight: 700; font-size: 1.05rem; color: var(--cj-creme); border-bottom: 1px solid rgba(238, 213, 180, .16); }
+.sidebar-brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.1rem .9rem; font-weight: 700; font-size: var(--t-titulo); color: var(--cj-creme); border-bottom: 1px solid rgba(238, 213, 180, .16); }
 .sidebar-brand img { width: 30px; height: 30px; object-fit: contain; border-radius: var(--raio-p); background: #fff; }
 
 /* Se o menu tiver mais itens que a altura da tela, ele rola sozinho —
@@ -81,7 +101,7 @@ p { margin: 0 0 .6rem 0; }
    componente pede 3:1, e ele passa com folga. */
 .nav-item.ativo { background: rgba(238, 213, 180, .16); color: var(--cj-creme); box-shadow: inset 3px 0 var(--acento); }
 .nav-item .badge-soon {
-  margin-left: auto; font-size: .62rem; letter-spacing: .02em; text-transform: uppercase;
+  margin-left: auto; font-size: var(--t-micro); letter-spacing: .02em; text-transform: uppercase;
   background: var(--acento); color: var(--cj-tinta); padding: .12rem .4rem; border-radius: var(--raio-pilula); font-weight: 700;
 }
 
@@ -91,7 +111,26 @@ p { margin: 0 0 .6rem 0; }
   padding: .8rem 1.4rem; background: var(--card); border-bottom: 1px solid var(--border);
   flex-shrink: 0;   /* o topo também fica parado */
 }
-.topbar-titulo { font-weight: 700; color: var(--navy); font-size: 1.05rem; margin-right: auto; min-width: 0; }
+/* O nome da página em Tanker — a fonte que o manual pede. É o único
+   elemento presente em TODA tela, então é ali que a marca fala depois do
+   login, sem enfeitar nenhuma tabela.
+
+   `display=swap` no @import garante que, se a Fontshare cair, o texto
+   aparece na reserva condensada em vez de sumir. Por isso o tamanho é
+   moderado: uma troca de fonte a 1,55rem saltaria a tela inteira. */
+.topbar-titulo {
+  font-family: var(--fonte-titulo);
+  font-weight: 400;
+  font-size: var(--t-pagina);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--marca-fundo);
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .topbar-acoes { display: flex; align-items: center; gap: .7rem; margin-left: auto; }
 
 /* ---------- Quem está usando o sistema ----------
@@ -126,7 +165,7 @@ p { margin: 0 0 .6rem 0; }
   background: var(--marca);
   border: 2px solid var(--acento);
   color: var(--cj-creme);
-  font-size: 1rem; font-weight: 700; line-height: 1;
+  font-size: var(--t-corpo); font-weight: 700; line-height: 1;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   user-select: none;
@@ -200,7 +239,7 @@ p { margin: 0 0 .6rem 0; }
 
 /* ---------- Componentes ---------- */
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; margin-bottom: 1.2rem; }
-.card h2 { font-size: 1.02rem; }
+.card h2 { font-size: var(--t-corpo); }
 .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
 
 /* ---------- Abas de página (ex.: Cadastros) ---------- */
@@ -216,7 +255,7 @@ p { margin: 0 0 .6rem 0; }
   border-bottom: 2px solid transparent;
   padding: .6rem 1rem;
   cursor: pointer;
-  font-size: .88rem;
+  font-size: var(--t-pequeno);
   font-weight: 600;
   color: var(--muted);
   display: flex;
@@ -228,7 +267,7 @@ p { margin: 0 0 .6rem 0; }
 .aba-pagina:hover { color: var(--navy); }
 .aba-pagina.ativa { color: var(--navy); border-bottom-color: var(--gold); }
 .aba-pagina .contador {
-  font-size: .7rem;
+  font-size: var(--t-micro);
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--muted);
@@ -237,11 +276,11 @@ p { margin: 0 0 .6rem 0; }
   font-weight: 700;
 }
 .aba-pagina.ativa .contador { background: var(--navy); color: #fff; border-color: var(--navy); }
-@media (max-width: 560px) { .aba-pagina { padding: .6rem .55rem; font-size: .8rem; } }
+@media (max-width: 560px) { .aba-pagina { padding: .6rem .55rem; font-size: var(--t-mini); } }
 
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.4rem; }
 .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; }
-.kpi-card .rotulo { font-size: .76rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.kpi-card .rotulo { font-size: var(--t-mini); color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
 .kpi-card .valor { font-size: 1.9rem; font-weight: 700; color: var(--navy); margin-top: .2rem; }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
@@ -250,7 +289,7 @@ p { margin: 0 0 .6rem 0; }
 /* Código único do produto (6 dígitos) — monoespaçado para alinhar na coluna */
 .codigo-item {
   font-family: "Consolas", "SF Mono", "Menlo", monospace;
-  font-size: .82rem;
+  font-size: var(--t-mini);
   color: var(--navy);
   background: var(--bg);
   border: 1px solid var(--border);
@@ -262,8 +301,8 @@ p { margin: 0 0 .6rem 0; }
 table.tabela-simples td.num, table.tabela-simples th.num { text-align: right; white-space: nowrap; }
 .zerado { color: var(--tinta-3); }
 
-table.tabela-simples { width: 100%; border-collapse: collapse; font-size: .88rem; }
-table.tabela-simples th { text-align: left; padding: .55rem .6rem; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--border); font-size: .76rem; text-transform: uppercase; letter-spacing: .02em; }
+table.tabela-simples { width: 100%; border-collapse: collapse; font-size: var(--t-pequeno); }
+table.tabela-simples th { text-align: left; padding: .55rem .6rem; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--border); font-size: var(--t-mini); text-transform: uppercase; letter-spacing: .02em; }
 table.tabela-simples td { padding: .55rem .6rem; border-bottom: 1px solid var(--border); }
 table.tabela-simples tr:last-child td { border-bottom: none; }
 
@@ -283,17 +322,17 @@ table.tabela-agrupada thead tr:last-child th {
   padding-top: .3rem;
   text-transform: none;
   letter-spacing: 0;
-  font-size: .72rem;
+  font-size: var(--t-micro);
 }
 table.tabela-agrupada th.inicio-grupo,
 table.tabela-agrupada td.inicio-grupo { border-left: 1px solid var(--border); }
 
 /* A unidade acompanha o número sem competir com ele: R$ 10,60/Kg */
-td.un-medida { color: var(--muted); font-size: .8rem; white-space: nowrap; }
-.por-unidade { color: var(--muted); font-size: .78rem; }
+td.un-medida { color: var(--muted); font-size: var(--t-mini); white-space: nowrap; }
+.por-unidade { color: var(--muted); font-size: var(--t-mini); }
 
 form.form-inline { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; }
-.form-group { display: flex; flex-direction: column; gap: .28rem; font-size: .8rem; color: var(--muted); min-width: 140px; }
+.form-group { display: flex; flex-direction: column; gap: .28rem; font-size: var(--t-mini); color: var(--muted); min-width: 140px; }
 input, select, button { font: inherit; }
 input, select { padding: .55rem .65rem; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--superficie); color: var(--tinta); transition: border-color .15s; }
 input:hover, select:hover { border-color: var(--linha-forte); }
@@ -315,16 +354,16 @@ button.btn:hover { background: var(--marca-forte); border-color: var(--marca-for
 button.btn.secundario { background: transparent; color: var(--marca-fundo); border-color: var(--linha-forte); }
 button.btn.secundario:hover { background: var(--superficie-2); border-color: var(--marca); }
 
-.tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: var(--raio-pilula); padding: .15rem .55rem; font-size: .74rem; color: var(--muted); }
+.tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: var(--raio-pilula); padding: .15rem .55rem; font-size: var(--t-mini); color: var(--muted); }
 .tag.aberta { background: var(--sucesso-fundo); color: var(--sucesso); border-color: var(--sucesso-linha); }
 .tag.fechada { background: var(--bg); color: var(--muted); }
 
-.estado-vazio { text-align: center; padding: 2.2rem 1rem; color: var(--muted); font-size: .9rem; }
+.estado-vazio { text-align: center; padding: 2.2rem 1rem; color: var(--muted); font-size: var(--t-corpo); }
 
 /* ---------- Status do inventário ---------- */
 .status-badge {
   display: inline-block;
-  font-size: .74rem;
+  font-size: var(--t-mini);
   font-weight: 700;
   padding: .18rem .6rem;
   border-radius: var(--raio-pilula);
@@ -358,7 +397,7 @@ button.btn.secundario:hover { background: var(--superficie-2); border-color: var
 .filtros-barra .form-group.cresce { flex: 1 1 190px; min-width: 190px; }
 .filtros-barra .form-group.data input { width: 148px; }
 .filtros-barra .form-group select { min-width: 150px; }
-.filtros-barra label { font-size: .73rem; }
+.filtros-barra label { font-size: var(--t-micro); }
 .filtros-barra .btn { margin-left: auto; }
 /* Separa visualmente os grupos de opção do resto dos filtros */
 .filtros-barra .form-group.opcao { margin-left: .3rem; }
@@ -374,7 +413,7 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
   color: var(--navy);
   border-radius: var(--raio-p);
   padding: .28rem .6rem;
-  font-size: .78rem;
+  font-size: var(--t-mini);
   font-weight: 600;
   cursor: pointer;
 }
@@ -384,7 +423,7 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
 .btn-acao:disabled { opacity: .4; cursor: not-allowed; }
 
 .aviso-acao {
-  font-size: .8rem;
+  font-size: var(--t-mini);
   color: var(--atencao);
   background: var(--atencao-fundo);
   border: 1px solid var(--atencao-linha);
@@ -403,7 +442,7 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
 .seletor-opcoes { display: flex; border: 1px solid var(--border); border-radius: var(--raio); overflow: hidden; background: var(--card); }
 .seletor-opcoes button {
   background: none; border: none; padding: .5rem .8rem; cursor: pointer;
-  font-size: .82rem; font-weight: 600; color: var(--muted); white-space: nowrap;
+  font-size: var(--t-mini); font-weight: 600; color: var(--muted); white-space: nowrap;
 }
 .seletor-opcoes button + button { border-left: 1px solid var(--border); }
 .seletor-opcoes button:hover:not(.ativo) { background: var(--bg); color: var(--navy); }
@@ -411,12 +450,12 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
 
 .valor-bom { color: var(--sucesso); }
 .valor-ruim { color: var(--red); }
-.nota-formula { font-size: .78rem; color: var(--muted); margin: .8rem 0 0; }
+.nota-formula { font-size: var(--t-mini); color: var(--muted); margin: .8rem 0 0; }
 
 /* De onde vieram os estoques do CMV — o número precisa ter origem visível */
 .origem-inventarios {
   display: flex; align-items: flex-start; gap: .7rem;
-  font-size: .82rem; color: var(--text); line-height: 1.5;
+  font-size: var(--t-mini); color: var(--text); line-height: 1.5;
   background: var(--info-fundo); border: 1px solid var(--info-linha); border-radius: var(--raio);
   padding: .7rem .85rem; margin-bottom: 1.2rem;
 }
@@ -426,11 +465,11 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
 .diverg-neg { color: var(--red); font-weight: 600; }
 .diverg-pos { color: var(--sucesso); font-weight: 600; }
 
-.legenda-status { display: grid; gap: .55rem; font-size: .84rem; color: var(--muted); }
+.legenda-status { display: grid; gap: .55rem; font-size: var(--t-pequeno); color: var(--muted); }
 .legenda-status > div { display: flex; align-items: center; gap: .55rem; }
 
-tr.linha-vazia td { text-align: center; padding: 2.2rem 1rem; color: var(--muted); font-size: .9rem; }
-tr.linha-vazia .obs { font-size: .78rem; margin-top: .5rem; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+tr.linha-vazia td { text-align: center; padding: 2.2rem 1rem; color: var(--muted); font-size: var(--t-corpo); }
+tr.linha-vazia .obs { font-size: var(--t-mini); margin-top: .5rem; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5; }
 
 /* ---------- Placeholder de seção ainda não iniciada ---------- */
 .placeholder-em-construcao {
@@ -439,11 +478,11 @@ tr.linha-vazia .obs { font-size: .78rem; margin-top: .5rem; max-width: 520px; ma
 }
 .placeholder-em-construcao svg { width: 46px; height: 46px; color: var(--gold); margin-bottom: .8rem; }
 .placeholder-em-construcao h2 { color: var(--navy); }
-.placeholder-em-construcao .fase-tag { display:inline-block; margin-top: .8rem; font-size: .76rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--raio-pilula); padding: .25rem .7rem; color: var(--navy); font-weight: 600; }
+.placeholder-em-construcao .fase-tag { display:inline-block; margin-top: .8rem; font-size: var(--t-mini); background: var(--bg); border: 1px solid var(--border); border-radius: var(--raio-pilula); padding: .25rem .7rem; color: var(--navy); font-weight: 600; }
 
 .grafico-vazio {
   display: flex; align-items: center; justify-content: center; flex-direction: column; gap: .5rem;
-  height: 220px; color: var(--muted); font-size: .86rem; border: 1.5px dashed var(--border); border-radius: var(--raio);
+  height: 220px; color: var(--muted); font-size: var(--t-pequeno); border: 1.5px dashed var(--border); border-radius: var(--raio);
 }
 .grafico-vazio svg { width: 32px; height: 32px; color: var(--gold); }
 
@@ -471,15 +510,15 @@ canvas { max-width: 100%; }
     width: 260px; max-width: 82vw; z-index: 1200;
     transform: translateX(-100%);
     transition: transform .22s ease;
-    box-shadow: 4px 0 24px rgba(15, 28, 42, .25);
+    box-shadow: var(--sombra-g);
   }
   .sidebar.aberta { transform: translateX(0); }
 
   .btn-menu { display: flex; }
 
   .topbar { flex-wrap: wrap; }
-  .topbar-titulo { font-size: .98rem; }
-  .topbar-usuario { gap: .5rem; font-size: .8rem; }
+  .topbar-titulo { font-size: var(--t-corpo); }
+  .topbar-usuario { gap: .5rem; font-size: var(--t-mini); }
   #nome-usuario { display: none; }
   #seletor-unidade { max-width: 130px; }
 
@@ -497,11 +536,11 @@ canvas { max-width: 100%; }
   .conteudo { padding: .85rem; }
   .card { padding: .9rem; border-radius: var(--raio); }
   .card-header { flex-wrap: wrap; gap: .55rem; }
-  .card-header h2 { font-size: .95rem; }
+  .card-header h2 { font-size: var(--t-corpo); }
 
   .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .kpi-card .rotulo { font-size: .68rem; }
-  .kpi-card .valor { font-size: 1.35rem; }
+  .kpi-card .rotulo { font-size: var(--t-micro); }
+  .kpi-card .valor { font-size: var(--t-titulo); }
 
   /* Filtros empilhados, cada um ocupando a linha toda */
   .filtros-barra { padding: .7rem; gap: .55rem; }
@@ -522,12 +561,12 @@ canvas { max-width: 100%; }
 
   /* Ações da linha quebram em duas colunas em vez de estourar a largura */
   .acoes-linha { flex-wrap: wrap; gap: .25rem; }
-  .btn-acao { padding: .26rem .5rem; font-size: .74rem; }
+  .btn-acao { padding: .26rem .5rem; font-size: var(--t-mini); }
 
   .abas-pagina { overflow-x: auto; }
   .aba-pagina { white-space: nowrap; }
 
   .login-card { padding: 1.8rem 1.4rem; }
-  .legenda-status { font-size: .8rem; }
+  .legenda-status { font-size: var(--t-mini); }
   .legenda-status > div { align-items: flex-start; }
 }

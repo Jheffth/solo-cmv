@@ -147,8 +147,19 @@
   --raio-g:  16px;     /* modal, cartão de destaque */
   --raio-pilula: 999px;
 
-  --sombra:   0 1px 2px rgba(42, 26, 28, .06), 0 4px 12px rgba(42, 26, 28, .05);
+  /* Duas sombras, e as duas na tinta quente da paleta — não em preto. Preto
+     puro sobre papel creme deixa uma auréola cinza que ninguém sabe nomear
+     mas todo mundo percebe como "sujo".
+
+     `--sombra` é o que flutua um pouco (menu suspenso, gaveta). `--sombra-g`
+     é o que flutua sobre o resto do mundo (modal). Não existe um terceiro
+     nível porque não existe um terceiro andar: se algo precisa se destacar
+     de um modal, ele é o modal. */
+  --sombra:   0 1px 2px rgba(42, 26, 28, .06), 0 4px 12px rgba(42, 26, 28, .07);
   --sombra-g: 0 8px 24px rgba(42, 26, 28, .12), 0 24px 60px rgba(42, 26, 28, .16);
+  /* O anel de foco não é sombra: é sinal de onde está o teclado. Fica aqui
+     por ser a mesma propriedade CSS, e só. */
+  --anel-foco: 0 0 0 4px var(--acento-suave);
 
   /* ======================================================================
      6. TIPOGRAFIA
@@ -157,7 +168,16 @@
      avulsos, sem ritmo, escolhidos um a um no calor de cada tela. Seis
      degraus dão a mesma expressividade e deixam a página parecer composta
      em vez de montada. */
-  --fonte:      "Inter", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+     A pilha do sistema é deliberada, e não preguiça. Havia uma "Inter"
+     escrita aqui que nunca foi carregada — o navegador caía na reserva sem
+     avisar, e o projeto tinha a ilusão de uma tipografia própria. Baixar uma
+     fonte de texto para telas de tabela custa uma dependência de rede e um
+     salto de layout, e devolve pouco: quem lê uma coluna de números não
+     percebe a forma da letra, percebe o alinhamento dela.
+
+     A Tanker fica onde ela faz diferença: título de página. É a fonte que
+     o manual pede, e é o que traz a marca para dentro sem enfeitar. */
+  --fonte:      -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --fonte-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --fonte-titulo: "Tanker", "Oswald", "Archivo Narrow", "Arial Narrow", sans-serif;
 
@@ -166,6 +186,7 @@
   --t-pequeno:0.86rem;   /* tabela, apoio */
   --t-corpo:  0.94rem;   /* texto */
   --t-titulo: 1.12rem;   /* título de cartão */
+  --t-pagina: 1.30rem;   /* nome da página, em Tanker */
   --t-numero: 1.9rem;    /* valor de indicador */
 
   /* ======================================================================

@@ -21,7 +21,7 @@ td.mov-sel input:disabled { cursor: not-allowed; opacity: .35; }
    não consigo marcar esta linha?". O motivo inteiro está no title, vindo do
    servidor — a mesma frase que a API devolveria se alguém insistisse. */
 .mov-cadeado {
-  font-size: .7rem;
+  font-size: var(--t-micro);
   opacity: .5;
   margin-left: .1rem;
 }
@@ -41,7 +41,7 @@ tr.mov-marcado td { border-color: rgba(166, 35, 31, .18); }
   background: rgba(182, 52, 33, .08);
   border-left: 3px solid var(--perigo);
   border-radius: 0 var(--raio-p) var(--raio-p) 0;
-  font-size: .88rem;
+  font-size: var(--t-pequeno);
 }
 .mov-acoes #mov-selecionados {
   font-weight: 600;

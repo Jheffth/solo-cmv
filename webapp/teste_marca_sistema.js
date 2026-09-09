@@ -189,6 +189,68 @@ ok(/var\(--perigo,/.test(dialogos),
 ok(!/#1F3B57|#A6231F|#F3F4F7|#E3E6EA|#6B7280/.test(dialogos),
    'e as cores de reserva são as novas, não as que foram substituídas');
 
+// ==========================================================================
+console.log('\n[9] TIPOGRAFIA — uma escala, não uma coleção');
+// ==========================================================================
+// Havia 37 tamanhos diferentes: .62, .66, .68, .70, .72, .73, .74, .75, .76,
+// .77, .78, .80… Ninguém escolheu trinta e sete. Cada tela escolheu um, no
+// calor do momento, e a soma é o que faz uma página parecer montada em vez
+// de composta.
+const tamanhosCrus = arquivos.filter((f) => f !== 'tokens.css')
+  .flatMap((f) => codigo(f).match(/font-size:\s*[0-9.]+rem/g) || [])
+  .map((r) => parseFloat(r.match(/[0-9.]+/)[0]));
+const pequenosCrus = tamanhosCrus.filter((v) => v <= 1.4);
+ok(pequenosCrus.length === 0,
+   `nenhum tamanho de texto fora da escala (${pequenosCrus.length} crus: `
+   + `${[...new Set(pequenosCrus)].join(', ') || 'nenhum'})`);
+// Acima de 1,4rem é tipografia de EXIBIÇÃO — o título da tela de login, em
+// Tanker. Isso é composição, não escala, e não se resolve com degraus.
+ok(tamanhosCrus.some((v) => v > 1.4),
+   'e a tipografia de exibição das telas de entrada continua livre');
+
+// A "Inter" estava escrita na pilha de fontes e nunca foi carregada: o
+// navegador caía na reserva sem avisar, e o projeto tinha a ilusão de uma
+// tipografia própria. Ou se carrega, ou não se escreve.
+const fontesCitadas = (tokens.match(/--fonte[\w-]*:\s*([^;]+)/g) || []).join(' ');
+const carregadas = arquivos.map(ler).join('') + fs.readFileSync(
+  path.join(BASE, 'index.html'), 'utf8');
+['Inter', 'Roboto Flex', 'Poppins'].forEach((f) => {
+  const citada = fontesCitadas.includes(f);
+  const existe = /@import|@font-face|fonts\.googleapis/.test(carregadas)
+    && carregadas.includes(f);
+  ok(!citada || existe, `${f} não é citada sem estar carregada`);
+});
+ok(/Tanker/.test(fontesCitadas) && /fontshare/.test(carregadas),
+   'e a Tanker, que é citada, está de fato carregada');
+
+// O nome da página é o único elemento presente em toda tela. É ali que a
+// marca fala depois do login — não num h2 de cartão, que apareceria em
+// tabela e viraria enfeite.
+ok(/\.topbar-titulo\s*{[^}]*font-family:\s*var\(--fonte-titulo\)/.test(main),
+   'o nome da página usa a fonte do manual');
+
+// Coluna de valor em fonte proporcional não alinha: o "1" é mais estreito
+// que o "8", a vírgula dança de linha para linha, e comparar exige ler
+// número por número em vez de bater o olho.
+ok(/font-variant-numeric:\s*tabular-nums/.test(main),
+   'e as colunas de número usam algarismos tabulares');
+
+// ==========================================================================
+console.log('\n[10] DUAS SOMBRAS, E NENHUMA PRETA');
+// ==========================================================================
+// Eram oito, três delas em preto puro ou em azul frio — sobre papel creme,
+// preto puro deixa uma auréola cinza que ninguém sabe nomear mas todo mundo
+// percebe como "sujo".
+const sombrasCruas = arquivos.filter((f) => f !== 'tokens.css')
+  .flatMap((f) => codigo(f).match(/box-shadow:\s*[^;]+/g) || [])
+  .filter((s) => !/var\(--|inset|none/.test(s));
+ok(sombrasCruas.length === 0,
+   `nenhuma sombra fora dos tokens (${sombrasCruas.length})`);
+ok(/--sombra:/.test(tokens) && /--sombra-g:/.test(tokens),
+   'e existem exatamente dois níveis nomeados');
+ok(!/box-shadow[^;]*rgba\(0,\s*0,\s*0/.test(tokens),
+   'nenhuma delas em preto puro — a sombra é da tinta quente da paleta');
+
 console.log('\n' + (falhas.length
   ? 'FALHAS:\n  ' + falhas.join('\n  ') : 'Tudo certo.'));
 process.exit(falhas.length ? 1 : 0);

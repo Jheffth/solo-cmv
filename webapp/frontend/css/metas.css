@@ -23,7 +23,7 @@
 .meta-tabela.com-acao .meta-cabecalho { display: none; }
 
 .meta-cabecalho {
-  font-size: .72rem;
+  font-size: var(--t-micro);
   text-transform: uppercase;
   letter-spacing: .03em;
   color: var(--muted);
@@ -41,7 +41,7 @@
 .meta-linha:last-child { border-bottom: none; }
 
 .meta-nome {
-  font-size: .9rem;
+  font-size: var(--t-corpo);
   color: var(--text);
   display: flex;
   flex-direction: column;
@@ -51,13 +51,13 @@
 
 /* A procedência da meta em letra miúda: sem isso ninguém sabe se o número
    foi decidido ou é reflexo de outro. */
-.meta-origem { font-size: .7rem; color: var(--muted); }
+.meta-origem { font-size: var(--t-micro); color: var(--muted); }
 .meta-origem.herdada { font-style: italic; }
 
 /* O valor é um botão: clicar nele é definir. Parece texto até o hover,
    para a tabela não virar um campo de futebol de botões. */
 .meta-valor {
-  font-size: 1.05rem;
+  font-size: var(--t-titulo);
   font-weight: 700;
   color: var(--navy);
   background: none;
@@ -98,7 +98,7 @@
 }
 
 .meta-realizado {
-  font-size: .84rem;
+  font-size: var(--t-pequeno);
   color: var(--muted);
   text-align: right;
   white-space: nowrap;
@@ -111,11 +111,11 @@
 .meta-selo.bom { color: var(--sucesso); }
 .meta-selo.ruim { color: var(--red); }
 
-.btn-acao.usar-realizado { font-size: .72rem; padding: .25rem .5rem; white-space: nowrap; }
+.btn-acao.usar-realizado { font-size: var(--t-micro); padding: .25rem .5rem; white-space: nowrap; }
 
 /* Cartões de Perdas e Faturamento */
 .meta-destaque { display: flex; flex-direction: column; align-items: flex-start; gap: .1rem; }
-.meta-legenda { font-size: .76rem; color: var(--muted); }
+.meta-legenda { font-size: var(--t-mini); color: var(--muted); }
 .meta-destaque .meta-realizado { text-align: left; margin-top: .35rem; }
 
 /* ---------- Diálogo de definição ---------- */
@@ -131,7 +131,7 @@
   width: 460px; max-width: 100%;
   max-height: 88vh;
   display: flex; flex-direction: column;
-  box-shadow: 0 18px 50px rgba(42, 26, 28, .3);
+  box-shadow: var(--sombra-g);
 }
 .modal-caixa.larga { width: 760px; }
 .modal-cabecalho {
@@ -139,9 +139,9 @@
   padding: .9rem 1.1rem;
   border-bottom: 1px solid var(--border);
 }
-.modal-cabecalho h3 { margin: 0; font-size: 1rem; flex: 1; }
+.modal-cabecalho h3 { margin: 0; font-size: var(--t-corpo); flex: 1; }
 .modal-corpo { padding: 1.1rem; overflow-y: auto; }
-.modal-corpo label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: .25rem; }
+.modal-corpo label { display: block; font-size: var(--t-mini); color: var(--muted); margin-bottom: .25rem; }
 .modal-corpo input { width: 100%; }
 .modal-rodape {
   display: flex; justify-content: flex-end; gap: .5rem;
@@ -150,7 +150,7 @@
 }
 .modal-mensagem {
   margin-top: .7rem; padding: .55rem .7rem; border-radius: var(--raio);
-  background: var(--perigo-fundo); color: var(--perigo-forte); font-size: .82rem;
+  background: var(--perigo-fundo); color: var(--perigo-forte); font-size: var(--t-mini);
 }
 
 /* ---------- Distribuição automática ---------- */
@@ -162,10 +162,10 @@
 
 .dist-opcao {
   display: flex; align-items: center; gap: .5rem;
-  margin-top: .5rem; font-size: .84rem; color: var(--text);
+  margin-top: .5rem; font-size: var(--t-pequeno); color: var(--text);
 }
 .dist-opcao input[type="checkbox"] { width: 16px; height: 16px; flex: 0 0 auto; margin: 0; }
-.dist-opcao small { display: block; color: var(--muted); font-size: .75rem; }
+.dist-opcao small { display: block; color: var(--muted); font-size: var(--t-mini); }
 
 .dist-previa { margin-top: .9rem; }
 .dist-tabela tbody tr.travada { color: var(--muted); }
@@ -207,12 +207,12 @@
 
 .escopo-opcao {
   display: flex; align-items: flex-start; gap: .5rem;
-  font-size: .86rem; color: var(--text); cursor: pointer;
+  font-size: var(--t-pequeno); color: var(--text); cursor: pointer;
 }
 .escopo-opcao input[type="checkbox"] {
   width: 16px; height: 16px; margin: .12rem 0 0; flex: 0 0 auto;
 }
-.escopo-opcao small { display: block; color: var(--muted); font-size: .74rem; }
+.escopo-opcao small { display: block; color: var(--muted); font-size: var(--t-mini); }
 .escopo-opcao.destaque {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: .55rem .7rem;
