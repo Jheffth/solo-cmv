@@ -14,15 +14,15 @@
   max-width: calc(100vw - 24px);
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(15, 28, 42, .28);
+  border-radius: var(--raio-g);
+  box-shadow: 0 24px 60px rgba(42, 26, 28, .28);
   display: none;
   flex-direction: column;
   overflow: hidden;
 }
 
 .lancador-janela.visible { display: flex; }
-.lancador-janela.dragging { box-shadow: 0 30px 70px rgba(15, 28, 42, .38); user-select: none; }
+.lancador-janela.dragging { box-shadow: 0 30px 70px rgba(42, 26, 28, .38); user-select: none; }
 
 /* ---------- Cabeçalho (área de arrasto) ---------- */
 .lancador-header {
@@ -46,7 +46,7 @@
   opacity: .9;
   background: rgba(255, 255, 255, .14);
   padding: .2rem .55rem;
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   white-space: nowrap;
   max-width: 140px;
   overflow: hidden;
@@ -61,7 +61,7 @@
   height: 32px;
   min-width: 32px;
   min-height: 32px;
-  border-radius: 8px;
+  border-radius: var(--raio);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,8 +71,8 @@
 }
 .lancador-close-btn:hover,
 .lancador-close-btn:active {
-  background: var(--red, #B63421);
-  border-color: var(--red, #B63421);
+  background: var(--perigo);
+  border-color: var(--perigo);
   color: #fff;
   transform: scale(1.05);
 }
@@ -117,7 +117,7 @@
   margin: 0 0 .9rem;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--raio);
   cursor: pointer;
   font-size: .85rem;
   color: var(--text);
@@ -126,7 +126,7 @@
 .modal-inventario label.mai-geral:hover { border-color: var(--gold); }
 .modal-inventario label.mai-geral.ativo {
   border-color: var(--gold);
-  background: #FBF7EE;
+  background: var(--atencao-fundo);
 }
 .modal-inventario label.mai-geral .mai-geral-texto { line-height: 1.35; }
 .modal-inventario label.mai-geral strong { color: var(--navy); }
@@ -148,7 +148,7 @@
   max-height: 176px;
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--raio);
   padding: .5rem;
   background: var(--card);
 }
@@ -160,12 +160,12 @@
   font-size: .83rem;
   color: var(--text);
   padding: .34rem .45rem;
-  border-radius: 6px;
+  border-radius: var(--raio-p);
   cursor: pointer;
   line-height: 1.2;
 }
 .modal-inventario label.mai-cat:hover { background: var(--bg); }
-.modal-inventario label.mai-cat.marcada { background: #EEF3F8; color: var(--navy); font-weight: 600; }
+.modal-inventario label.mai-cat.marcada { background: var(--info-fundo); color: var(--navy); font-weight: 600; }
 
 .modal-inventario .lancador-dica { margin-bottom: 1rem; }
 .modal-inventario .form-group { margin-bottom: .9rem; }
@@ -178,7 +178,7 @@
 /* ---------- Bloco do inventário (porteiro do lançamento) ---------- */
 .inv-bloco {
   padding: .85rem 1rem;
-  background: #F7F9FC;
+  background: var(--superficie-2);
   border-bottom: 1px solid var(--border);
 }
 .inv-linha { display: flex; gap: .7rem; align-items: flex-end; }
@@ -192,7 +192,7 @@
 .inv-desc input[readonly] { background: var(--bg); color: var(--text); cursor: default; }
 
 .inv-estado { font-size: .78rem; margin-top: .5rem; }
-.inv-estado.ok { color: #1C7A3C; }
+.inv-estado.ok { color: var(--sucesso); }
 .inv-estado.erro { color: var(--red); }
 
 /* ---------- Área do formulário + trava ---------- */
@@ -225,7 +225,7 @@
   text-align: center;
 }
 .campo-un input { background: var(--bg); text-align: center; color: var(--muted); }
-input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
+input.codigo-invalido { border-color: var(--red); background: var(--perigo-fundo); }
 
 /* ---------- Abas ---------- */
 .lancador-abas {
@@ -249,7 +249,7 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
   border-bottom: 2px solid transparent;
 }
 .lancador-aba svg { width: 15px; height: 15px; }
-.lancador-aba:hover { color: var(--navy); background: rgba(31, 59, 87, .05); }
+.lancador-aba:hover { color: var(--navy); background: rgba(100, 17, 28, .05); }
 .lancador-aba.ativa { color: var(--navy); border-bottom-color: var(--gold); background: var(--card); }
 
 /* ---------- Corpo ---------- */
@@ -276,7 +276,7 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
   background: var(--bg);
   border-left: 3px solid var(--gold);
   padding: .5rem .7rem;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 var(--raio-p) var(--raio-p) 0;
   margin-bottom: .9rem;
 }
 
@@ -284,10 +284,10 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
 .lancador-aviso {
   margin-top: .75rem;
   font-size: .77rem;
-  color: #8A6A1F;
-  background: #FBF3E3;
-  border: 1px solid #E8D9B5;
-  border-radius: 7px;
+  color: var(--atencao);
+  background: var(--atencao-fundo);
+  border: 1px solid var(--atencao-linha);
+  border-radius: var(--raio-p);
   padding: .5rem .7rem;
 }
 
@@ -303,7 +303,7 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
 .nf-item-remover {
   background: none;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--raio-p);
   color: var(--muted);
   cursor: pointer;
   height: 34px;
@@ -335,7 +335,7 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
 }
 .lancador-rodape .btn { margin-left: auto; }
 .lancador-msg { font-size: .8rem; flex: 1; min-width: 0; }
-.lancador-msg.sucesso { color: #1C7A3C; }
+.lancador-msg.sucesso { color: var(--sucesso); }
 .lancador-msg.erro { color: var(--red); }
 
 /* ---------- Janelas flutuantes em telas pequenas ---------- */
@@ -356,7 +356,7 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
     width: calc(100vw - 12px) !important;
     max-width: calc(100vw - 12px) !important;
     max-height: calc(100vh - 12px) !important;
-    border-radius: 12px;
+    border-radius: var(--raio);
     transform: none !important;
   }
   .lancador-corpo, .modal-inventario .lancador-corpo { padding: .75rem; }
@@ -380,10 +380,10 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
     height: 36px;
     min-width: 36px;
     min-height: 36px;
-    background: #B63421; /* Vermelho/tijolo Casa Josefina destacado */
+    background: var(--perigo); /* Vermelho/tijolo Casa Josefina destacado */
     border: 1.5px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
-    border-radius: 8px;
+    border-radius: var(--raio);
     margin-left: .35rem;
   }
   .lancador-close-btn svg {
@@ -398,7 +398,7 @@ input.codigo-invalido { border-color: var(--red); background: #FDF3F3; }
     grid-template-areas: "codigo produto remover" "qtd custo remover";
     gap: .35rem;
     padding: .5rem; margin-bottom: .5rem;
-    border: 1px solid var(--border); border-radius: 8px;
+    border: 1px solid var(--border); border-radius: var(--raio);
   }
   .nf-item > div:nth-child(1) { grid-area: codigo; }
   .nf-item > div:nth-child(2) { grid-area: produto; }

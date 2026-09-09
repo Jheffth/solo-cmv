@@ -26,7 +26,7 @@ td.mov-sel input:disabled { cursor: not-allowed; opacity: .35; }
   margin-left: .1rem;
 }
 
-tr.mov-marcado { background: rgba(166, 35, 31, .07); }
+tr.mov-marcado { background: rgba(182, 52, 33, .08); }
 tr.mov-marcado td { border-color: rgba(166, 35, 31, .18); }
 
 /* A barra aparece SÓ quando há seleção. Botão de excluir sempre visível
@@ -38,9 +38,9 @@ tr.mov-marcado td { border-color: rgba(166, 35, 31, .18); }
   flex-wrap: wrap;
   margin: 0 0 .9rem;
   padding: .7rem .9rem;
-  background: rgba(166, 35, 31, .07);
-  border-left: 3px solid var(--red, #a6231f);
-  border-radius: 0 8px 8px 0;
+  background: rgba(182, 52, 33, .08);
+  border-left: 3px solid var(--perigo);
+  border-radius: 0 var(--raio-p) var(--raio-p) 0;
   font-size: .88rem;
 }
 .mov-acoes #mov-selecionados {
@@ -49,8 +49,8 @@ tr.mov-marcado td { border-color: rgba(166, 35, 31, .18); }
 }
 
 .btn.btn-perigo {
-  background: var(--red, #a6231f);
-  border-color: var(--red, #a6231f);
+  background: var(--perigo);
+  border-color: var(--perigo);
   color: #fff;
 }
 .btn.btn-perigo:hover { filter: brightness(1.08); }

@@ -23,7 +23,7 @@
   color: var(--muted);
 }
 .rel-procedencia svg { width: 15px; height: 15px; color: var(--gold); flex-shrink: 0; }
-.rel-procedencia.alerta { color: #9B2C2C; }
+.rel-procedencia.alerta { color: var(--perigo-forte); }
 .rel-procedencia.alerta svg { color: var(--red); }
 
 /* ---------- Curva ABC ---------- */
@@ -33,11 +33,11 @@
   text-align: center;
   font-weight: 700;
   font-size: .78rem;
-  border-radius: 5px;
+  border-radius: var(--raio-p);
   padding: .1rem .3rem;
 }
-.faixa-abc.faixa-a { background: #FBEBEB; color: #9B2C2C; }
-.faixa-abc.faixa-b { background: #FBF3E3; color: #8A6A1F; }
+.faixa-abc.faixa-a { background: var(--perigo-fundo); color: var(--perigo-forte); }
+.faixa-abc.faixa-b { background: var(--atencao-fundo); color: var(--atencao); }
 .faixa-abc.faixa-c { background: var(--bg); color: var(--muted); }
 
 /* Cores das faixas nos cartões de resumo */

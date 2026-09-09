@@ -19,7 +19,7 @@
    propósito: ler o que se recebe vem antes de escolher a senha. */
 .convite-resumo {
   background: var(--fundo-suave, rgba(0, 0, 0, .04));
-  border-radius: 10px;
+  border-radius: var(--raio);
   padding: .9rem 1rem;
   margin: 1.1rem 0 1.3rem;
 }
@@ -34,11 +34,11 @@
 .convite-linha + .convite-linha {
   border-top: 1px solid var(--borda, rgba(0, 0, 0, .08));
 }
-.convite-linha span { color: var(--texto-suave, #6b7280); flex: 0 0 auto; }
+.convite-linha span { color: var(--tinta-2); flex: 0 0 auto; }
 .convite-linha strong { text-align: right; }
 
 .convite-motivo {
-  color: var(--perigo, #a6231f);
+  color: var(--perigo);
   font-weight: 600;
   text-align: center;
   margin: .8rem 0;
@@ -64,12 +64,12 @@
 .check-linha input { margin-top: .18rem; flex: 0 0 auto; }
 .check-destaque {
   border: 1px solid var(--borda, rgba(0, 0, 0, .1));
-  border-radius: 8px;
+  border-radius: var(--raio);
   padding: .55rem .7rem;
   margin-bottom: .4rem;
 }
 .check-destaque:has(input:checked) {
-  border-color: var(--primaria, #2563eb);
+  border-color: var(--info);
   background: var(--fundo-suave, rgba(37, 99, 235, .05));
 }
 
@@ -90,14 +90,14 @@
 .form-dica {
   display: block;
   margin-top: .3rem;
-  color: var(--texto-suave, #6b7280);
+  color: var(--tinta-2);
   font-size: .82rem;
 }
 
 .aviso-sucesso {
-  background: var(--sucesso-fundo, #ecfdf5);
-  color: var(--sucesso, #067647);
-  border-radius: 8px;
+  background: var(--sucesso-fundo);
+  color: var(--sucesso);
+  border-radius: var(--raio);
   padding: .7rem .9rem;
   margin-bottom: 1rem;
   font-size: .9rem;
@@ -114,15 +114,15 @@
 .badge-estado {
   display: inline-block;
   padding: .15rem .5rem;
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   font-size: .76rem;
   font-weight: 600;
   white-space: nowrap;
 }
-.badge-disponivel { background: #e0f2fe; color: #075985; }
-.badge-usado      { background: #ecfdf5; color: #067647; }
-.badge-expirado   { background: rgba(0, 0, 0, .06); color: #6b7280; }
-.badge-revogado   { background: #fef2f2; color: #a6231f; }
+.badge-disponivel { background: var(--info-fundo); color: var(--info); }
+.badge-usado      { background: var(--sucesso-fundo); color: var(--sucesso); }
+.badge-expirado   { background: rgba(0, 0, 0, .06); color: var(--tinta-2); }
+.badge-revogado   { background: var(--perigo-fundo); color: var(--perigo); }
 
 /* Convite gasto ou vencido continua na lista, apagado: é registro de quem
    autorizou a entrada de quem, e isso não se esconde. */
@@ -132,7 +132,7 @@ tr.estado-expirado, tr.estado-revogado { opacity: .55; }
 .btn-icone {
   background: none;
   border: 1px solid var(--borda, rgba(0, 0, 0, .12));
-  border-radius: 6px;
+  border-radius: var(--raio-p);
   padding: .25rem .45rem;
   cursor: pointer;
   line-height: 1;
@@ -140,8 +140,8 @@ tr.estado-expirado, tr.estado-revogado { opacity: .55; }
 }
 .btn-icone:hover { background: var(--fundo-suave, rgba(0, 0, 0, .05)); }
 .btn-icone.btn-perigo:hover {
-  border-color: var(--perigo, #a6231f);
-  color: var(--perigo, #a6231f);
+  border-color: var(--perigo);
+  color: var(--perigo);
 }
 
 /* ------------------------------------------------------ tela de Usuários */
@@ -164,8 +164,8 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
 
 .tabela-simples .acoes { white-space: nowrap; text-align: right; }
 .tabela-simples .acoes .btn-acao + .btn-acao { margin-left: .35rem; }
-.btn-acao.btn-perigo { color: var(--perigo, #a6231f); }
-.btn-acao.btn-perigo:hover { border-color: var(--perigo, #a6231f); }
+.btn-acao.btn-perigo { color: var(--perigo); }
+.btn-acao.btn-perigo:hover { border-color: var(--perigo); }
 
 /* ------------------------------------------------------ entrada pelo login */
 .login-rodape {
@@ -174,10 +174,10 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
   border-top: 1px solid var(--borda, rgba(0, 0, 0, .08));
   text-align: center;
   font-size: .88rem;
-  color: var(--texto-suave, #6b7280);
+  color: var(--tinta-2);
 }
 .login-rodape a {
-  color: var(--primaria, #2563eb);
+  color: var(--info);
   font-weight: 600;
   text-decoration: none;
   margin-left: .25rem;
@@ -196,21 +196,21 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
 
 /* ------------------------------------------------------ tela Equipe */
 /* Dizer em voz alta o que a pessoa pode fazer, antes de ela tentar. */
-.faixa-poderes { border-left: 3px solid var(--primaria, #2563eb); border-radius: 0 12px 12px 0; }
+.faixa-poderes { border-left: 3px solid var(--info); border-radius: 0 var(--raio-p) var(--raio-p) 0; }
 .badge-nivel { font-size: .8rem; padding: .2rem .6rem; }
 
 .abas-equipe { display: flex; gap: .4rem; margin: 1rem 0 .8rem; }
 .aba-equipe {
   background: none;
   border: 1px solid var(--borda, rgba(0, 0, 0, .12));
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   padding: .4rem .95rem;
   cursor: pointer;
   font-size: .9rem;
 }
 .aba-equipe.ativa {
-  border-color: var(--primaria, #2563eb);
-  color: var(--primaria, #2563eb);
+  border-color: var(--info);
+  color: var(--info);
   font-weight: 600;
 }
 
@@ -218,7 +218,7 @@ tr.linha-inativa .badge-role { filter: grayscale(1); }
    ensina nada; "mesmo nível que o seu" ensina. */
 .motivo-bloqueio {
   font-size: .82rem;
-  color: var(--texto-suave, #6b7280);
+  color: var(--tinta-2);
   font-style: italic;
   white-space: nowrap;
 }
@@ -236,7 +236,7 @@ tr.linha-excluida { opacity: .38; }
 tr.linha-excluida td { text-decoration: line-through; }
 tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: none; }
 
-.status-badge.status-pausado { background: #fef3c7; color: #854f0b; }
+.status-badge.status-pausado { background: var(--atencao-fundo); color: var(--atencao); }
 
 /* ------------------------------------------------------ tela de Perfil */
 .perfil-cabecalho {
@@ -260,7 +260,7 @@ tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: no
   align-items: center;
   justify-content: center;
   background: var(--fundo-suave, rgba(37, 99, 235, .08));
-  color: var(--primaria, #2563eb);
+  color: var(--info);
   font-size: 2rem;
   font-weight: 600;
   letter-spacing: .02em;
@@ -281,17 +281,17 @@ tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: no
   font-size: .92rem;
 }
 .perfil-acesso > div:last-child { border-bottom: none; }
-.perfil-acesso span:first-child { color: var(--texto-suave, #6b7280); }
+.perfil-acesso span:first-child { color: var(--tinta-2); }
 
 /* Campo travado: some a ação, fica a informação. O usuário não muda porque
    identifica a pessoa no histórico de tudo que ela já lançou. */
 .form-group input:disabled {
   background: var(--fundo-suave, rgba(0, 0, 0, .04));
-  color: var(--texto-suave, #6b7280);
+  color: var(--tinta-2);
   cursor: not-allowed;
 }
 
-.sidebar-user { transition: background .15s; border-radius: 8px; }
+.sidebar-user { transition: background .15s; border-radius: var(--raio); }
 .sidebar-user:hover { background: rgba(255, 255, 255, .06); }
 
 /* ------------------------------------------------- vínculo com o Telegram */
@@ -300,42 +300,42 @@ tr.linha-excluida .acoes, tr.linha-excluida .celula-escopo { text-decoration: no
 .tg-codigo, .wpp-codigo {
   margin: .8rem 0;
   padding: 1rem 1.2rem;
-  border-radius: 10px;
+  border-radius: var(--raio);
   background: var(--fundo-suave, rgba(37, 99, 235, .07));
-  border-left: 3px solid var(--primaria, #2563eb);
+  border-left: 3px solid var(--info);
 }
 .wpp-codigo {
   background: rgba(16, 185, 129, .08);
-  border-left-color: #10b981;
+  border-left-color: var(--sucesso);
 }
 .tg-codigo strong, .wpp-codigo strong {
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 2rem;
   letter-spacing: .28em;
-  color: var(--primaria, #2563eb);
+  color: var(--info);
 }
-.wpp-codigo strong { color: #059669; }
+.wpp-codigo strong { color: var(--sucesso); }
 .tg-codigo p, .wpp-codigo p { margin: .6rem 0 .4rem; font-size: .92rem; }
 .tg-codigo code, .wpp-codigo code {
   background: rgba(0, 0, 0, .06);
   padding: .15rem .4rem;
-  border-radius: 4px;
+  border-radius: var(--raio-p);
 }
-.tg-codigo small, .wpp-codigo small { color: var(--texto-suave, #6b7280); font-size: .82rem; }
+.tg-codigo small, .wpp-codigo small { color: var(--tinta-2); font-size: .82rem; }
 
 .qrcode-box {
   text-align: center;
   padding: 1.5rem;
   background: white;
-  border-radius: 12px;
-  border: 1px solid var(--borda, #e5e7eb);
+  border-radius: var(--raio);
+  border: 1px solid var(--borda, var(--linha));
   margin: 1rem 0;
 }
 .qrcode-box img {
   max-width: 260px;
   height: auto;
-  border-radius: 8px;
+  border-radius: var(--raio);
   margin: 0 auto;
   display: block;
 }

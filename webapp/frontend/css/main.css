@@ -1,15 +1,11 @@
-:root {
-  --navy: #1F3B57;
-  --navy-dark: #16293e;
-  --gold: #B08D3E;
-  --red: #A6231F;
-  --bg: #F3F4F7;
-  --card: #FFFFFF;
-  --border: #E3E6EA;
-  --text: #20242B;
-  --muted: #6B7280;
-  --radius: 12px;
-}
+/* As cores saíram daqui e moram em `tokens.css`, carregado antes deste
+   arquivo. Este `:root` tinha nove literais — `--navy: var(--marca-fundo)` entre eles,
+   um azul inventado para um papel que o petróleo do manual já cumpria — e,
+   por vir depois, vencia qualquer tentativa de tematizar por fora.
+
+   Os nomes antigos continuam funcionando: `tokens.css` os mantém como
+   apelidos dos novos. É o que deixa a migração acontecer tela a tela em
+   vez de num único commit gigante onde um descuido passa despercebido. */
 
 * { box-sizing: border-box; }
 
@@ -22,43 +18,25 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: var(--fonte);
+  font-size: var(--t-corpo);
+  background: var(--papel);
+  color: var(--tinta);
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { margin: 0 0 .4rem 0; color: var(--navy); }
+/* Título em vinho, não em preto: 12,4:1 sobre o papel, e é a cor que a
+   pessoa acabou de ver na tela de login. A continuidade é o ponto. */
+h1, h2, h3 { margin: 0 0 .4rem 0; color: var(--marca-fundo); font-weight: 600; }
+h1 { font-size: 1.32rem; }
+h2 { font-size: var(--t-titulo); }
+h3 { font-size: var(--t-corpo); }
 p { margin: 0 0 .6rem 0; }
 
-/* ---------- Login ---------- */
-.login-screen {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-dark) 55%, #0f1c2a 100%);
-  padding: 1rem;
-}
-.login-card {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 2.4rem 2.2rem;
-  width: 100%;
-  max-width: 360px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,.35);
-}
-.login-logo { width: 76px; height: 76px; object-fit: contain; margin-bottom: .8rem; }
-.login-subtitulo { color: var(--muted); font-size: .9rem; margin-bottom: 1.4rem; }
-.login-card form { display: flex; flex-direction: column; gap: .9rem; text-align: left; }
-.login-card .form-group label { font-size: .78rem; color: var(--muted); margin-bottom: .25rem; display: block; }
-.input-com-olho { position: relative; display: flex; align-items: center; width: 100%; }
-.input-com-olho input { width: 100%; padding-right: 2.6rem; }
-.btn-toggle-senha { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%); background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; padding: .3rem; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: color .15s ease; }
-.btn-toggle-senha:hover { color: var(--navy); }
-.btn-login { margin-top: .4rem; }
-.login-erro { color: var(--red); font-size: .84rem; margin-top: .4rem; }
-.erro-tecnico { color: var(--muted); font-size: .74rem; margin-top: 1rem; padding-top: .7rem; border-top: 1px dashed var(--border); text-align: left; }
+/* O login não mora mais aqui. Ele é o `.auth` de `marca.css` desde que a
+   marca entrou, e este bloco continuava presente sem nada apontar para ele
+   — junto com o último gradiente frio do projeto, herdado do azul que já
+   não existe. */
 
 /* ---------- Shell ----------
    A janela inteira é o shell, e ele NÃO rola: quem rola é o miolo.
@@ -75,13 +53,16 @@ p { margin: 0 0 .6rem 0; }
   overflow: hidden;
 }
 
+/* Vinho, continuando a tela de login. Antes a pessoa entrava numa tela
+   vinho e o sistema a recebia em azul — a troca era perceptível e não
+   significava nada. */
 .sidebar {
-  background: var(--navy); color: rgba(255,255,255,.9);
+  background: var(--marca-fundo); color: rgba(238, 213, 180, .9);
   display: flex; flex-direction: column;
   min-height: 0;   /* deixa o #menu-lateral rolar por conta própria */
 }
-.sidebar-brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.1rem .9rem; font-weight: 700; font-size: 1.05rem; border-bottom: 1px solid rgba(255,255,255,.12); }
-.sidebar-brand img { width: 30px; height: 30px; object-fit: contain; border-radius: 6px; background: #fff; }
+.sidebar-brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.1rem .9rem; font-weight: 700; font-size: 1.05rem; color: var(--cj-creme); border-bottom: 1px solid rgba(238, 213, 180, .16); }
+.sidebar-brand img { width: 30px; height: 30px; object-fit: contain; border-radius: var(--raio-p); background: #fff; }
 
 /* Se o menu tiver mais itens que a altura da tela, ele rola sozinho —
    sem arrastar a marca do topo nem o conteúdo junto. */
@@ -89,16 +70,19 @@ p { margin: 0 0 .6rem 0; }
 .sidebar-brand { flex-shrink: 0; }
 .nav-item {
   display: flex; align-items: center; gap: .7rem;
-  padding: .55rem .7rem; border-radius: 8px;
-  color: rgba(255,255,255,.82); text-decoration: none; font-size: .88rem;
+  padding: .55rem .7rem; border-radius: var(--raio-p);
+  color: rgba(238, 213, 180, .82); text-decoration: none; font-size: var(--t-pequeno);
   cursor: pointer; border: none; background: none; width: 100%; text-align: left;
 }
 .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
-.nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
-.nav-item.ativo { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 3px 0 var(--gold); }
+.nav-item:hover { background: rgba(238, 213, 180, .09); color: var(--cj-creme); }
+/* O filete coral marca onde a pessoa está. Coral não carrega texto
+   pequeno sobre vinho (4,20:1), mas como filete não precisa: contorno de
+   componente pede 3:1, e ele passa com folga. */
+.nav-item.ativo { background: rgba(238, 213, 180, .16); color: var(--cj-creme); box-shadow: inset 3px 0 var(--acento); }
 .nav-item .badge-soon {
   margin-left: auto; font-size: .62rem; letter-spacing: .02em; text-transform: uppercase;
-  background: var(--gold); color: var(--navy-dark); padding: .12rem .4rem; border-radius: 999px; font-weight: 700;
+  background: var(--acento); color: var(--cj-tinta); padding: .12rem .4rem; border-radius: var(--raio-pilula); font-weight: 700;
 }
 
 .area-principal { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -110,129 +94,89 @@ p { margin: 0 0 .6rem 0; }
 .topbar-titulo { font-weight: 700; color: var(--navy); font-size: 1.05rem; margin-right: auto; min-width: 0; }
 .topbar-acoes { display: flex; align-items: center; gap: .7rem; margin-left: auto; }
 
-/* Bloco de Perfil do Usuário na Barra Lateral (Estilo Solo Routines) */
-.sidebar-user {
-  padding: 0.85rem 0.9rem !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(11, 21, 33, 0.6) !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 0.75rem !important;
-  flex-shrink: 0 !important;
-  margin-top: auto !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  transition: background 0.2s, border-color 0.2s;
-}
+/* ---------- Quem está usando o sistema ----------
+   Este bloco veio colado de outro projeto, com o dourado do Solo Rotinas
+   (o hex d4af37) e `!important` em cada uma das 89 linhas. O !important não
+   resolvia conflito nenhum: era só a marca de quem copiou um estilo para
+   dentro de uma casa cuja especificidade não conhecia — e o efeito foi
+   que este virou o único canto do sistema impossível de retematizar.
 
+   Reescrito com os tokens. Zero !important: a especificidade normal já
+   basta, porque agora o estilo é daqui. */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  padding: .85rem .9rem;
+  margin-top: auto;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(238, 213, 180, .14);
+  background: var(--marca-fundo-2);
+  transition: background .2s, border-color .2s;
+}
 .sidebar-user:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-top-color: rgba(212, 175, 55, 0.3) !important;
+  background: rgba(238, 213, 180, .07);
+  border-top-color: var(--acento-suave);
 }
 
 .sidebar-avatar {
-  width: 38px !important;
-  height: 38px !important;
-  min-width: 38px !important;
-  max-width: 38px !important;
-  border-radius: 50% !important;
-  background: linear-gradient(135deg, #d4af37, #997519) !important;
-  color: #0b1521 !important;
-  font-family: inherit !important;
-  font-size: 1rem !important;
-  font-weight: 800 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-  border: 2px solid rgba(212, 175, 55, 0.8) !important;
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.35) !important;
-  overflow: hidden !important;
-  user-select: none !important;
-  text-transform: uppercase !important;
-  line-height: 1 !important;
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--marca);
+  border: 2px solid var(--acento);
+  color: var(--cj-creme);
+  font-size: 1rem; font-weight: 700; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  user-select: none;
+  text-transform: uppercase;
 }
-
-.sidebar-avatar img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  border-radius: 50% !important;
-  display: block !important;
-}
+.sidebar-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .sidebar-user-info {
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  gap: 2px !important;
-  overflow: hidden !important;
-  text-align: left !important;
+  flex: 1 1 auto; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+  overflow: hidden;
 }
-
 .sidebar-user-name {
-  font-size: 0.84rem !important;
-  font-weight: 600 !important;
-  color: #f8fafc !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  line-height: 1.2 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  font-size: var(--t-pequeno); font-weight: 600; line-height: 1.2;
+  color: var(--cj-creme);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
+/* O cargo em coral: é o mesmo realce do item ativo do menu, e assim a
+   lateral inteira fala uma língua só. */
 .sidebar-user-role {
-  font-size: 0.62rem !important;
-  font-weight: 700 !important;
-  color: #d4af37 !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
-  line-height: 1.2 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  font-size: var(--t-micro); font-weight: 700; line-height: 1.2;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--acento);
 }
 
 .sidebar-logout {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  max-width: 32px !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  cursor: pointer !important;
-  color: rgba(255, 255, 255, 0.6) !important;
-  border-radius: 8px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s !important;
+  width: 32px; height: 32px; flex-shrink: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--raio-p);
+  border: 1px solid rgba(238, 213, 180, .16);
+  background: rgba(238, 213, 180, .06);
+  color: rgba(238, 213, 180, .7);
+  cursor: pointer;
+  transition: color .2s, background .2s, border-color .2s;
 }
-
+/* Sair é destrutivo o bastante para avisar, e comum o bastante para não
+   assustar: o aviso é a cor, não o tamanho. */
 .sidebar-logout:hover {
-  background: rgba(239, 68, 68, 0.2) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  color: #f87171 !important;
-  transform: scale(1.05) !important;
+  background: rgba(182, 52, 33, .3);
+  border-color: var(--cj-tijolo);
+  color: var(--cj-creme);
 }
-
-.sidebar-logout svg {
-  width: 16px !important;
-  height: 16px !important;
-  stroke: currentColor !important;
-  display: block !important;
-}
+.sidebar-logout svg { width: 16px; height: 16px; stroke: currentColor; display: block; }
 
 /* Botão do menu — só aparece quando a barra lateral vira gaveta */
 .btn-menu {
   display: none; background: none; border: 1px solid var(--border);
-  border-radius: 8px; padding: .35rem; cursor: pointer; color: var(--navy);
+  border-radius: var(--raio); padding: .35rem; cursor: pointer; color: var(--navy);
   align-items: center; justify-content: center; flex-shrink: 0;
 }
 .btn-menu svg { width: 20px; height: 20px; }
@@ -241,11 +185,13 @@ p { margin: 0 0 .6rem 0; }
 /* Fundo escurecido atrás da gaveta */
 .menu-overlay {
   display: none; position: fixed; inset: 0; z-index: 1100;
-  background: rgba(15, 28, 42, .45);
+  background: rgba(42, 26, 28, .48);
 }
 .menu-overlay.visivel { display: block; }
-.badge-role { background: var(--gold); color: var(--navy-dark); padding: .18rem .55rem; border-radius: 999px; font-size: .68rem; font-weight: 700; text-transform: uppercase; }
-.btn-icone { background: none; border: none; cursor: pointer; color: var(--muted); padding: .3rem; border-radius: 6px; display: flex; }
+/* Carmim e não coral: em maiúsculas miúdas, branco sobre coral dá 3,05:1
+   e some. Sobre carmim dá 7,46:1. */
+.badge-role { background: var(--marca); color: #fff; padding: .18rem .55rem; border-radius: var(--raio-pilula); font-size: var(--t-micro); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.btn-icone { background: none; border: none; cursor: pointer; color: var(--muted); padding: .3rem; border-radius: var(--raio-p); display: flex; }
 .btn-icone:hover { background: var(--bg); color: var(--red); }
 .btn-icone svg { width: 18px; height: 18px; }
 
@@ -286,7 +232,7 @@ p { margin: 0 0 .6rem 0; }
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   padding: .05rem .4rem;
   font-weight: 700;
 }
@@ -308,13 +254,13 @@ p { margin: 0 0 .6rem 0; }
   color: var(--navy);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--raio-p);
   padding: .1rem .38rem;
   letter-spacing: .04em;
   white-space: nowrap;
 }
 table.tabela-simples td.num, table.tabela-simples th.num { text-align: right; white-space: nowrap; }
-.zerado { color: #B0B4BB; }
+.zerado { color: var(--tinta-3); }
 
 table.tabela-simples { width: 100%; border-collapse: collapse; font-size: .88rem; }
 table.tabela-simples th { text-align: left; padding: .55rem .6rem; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--border); font-size: .76rem; text-transform: uppercase; letter-spacing: .02em; }
@@ -349,16 +295,28 @@ td.un-medida { color: var(--muted); font-size: .8rem; white-space: nowrap; }
 form.form-inline { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; }
 .form-group { display: flex; flex-direction: column; gap: .28rem; font-size: .8rem; color: var(--muted); min-width: 140px; }
 input, select, button { font: inherit; }
-input, select { padding: .55rem .65rem; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); }
-input:focus, select:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+input, select { padding: .55rem .65rem; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--superficie); color: var(--tinta); transition: border-color .15s; }
+input:hover, select:hover { border-color: var(--linha-forte); }
+input:focus, select:focus {
+  outline: 2px solid var(--acento); outline-offset: 1px;
+  border-color: var(--acento);
+}
 
-button.btn { background: var(--navy); color: #fff; border: none; padding: .6rem 1.1rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .88rem; }
-button.btn:hover { background: var(--navy-dark); }
-button.btn.secundario { background: transparent; color: var(--navy); border: 1px solid var(--border); }
-button.btn.secundario:hover { background: var(--bg); }
+/* O botão principal é a AÇÃO, e ação é carmim — a cor do logotipo. O
+   vinho é palco (barra lateral, títulos); usá-lo aqui faria o botão
+   desaparecer dentro do próprio fundo da marca. */
+button.btn {
+  background: var(--marca); color: #fff; border: 1px solid var(--marca);
+  padding: .6rem 1.1rem; border-radius: var(--raio);
+  cursor: pointer; font-weight: 600; font-size: var(--t-pequeno);
+  transition: background .15s, border-color .15s;
+}
+button.btn:hover { background: var(--marca-forte); border-color: var(--marca-forte); }
+button.btn.secundario { background: transparent; color: var(--marca-fundo); border-color: var(--linha-forte); }
+button.btn.secundario:hover { background: var(--superficie-2); border-color: var(--marca); }
 
-.tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .15rem .55rem; font-size: .74rem; color: var(--muted); }
-.tag.aberta { background: #e9f7ee; color: #1c7a3c; border-color: #bfe6cc; }
+.tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: var(--raio-pilula); padding: .15rem .55rem; font-size: .74rem; color: var(--muted); }
+.tag.aberta { background: var(--sucesso-fundo); color: var(--sucesso); border-color: var(--sucesso-linha); }
 .tag.fechada { background: var(--bg); color: var(--muted); }
 
 .estado-vazio { text-align: center; padding: 2.2rem 1rem; color: var(--muted); font-size: .9rem; }
@@ -369,17 +327,17 @@ button.btn.secundario:hover { background: var(--bg); }
   font-size: .74rem;
   font-weight: 700;
   padding: .18rem .6rem;
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   border: 1px solid transparent;
   white-space: nowrap;
 }
-.status-aberto    { background: #E7F0FA; color: #1F5A8F; border-color: #C4DCF0; }
-.status-congelado { background: #E8F4F8; color: #17667A; border-color: #BDE0E9; }
-.status-contagem  { background: #FBF3E3; color: #8A6A1F; border-color: #E8D9B5; }
-.status-fechado   { background: #E9F7EE; color: #1C7A3C; border-color: #BFE6CC; }
-.status-cancelado { background: #F4F4F5; color: #7A7A80; border-color: #DEDEE2; }
+.status-aberto    { background: var(--info-fundo); color: var(--info); border-color: var(--info-linha); }
+.status-congelado { background: var(--info-fundo); color: var(--cj-petroleo); border-color: var(--info-linha); }
+.status-contagem  { background: var(--atencao-fundo); color: var(--atencao); border-color: var(--atencao-linha); }
+.status-fechado   { background: var(--sucesso-fundo); color: var(--sucesso); border-color: var(--sucesso-linha); }
+.status-cancelado { background: var(--neutro-fundo); color: var(--neutro); border-color: var(--neutro-linha); }
 /* Perda é dinheiro que evaporou: destaque em vermelho, não em cinza */
-.status-perda     { background: #FBEBEB; color: #9B2C2C; border-color: #F0CFCF; }
+.status-perda     { background: var(--perigo-fundo); color: var(--perigo-forte); border-color: var(--perigo-linha); }
 
 /* ---------- Barra de filtros ---------- */
 .filtros-barra {
@@ -390,7 +348,7 @@ button.btn.secundario:hover { background: var(--bg); }
   padding: .9rem;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--raio);
   margin-bottom: 1rem;
 }
 /* Por padrão cada filtro ocupa só o que precisa. Quem deve esticar recebe a
@@ -414,7 +372,7 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
   background: var(--card);
   border: 1px solid var(--border);
   color: var(--navy);
-  border-radius: 7px;
+  border-radius: var(--raio-p);
   padding: .28rem .6rem;
   font-size: .78rem;
   font-weight: 600;
@@ -422,27 +380,27 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
 }
 .btn-acao:hover:not(:disabled) { background: var(--navy); color: #fff; border-color: var(--navy); }
 .btn-acao.cancelar:hover:not(:disabled) { background: var(--red); border-color: var(--red); }
-.btn-acao.finalizar:hover:not(:disabled) { background: #1C7A3C; border-color: #1C7A3C; }
+.btn-acao.finalizar:hover:not(:disabled) { background: var(--sucesso); border-color: var(--sucesso); }
 .btn-acao:disabled { opacity: .4; cursor: not-allowed; }
 
 .aviso-acao {
   font-size: .8rem;
-  color: #8A6A1F;
-  background: #FBF3E3;
-  border: 1px solid #E8D9B5;
-  border-radius: 7px;
+  color: var(--atencao);
+  background: var(--atencao-fundo);
+  border: 1px solid var(--atencao-linha);
+  border-radius: var(--raio-p);
   padding: .55rem .75rem;
   margin: 0 0 .9rem;
 }
-.aviso-acao.sucesso { color: #1C7A3C; background: #E9F7EE; border-color: #BFE6CC; }
-.aviso-acao.erro    { color: var(--red); background: #FDF3F3; border-color: #F0CFCE; }
+.aviso-acao.sucesso { color: var(--sucesso); background: var(--sucesso-fundo); border-color: var(--sucesso-linha); }
+.aviso-acao.erro    { color: var(--red); background: var(--perigo-fundo); border-color: var(--perigo-linha); }
 
-.btn-acao.congelar:hover:not(:disabled) { background: #17667A; border-color: #17667A; }
-.btn-acao.pdf:hover:not(:disabled) { background: var(--gold); border-color: var(--gold); color: #fff; }
+.btn-acao.congelar:hover:not(:disabled) { background: var(--info); border-color: var(--info); }
+.btn-acao.pdf:hover:not(:disabled) { background: var(--marca); border-color: var(--marca); color: #fff; }
 .btn-acao.folha:hover:not(:disabled) { background: var(--navy); border-color: var(--navy); color: #fff; }
 
 /* Alternador de opções (modo de apuração, método de custo) */
-.seletor-opcoes { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--card); }
+.seletor-opcoes { display: flex; border: 1px solid var(--border); border-radius: var(--raio); overflow: hidden; background: var(--card); }
 .seletor-opcoes button {
   background: none; border: none; padding: .5rem .8rem; cursor: pointer;
   font-size: .82rem; font-weight: 600; color: var(--muted); white-space: nowrap;
@@ -451,7 +409,7 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
 .seletor-opcoes button:hover:not(.ativo) { background: var(--bg); color: var(--navy); }
 .seletor-opcoes button.ativo { background: var(--navy); color: #fff; }
 
-.valor-bom { color: #1C7A3C; }
+.valor-bom { color: var(--sucesso); }
 .valor-ruim { color: var(--red); }
 .nota-formula { font-size: .78rem; color: var(--muted); margin: .8rem 0 0; }
 
@@ -459,14 +417,14 @@ table.tabela-simples td:first-child { text-align: center; white-space: nowrap; }
 .origem-inventarios {
   display: flex; align-items: flex-start; gap: .7rem;
   font-size: .82rem; color: var(--text); line-height: 1.5;
-  background: #EEF3F8; border: 1px solid #C4DCF0; border-radius: 9px;
+  background: var(--info-fundo); border: 1px solid var(--info-linha); border-radius: var(--raio);
   padding: .7rem .85rem; margin-bottom: 1.2rem;
 }
 .origem-inventarios svg { width: 18px; height: 18px; color: var(--navy); flex-shrink: 0; margin-top: .1rem; }
 .origem-inventarios strong { color: var(--navy); }
 
 .diverg-neg { color: var(--red); font-weight: 600; }
-.diverg-pos { color: #1C7A3C; font-weight: 600; }
+.diverg-pos { color: var(--sucesso); font-weight: 600; }
 
 .legenda-status { display: grid; gap: .55rem; font-size: .84rem; color: var(--muted); }
 .legenda-status > div { display: flex; align-items: center; gap: .55rem; }
@@ -481,11 +439,11 @@ tr.linha-vazia .obs { font-size: .78rem; margin-top: .5rem; max-width: 520px; ma
 }
 .placeholder-em-construcao svg { width: 46px; height: 46px; color: var(--gold); margin-bottom: .8rem; }
 .placeholder-em-construcao h2 { color: var(--navy); }
-.placeholder-em-construcao .fase-tag { display:inline-block; margin-top: .8rem; font-size: .76rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .25rem .7rem; color: var(--navy); font-weight: 600; }
+.placeholder-em-construcao .fase-tag { display:inline-block; margin-top: .8rem; font-size: .76rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--raio-pilula); padding: .25rem .7rem; color: var(--navy); font-weight: 600; }
 
 .grafico-vazio {
   display: flex; align-items: center; justify-content: center; flex-direction: column; gap: .5rem;
-  height: 220px; color: var(--muted); font-size: .86rem; border: 1.5px dashed var(--border); border-radius: 10px;
+  height: 220px; color: var(--muted); font-size: .86rem; border: 1.5px dashed var(--border); border-radius: var(--raio);
 }
 .grafico-vazio svg { width: 32px; height: 32px; color: var(--gold); }
 
@@ -537,7 +495,7 @@ canvas { max-width: 100%; }
 /* ---------- Celular ---------- */
 @media (max-width: 600px) {
   .conteudo { padding: .85rem; }
-  .card { padding: .9rem; border-radius: 10px; }
+  .card { padding: .9rem; border-radius: var(--raio); }
   .card-header { flex-wrap: wrap; gap: .55rem; }
   .card-header h2 { font-size: .95rem; }
 

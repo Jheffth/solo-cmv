@@ -21,20 +21,20 @@ window.Dialogo = (function() {
       card.style.maxWidth = '400px';
       card.style.width = '90%';
       card.style.padding = '24px';
-      card.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+      card.style.boxShadow = '0 8px 24px rgba(42, 26, 28, .12), 0 24px 60px rgba(42, 26, 28, .16)';
       card.style.transform = 'scale(0.95) translateY(10px)';
       card.style.transition = 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
       card.style.display = 'flex';
       card.style.flexDirection = 'column';
       card.style.gap = '16px';
-      card.style.backgroundColor = 'var(--card, #FFFFFF)';
-      card.style.borderRadius = 'var(--radius, 12px)';
+      card.style.backgroundColor = 'var(--superficie, #FFFFFF)';
+      card.style.borderRadius = 'var(--raio-g, 16px)';
 
       const texto = document.createElement('p');
       texto.style.margin = '0';
       texto.style.lineHeight = '1.5';
       texto.style.fontSize = '1rem';
-      texto.style.color = 'var(--navy, #1F3B57)';
+      texto.style.color = 'var(--tinta, #2A1A1C)';
       texto.style.whiteSpace = 'pre-wrap';
       texto.textContent = mensagem;
 
@@ -47,18 +47,18 @@ window.Dialogo = (function() {
         input.value = opcoes.padrao || '';
         input.style.width = '100%';
         input.style.padding = '10px 12px';
-        input.style.border = '1px solid var(--border, #E3E6EA)';
+        input.style.border = '1px solid var(--linha, #E6DCD2)';
         input.style.borderRadius = '8px';
         input.style.fontSize = '1rem';
         input.style.fontFamily = 'inherit';
         input.style.outline = 'none';
-        input.style.backgroundColor = 'var(--bg, #F3F4F7)';
+        input.style.backgroundColor = 'var(--superficie, #FFFFFF)';
         input.addEventListener('focus', () => {
-          input.style.borderColor = 'var(--navy, #1F3B57)';
+          input.style.borderColor = 'var(--acento, #EC6E45)';
           input.style.boxShadow = '0 0 0 2px rgba(31,59,87,0.1)';
         });
         input.addEventListener('blur', () => {
-          input.style.borderColor = 'var(--border, #E3E6EA)';
+          input.style.borderColor = 'var(--linha, #E6DCD2)';
           input.style.boxShadow = 'none';
         });
         card.appendChild(input);
@@ -86,11 +86,11 @@ window.Dialogo = (function() {
         btn.style.margin = '0';
         if (!primario) {
           btn.style.backgroundColor = 'transparent';
-          btn.style.color = 'var(--muted, #6B7280)';
+          btn.style.color = 'var(--tinta-2, #6E5F61)';
           btn.style.boxShadow = 'none';
           btn.style.padding = '0.6rem 1rem';
         } else {
-          btn.style.backgroundColor = 'var(--navy, #1F3B57)';
+          btn.style.backgroundColor = 'var(--marca, #A6183B)';
         }
         btn.addEventListener('click', onClick);
         return btn;
@@ -103,7 +103,7 @@ window.Dialogo = (function() {
         const msgLow = mensagem.toLowerCase();
         const destrutivo = msgLow.includes('excluir') || msgLow.includes('descartar') || msgLow.includes('remover') || msgLow.includes('cancelar') || msgLow.includes('suspender') || msgLow.includes('desvincular');
         const confirma = criarBotao('Confirmar', true, () => fechar(true));
-        if (destrutivo) confirma.style.backgroundColor = 'var(--red, #A6231F)';
+        if (destrutivo) confirma.style.backgroundColor = 'var(--perigo, #B63421)';
         acoes.appendChild(confirma);
       } else if (tipo === 'prompt') {
         acoes.appendChild(criarBotao('Cancelar', false, () => fechar(null)));

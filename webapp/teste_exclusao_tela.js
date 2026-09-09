@@ -61,14 +61,18 @@ function janela(capacidades) {
   w.icone = (n) => `<svg data-i="${n}"></svg>`;
   w.UNIDADE_SELECIONADA = 1;
   w.emRegional = () => false;
-  w.confirm = (texto) => { perguntas.push(texto); return w.RESPOSTA !== false; };
-  // `null` é resposta significativa aqui (é o "cancelar" do prompt), então o
-  // padrão do dublê tem que distinguir null de não-definido.
-  w.prompt = (texto) => {
-    perguntas.push(texto);
-    return w.MOTIVO === undefined ? 'engano' : w.MOTIVO;
+  /* O sistema não usa mais as caixas do navegador: o Antigravity as trocou
+     por `window.Dialogo`, que devolve promessa. O dublê responde igual — e
+     `prompt` distingue null (cancelou) de não-definido (sem resposta
+     combinada), porque cancelar no meio é justamente um dos casos. */
+  w.Dialogo = {
+    async confirm(texto) { perguntas.push(texto); return w.RESPOSTA !== false; },
+    async prompt(texto) {
+      perguntas.push(texto);
+      return w.MOTIVO === undefined ? 'engano' : w.MOTIVO;
+    },
+    async alert(texto) { perguntas.push(texto); },
   };
-  w.alert = (texto) => { perguntas.push(texto); };
   w.RESPOSTA = true;
   w.api = {
     async get(url) {

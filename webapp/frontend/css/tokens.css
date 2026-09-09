@@ -1,0 +1,198 @@
+/* ==========================================================================
+   TOKENS — a única fonte de cor do Solo CMV
+   ==========================================================================
+
+   POR QUE ESTE ARQUIVO EXISTE
+   ---------------------------
+   Antes dele havia 77 cores literais espalhadas por nove arquivos, e quatro
+   paletas convivendo sem saber uma da outra:
+
+     · a da MARCA (vinho, carmim, creme), amostrada do manual — e usada só
+       na tela de login;
+     · a do APP (#1F3B57 azul, #B08D3E dourado), inventada, valendo em todo
+       o resto;
+     · a do SOLO ROTINAS (#d4af37), colada junto com o bloco do rodapé da
+       barra lateral, imposta com !important em 89 linhas;
+     · a do TAILWIND (#2563eb, #10b981), que entrou pelas telas mais novas.
+
+   Nenhuma delas estava errada sozinha. O problema é que "sucesso" tinha
+   nove verdes, "perigo" tinha dezessete vermelhos, e nada obrigava o
+   décimo a ser um dos anteriores. Consistência que depende de as pessoas
+   lembrarem não é consistência: é sorte com prazo de validade.
+
+   A REGRA DAQUI PARA A FRENTE
+   ---------------------------
+   Nenhuma cor literal fora deste arquivo. Se falta um tom, ele nasce aqui
+   com um nome que diz PARA QUE serve — não com um nome que diz qual é.
+   `--perigo` sobrevive a uma troca de paleta; `--vermelho-escuro-2` não.
+
+   POR QUE A MARCA MANDA, E NÃO O GOSTO
+   ------------------------------------
+   As oito cores de base vieram do manual `MIV-CasaJosefina-Expresso`
+   (Estúdio Las, out/2024), amostradas pixel a pixel. Duas descobertas
+   valem o arquivo inteiro:
+
+     · o manual JÁ TEM um azul — o petróleo #466178 — e o app tinha
+       inventado o #1F3B57 para o mesmo papel;
+     · o dourado #B08D3E não existe no manual. O lugar dele é do coral.
+
+   Não é questão de preferência. São cores redundantes, e cada redundância
+   é uma chance de duas telas discordarem.
+
+   CONTRASTE — MEDIDO, NÃO ESTIMADO
+   --------------------------------
+   Todo par de texto/fundo abaixo foi calculado. Os números estão nos
+   comentários, e todos passam em AA (4,5:1 para texto normal):
+
+     vinho sobre papel .... 12,40:1     creme sobre vinho ..... 9,04:1
+     petróleo sobre papel .. 6,27:1     perigo sobre papel .... 5,80:1
+     carmim sobre papel .... 7,22:1     atenção sobre papel ... 5,72:1
+     branco sobre carmim ... 7,46:1     sucesso sobre papel ... 5,95:1
+
+   O coral sobre vinho dá 4,20:1 — por isso ele é FILETE e realce, nunca
+   texto pequeno.
+   ========================================================================== */
+
+:root {
+  /* ======================================================================
+     1. A PALETA DO MANUAL
+     ======================================================================
+     Literais só aqui. Estes oito nomes são os do manual, e mudá-los
+     significa que a marca mudou — não que alguém achou outro tom melhor. */
+  --cj-carmim:    #A6183B;   /* a cor do logotipo */
+  --cj-vinho:     #64111C;   /* profundidade, fundos */
+  --cj-tijolo:    #B63421;
+  --cj-terra:     #753017;
+  --cj-coral:     #EC6E45;
+  --cj-creme:     #EED5B4;
+  --cj-petroleo:  #466178;
+  --cj-azul:      #83ABC1;
+
+  /* Derivadas de superfície. Preto puro brigaria com uma paleta inteira
+     de tons quentes — daí o preto amarronzado. */
+  --cj-papel:     #FDFBF7;
+  --cj-tinta:     #2A1A1C;
+  --cj-tinta-2:   #7A6A6C;
+  --cj-linha:     #E6DCD2;
+
+  /* ======================================================================
+     2. SUPERFÍCIE E TINTA
+     ====================================================================== */
+  --papel:        var(--cj-papel);      /* fundo da aplicação */
+  --superficie:   #FFFFFF;              /* cartão, tabela, formulário */
+  --superficie-2: #F6F1EA;              /* faixa de filtros, cabeçalho de tabela */
+  --linha:        var(--cj-linha);
+  --linha-forte:  #D6C7B8;
+
+  --tinta:        var(--cj-tinta);      /* texto principal      16,09:1 */
+  --tinta-2:      #6E5F61;              /* rótulo, apoio         5,90:1 */
+  --tinta-3:      #9A8C8E;              /* dica, placeholder            */
+  --tinta-invertida: var(--cj-creme);   /* texto sobre fundo escuro     */
+
+  /* ======================================================================
+     3. A MARCA, POR FUNÇÃO
+     ======================================================================
+     `--marca` é a ação: o botão que faz a coisa acontecer, o item ativo.
+     `--marca-fundo` é o palco: a barra lateral, que continua o vinho da
+     tela de login em vez de trocar para azul sem motivo.
+     `--acento` é o realce: filete do item ativo, anel de foco. Ele NÃO
+     carrega texto pequeno — sobre vinho fica em 4,20:1. */
+  --marca:         var(--cj-carmim);
+  --marca-forte:   #8C1432;
+  --marca-fundo:   var(--cj-vinho);
+  --marca-fundo-2: #4E0D16;             /* rodapé da lateral, hover escuro */
+  --acento:        var(--cj-coral);
+  --acento-suave:  rgba(236, 110, 69, .16);
+
+  /* ======================================================================
+     4. AS SEMÂNTICAS
+     ======================================================================
+     Cada estado tem TRÊS tons e só três: o texto, o fundo e a linha. Foi a
+     falta desse trio que multiplicou os tons — quem precisava de um fundo
+     claro para o vermelho inventava um, porque não havia onde pegar.
+
+     Verde não existe no manual. O daqui é dessaturado e puxado para o
+     quente de propósito, para conviver com terra e vinho em vez de brigar
+     com eles. */
+  --perigo:        var(--cj-tijolo);            /* 5,80:1 sobre papel */
+  --perigo-fundo:  #FBEDEA;
+  --perigo-linha:  #EBC9C1;
+  --perigo-forte:  #8E2619;
+
+  --atencao:       #8A5A12;                     /* 5,72:1 sobre papel */
+  --atencao-fundo: #FBF2E2;
+  --atencao-linha: #E8D6B4;
+
+  --sucesso:       #3F6B4A;                     /* 5,95:1 sobre papel */
+  --sucesso-fundo: #EDF3EE;
+  --sucesso-linha: #C8DCCD;
+
+  --info:          var(--cj-petroleo);          /* 6,27:1 sobre papel */
+  --info-fundo:    #EDF2F5;
+  --info-linha:    #C9D8E1;
+  --info-claro:    var(--cj-azul);
+
+  --neutro:        var(--tinta-2);
+  --neutro-fundo:  var(--superficie-2);
+  --neutro-linha:  var(--linha);
+
+  /* ======================================================================
+     5. FORMA
+     ======================================================================
+     Havia catorze raios de borda diferentes e oito sombras. Ninguém
+     escolheu catorze — cada tela escolheu um, e a soma virou ruído. Três
+     raios e duas sombras cobrem tudo que existe no sistema. */
+  --raio-p:  6px;      /* etiqueta, botão pequeno, código */
+  --raio:    10px;     /* campo, botão, cartão */
+  --raio-g:  16px;     /* modal, cartão de destaque */
+  --raio-pilula: 999px;
+
+  --sombra:   0 1px 2px rgba(42, 26, 28, .06), 0 4px 12px rgba(42, 26, 28, .05);
+  --sombra-g: 0 8px 24px rgba(42, 26, 28, .12), 0 24px 60px rgba(42, 26, 28, .16);
+
+  /* ======================================================================
+     6. TIPOGRAFIA
+     ======================================================================
+     A escala tinha .62, .66, .68, .70, .72, .74, .76, .78, .80… — tamanhos
+     avulsos, sem ritmo, escolhidos um a um no calor de cada tela. Seis
+     degraus dão a mesma expressividade e deixam a página parecer composta
+     em vez de montada. */
+  --fonte:      "Inter", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --fonte-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --fonte-titulo: "Tanker", "Oswald", "Archivo Narrow", "Arial Narrow", sans-serif;
+
+  --t-micro:  0.69rem;   /* etiqueta, selo */
+  --t-mini:   0.78rem;   /* rótulo de campo, legenda */
+  --t-pequeno:0.86rem;   /* tabela, apoio */
+  --t-corpo:  0.94rem;   /* texto */
+  --t-titulo: 1.12rem;   /* título de cartão */
+  --t-numero: 1.9rem;    /* valor de indicador */
+
+  /* ======================================================================
+     7. COMPATIBILIDADE
+     ======================================================================
+     Os nomes antigos continuam existindo, apontando para os novos. É o que
+     permite trocar a paleta do sistema inteiro num arquivo só, sem uma
+     varredura de mil linhas onde qualquer descuido deixa uma tela para
+     trás — e sem impedir a migração de acontecer aos poucos, tela a tela.
+
+     Apagar daqui é o último passo da migração, não o primeiro. */
+  --navy:      var(--marca-fundo);
+  --navy-dark: var(--marca-fundo-2);
+  --gold:      var(--acento);
+  --red:       var(--perigo);
+  --bg:        var(--papel);
+  --card:      var(--superficie);
+  --border:    var(--linha);
+  --text:      var(--tinta);
+  --muted:     var(--tinta-2);
+  --radius:    var(--raio);
+
+  /* Fallbacks que o CSS antigo já usava na forma `var(--verde, #1C7A3C)`.
+     Definidos, param de cair no literal. */
+  --verde:         var(--sucesso);
+  --sucesso-texto: var(--sucesso);
+  --texto-suave:   var(--tinta-2);
+  --fundo-cartao:  var(--superficie);
+  --perigo-cor:    var(--perigo);
+}

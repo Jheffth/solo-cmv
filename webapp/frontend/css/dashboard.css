@@ -34,7 +34,7 @@
   flex: 1 1 260px; min-width: 0;
 }
 .procedencia svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--gold); }
-.procedencia.alerta { color: #9B2C2C; }
+.procedencia.alerta { color: var(--perigo-forte); }
 .procedencia.alerta svg { color: var(--red); }
 
 /* ---------- Faixa 1 · pendências ---------- */
@@ -50,10 +50,10 @@
 .pendencia-texto { flex: 1; min-width: 0; }
 .pendencia-rota { font-size: .76rem; opacity: .75; text-transform: capitalize; white-space: nowrap; }
 
-.pendencia.urgente { background: #FBEBEB; color: #9B2C2C; border-color: #F0CFCF; }
-.pendencia.urgente:hover { background: #F7DDDD; }
-.pendencia.atencao { background: #FBF3E3; color: #8A6A1F; border-color: #E8D9B5; }
-.pendencia.atencao:hover { background: #F6EBD2; }
+.pendencia.urgente { background: var(--perigo-fundo); color: var(--perigo-forte); border-color: var(--perigo-linha); }
+.pendencia.urgente:hover { background: var(--perigo-fundo); }
+.pendencia.atencao { background: var(--atencao-fundo); color: var(--atencao); border-color: var(--atencao-linha); }
+.pendencia.atencao:hover { background: var(--atencao-fundo); }
 
 /* ---------- Faixa 2 · indicadores ---------- */
 .kpi-card.clicavel {
@@ -69,14 +69,14 @@
   flex-wrap: wrap; margin-top: .15rem;
 }
 .kpi-variacao { font-size: .74rem; white-space: nowrap; }
-.kpi-variacao.boa { color: #1C7A3C; }
+.kpi-variacao.boa { color: var(--sucesso); }
 .kpi-variacao.ruim { color: var(--red); }
 .kpi-variacao.neutra { color: var(--muted); }
 .kpi-meta { font-size: .74rem; color: var(--muted); }
 
 .sparkline { width: 100%; height: 24px; margin-top: .4rem; display: block; }
 
-.valor-bom { color: #1C7A3C; }
+.valor-bom { color: var(--sucesso); }
 .valor-ruim { color: var(--red); }
 
 /* ---------- Faixas 3 e 4 · gráficos e detalhamento ---------- */
@@ -99,8 +99,8 @@
   display: inline-block; width: 9px; height: 9px;
   border-radius: 2px; margin-right: .35rem;
 }
-.ponto.navy { background: #1F3B57; }
-.ponto.azul { background: #4A7CA6; }
+.ponto.navy { background: var(--marca-fundo); }
+.ponto.azul { background: var(--info); }
 
 /* Top itens em barras de CSS: mais leve que um gráfico, e o texto
    continua sendo texto — selecionável, buscável, acessível. */
@@ -111,16 +111,16 @@
 }
 .barra-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .barra-valor { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.barra-trilho { height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; }
-.barra-preenchimento { height: 100%; background: var(--navy); border-radius: 4px; }
-.barra-preenchimento.bebida { background: #4A7CA6; }
+.barra-trilho { height: 7px; background: var(--bg); border-radius: var(--raio-p); overflow: hidden; }
+.barra-preenchimento { height: 100%; background: var(--navy); border-radius: var(--raio-p); }
+.barra-preenchimento.bebida { background: var(--info); }
 
 /* ---------- Carregamento ---------- */
 /* Esqueleto em vez de "Carregando…": a estrutura aparece na hora e a tela
    parece o dobro mais rápida pelo mesmo tempo de resposta. */
 .painel-esqueleto { display: flex; flex-direction: column; gap: 1.1rem; }
 .esq-barra {
-  background: linear-gradient(90deg, #EEF0F3 25%, #F6F7F9 50%, #EEF0F3 75%);
+  background: linear-gradient(90deg, var(--info-fundo) 25%, var(--superficie-2) 50%, var(--info-fundo) 75%);
   background-size: 200% 100%;
   border-radius: var(--radius);
   animation: esq-brilho 1.3s ease-in-out infinite;
@@ -151,7 +151,7 @@
    caro esperando para acontecer. */
 #seletor-unidade.regional {
   border-color: var(--gold);
-  background: #FDF9F0;
+  background: var(--atencao-fundo);
   color: var(--navy);
   font-weight: 600;
 }
@@ -164,21 +164,21 @@
   font-size: .84rem; margin-bottom: 1.1rem;
 }
 .cobertura svg { width: 17px; height: 17px; flex-shrink: 0; }
-.cobertura.completa { background: #EAF3EE; color: #1C7A3C; border: 1px solid #C9E3D3; }
-.cobertura.incompleta { background: #FBF3E3; color: #8A6A1F; border: 1px solid #E8D9B5; }
+.cobertura.completa { background: var(--sucesso-fundo); color: var(--sucesso); border: 1px solid var(--sucesso-linha); }
+.cobertura.incompleta { background: var(--atencao-fundo); color: var(--atencao); border: 1px solid var(--atencao-linha); }
 
 /* Unidade que ficou de fora da soma aparece apagada, não sumida */
-table.tabela-simples tr.fora { color: var(--muted); background: #FAFAFB; }
+table.tabela-simples tr.fora { color: var(--muted); background: var(--superficie-2); }
 table.tabela-simples tr.fora em { font-style: italic; }
 
 /* ---------- Regional nas telas de consulta ---------- */
 /* Faixa que explica, uma vez por tela, que ali se consulta e não se opera */
 .faixa-regional {
   display: flex; align-items: flex-start; gap: .6rem;
-  background: #FDF9F0; border: 1px solid #E8D9B5;
+  background: var(--atencao-fundo); border: 1px solid var(--atencao-linha);
   border-radius: var(--radius);
   padding: .65rem .9rem; margin-bottom: 1rem;
-  font-size: .83rem; color: #8A6A1F;
+  font-size: .83rem; color: var(--atencao);
 }
 .faixa-regional svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--gold); }
 
@@ -186,9 +186,9 @@ table.tabela-simples tr.fora em { font-style: italic; }
    de "INV-01 da Casa Josefina" numa lista consolidada. */
 .marca-unidade {
   display: inline-block;
-  background: #EEF3F8; color: var(--navy);
-  border: 1px solid #D6E2ED;
-  border-radius: 999px;
+  background: var(--info-fundo); color: var(--navy);
+  border: 1px solid var(--info-linha);
+  border-radius: var(--raio-pilula);
   padding: .12rem .55rem;
   font-size: .74rem; font-weight: 600;
   white-space: nowrap;
@@ -215,9 +215,9 @@ table.tabela-simples tr.fora em { font-style: italic; }
   gap: .5rem;
   margin: 0 0 1rem;
   padding: .5rem .8rem;
-  border-radius: 8px;
-  background: var(--sucesso-fundo, #ecfdf5);
-  color: var(--sucesso, #067647);
+  border-radius: var(--raio);
+  background: var(--sucesso-fundo);
+  color: var(--sucesso);
   font-size: .82rem;
   line-height: 1.4;
 }
@@ -233,7 +233,7 @@ table.tabela-simples tr.fora em { font-style: italic; }
 .titulo-seccao {
   margin: 1.4rem 0 .8rem;
   font-size: 1.05rem;
-  color: var(--texto-suave, #6b7280);
+  color: var(--tinta-2);
   font-weight: 600;
 }
 
@@ -251,16 +251,16 @@ table.tabela-simples tr.fora em { font-style: italic; }
   padding: 1.1rem 1.2rem;
   border: 1px solid var(--borda, rgba(0, 0, 0, .1));
   border-left: 4px solid var(--borda, rgba(0, 0, 0, .1));
-  border-radius: 12px;
+  border-radius: var(--raio);
   background: var(--fundo-cartao, #fff);
   cursor: pointer;
   transition: border-color .15s, transform .1s;
 }
 .cartao-tarefa:hover { transform: translateY(-1px); }
-.cartao-tarefa.atencao { border-left-color: #EF9F27; }
-.cartao-tarefa.ok { border-left-color: var(--verde, #1C7A3C); }
+.cartao-tarefa.atencao { border-left-color: var(--atencao); }
+.cartao-tarefa.ok { border-left-color: var(--sucesso); }
 .cartao-tarefa strong { display: block; }
-.cartao-tarefa small { color: var(--texto-suave, #6b7280); }
+.cartao-tarefa small { color: var(--tinta-2); }
 .cartao-tarefa svg { flex: 0 0 auto; opacity: .7; }
 
 /* O recado de que falta alguém congelar. Sem ele, "abri o inventário e não
@@ -271,8 +271,8 @@ table.tabela-simples tr.fora em { font-style: italic; }
   gap: .7rem;
   margin-top: 1.2rem;
   padding: .9rem 1.1rem;
-  border-radius: 10px;
+  border-radius: var(--raio);
   background: rgba(239, 159, 39, .1);
-  border-left: 3px solid #EF9F27;
+  border-left: 3px solid var(--atencao);
   font-size: .9rem;
 }

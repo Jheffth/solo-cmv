@@ -24,24 +24,10 @@
    halo branco que JPG de logo sempre carrega.
    ========================================================================== */
 
-:root {
-  /* ---- paleta oficial, amostrada do manual ---- */
-  --cj-carmim:    #A6183B;   /* a cor do logotipo */
-  --cj-vinho:     #64111C;   /* profundidade, fundos */
-  --cj-tijolo:    #B63421;
-  --cj-terra:     #753017;
-  --cj-coral:     #EC6E45;
-  --cj-creme:     #EED5B4;
-  --cj-petroleo:  #466178;
-  --cj-azul:      #83ABC1;
-
-  /* ---- derivadas, só para superfície ---- */
-  --cj-papel:     #FDFBF7;   /* creme lavado: fundo de formulário */
-  --cj-tinta:     #2A1A1C;   /* preto amarronzado — preto puro brigaria
-                                com a paleta quente inteira */
-  --cj-tinta-2:   #7A6A6C;
-  --cj-linha:     #E6DCD2;
-}
+/* A paleta saiu daqui e mora em `tokens.css`, carregado antes deste
+   arquivo. Ela era daqui quando só o login usava a marca; agora o sistema
+   inteiro usa, e uma cópia em cada arquivo é como duas telas começam a
+   discordar. Os nomes `--cj-*` continuam idênticos. */
 
 /* ==========================================================================
    TIPOGRAFIA
@@ -213,12 +199,12 @@
   color: var(--cj-tinta);
   background: #fff;
   border: 1.5px solid var(--cj-linha);
-  border-radius: 10px;
+  border-radius: var(--raio);
   outline: none;
   transition: border-color .16s ease, box-shadow .16s ease;
 }
 
-.campo input:hover { border-color: #D8C8BC; }
+.campo input:hover { border-color: var(--linha-forte); }
 
 .campo input:focus {
   border-color: var(--cj-carmim);
@@ -255,7 +241,7 @@
   padding: .35rem;
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--raio-p);
   color: var(--cj-tinta-2);
   cursor: pointer;
   transition: color .15s ease;
@@ -301,17 +287,17 @@
   color: var(--cj-creme);
   background: var(--cj-carmim);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--raio);
   cursor: pointer;
   transition: background .16s ease, transform .1s ease, box-shadow .16s ease;
 }
 .btn-marca:hover {
-  background: #8E1432;
+  background: var(--marca-forte);
   box-shadow: 0 8px 20px -8px rgba(166, 24, 59, .7);
 }
 .btn-marca:active { transform: translateY(1px); }
 .btn-marca:disabled {
-  background: #C9A3AC;
+  background: var(--linha-forte);
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -330,7 +316,7 @@
   color: var(--cj-vinho);
   background: rgba(236, 110, 69, .13);
   border-left: 3px solid var(--cj-coral);
-  border-radius: 0 8px 8px 0;   /* borda de um lado só não leva canto
+  border-radius: 0 var(--raio-p) var(--raio-p) 0;   /* borda de um lado só não leva canto
                                    arredondado do lado oposto */
 }
 
@@ -373,7 +359,7 @@
   padding: 1.1rem 1.2rem;
   background: rgba(238, 213, 180, .38);
   border: 1px solid var(--cj-creme);
-  border-radius: 12px;
+  border-radius: var(--raio);
 }
 .convite-linha {
   display: flex;
@@ -395,7 +381,7 @@
   text-transform: uppercase;
   color: var(--cj-creme);
   background: var(--cj-carmim);
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
 }
 
 /* ==========================================================================

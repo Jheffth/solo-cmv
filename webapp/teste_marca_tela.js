@@ -16,7 +16,12 @@ const { JSDOM } = require('/tmp/jt/node_modules/jsdom');
 
 const BASE = '/sessions/peaceful-youthful-lovelace/mnt/SOLO CMV/webapp/frontend';
 const html = fs.readFileSync(path.join(BASE, 'index.html'), 'utf8');
-const css = fs.readFileSync(path.join(BASE, 'css/marca.css'), 'utf8');
+/* A paleta saiu de marca.css para tokens.css quando deixou de ser só do
+   login e virou a do sistema inteiro. O teste segue a mudança: o que ele
+   protege é que os oito hexes do manual continuem exatos, não em que
+   arquivo eles moram. */
+const css = fs.readFileSync(path.join(BASE, 'css/tokens.css'), 'utf8')
+           + fs.readFileSync(path.join(BASE, 'css/marca.css'), 'utf8');
 const svg = fs.readFileSync(path.join(BASE, 'assets/logos/casa-josefina.svg'), 'utf8');
 
 const falhas = [];
@@ -40,9 +45,12 @@ for (const [nome, hex] of Object.entries(PALETA)) {
   ok(new RegExp(`${nome}:\\s*${hex}`, 'i').test(css), `${nome} = ${hex}`);
 }
 
-// Nenhuma cor do tema antigo pode ter sobrado nas telas de entrada.
+// Nenhuma cor do tema antigo pode ter sobrado. Os comentários de
+// `tokens.css` citam os hexes de propósito — é a explicação que impede
+// alguém de reintroduzi-los — então a busca é no CÓDIGO, não na prosa.
+const semComentarios = css.replace(/\/\*[\s\S]*?\*\//g, '');
 const ANTIGAS = ['#1F3B57', '#16293e', '#B08D3E'];
-const sobrou = ANTIGAS.filter((c) => css.toUpperCase().includes(c.toUpperCase()));
+const sobrou = ANTIGAS.filter((c) => semComentarios.toUpperCase().includes(c.toUpperCase()));
 ok(sobrou.length === 0, `nenhuma cor do tema antigo sobrou (${sobrou})`);
 
 // ============================================================================

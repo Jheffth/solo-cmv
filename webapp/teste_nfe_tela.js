@@ -57,6 +57,14 @@ function montar(respostas = {}) {
   w.icone = (n) => `<svg data-i="${n}"></svg>`;
   w.alert = () => {};
   w.confirm = () => true;
+  w.prompt = () => 'motivo';
+  // O sistema usa `window.Dialogo` (promessas) desde que as caixas do
+  // navegador foram substituídas.
+  w.Dialogo = {
+    async confirm() { return true; },
+    async prompt() { return 'motivo'; },
+    async alert() {},
+  };
   w.api = {
     async get(url) {
       pedidos.push(['GET', url]);
