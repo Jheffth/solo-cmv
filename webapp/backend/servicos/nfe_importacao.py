@@ -23,7 +23,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from models import (Fornecedor, ItemNotaImportada, Movimento,
+from models import (Fornecedor, HistoricoCusto, ItemNotaImportada, Movimento,
                     NotaFiscalImportada, Produto, SinonimoProduto,
                     StatusNotaFiscal, TipoMovimento, Usuario)
 from servicos import busca as servico_busca
@@ -453,6 +453,15 @@ def aprovar(db: Session, registro: NotaFiscalImportada,
             data=data,
             usuario_id=usuario.id,
         ))
+        if item.custo_final is not None:
+            db.add(HistoricoCusto(
+                produto_id=item.produto_id,
+                unidade_id=registro.unidade_id,
+                custo=item.custo_final,
+                data=data,
+                numero_documento=documento,
+                fornecedor_id=registro.fornecedor_id,
+            ))
         criados += 1
 
     registro.status = StatusNotaFiscal.PROCESSADA
