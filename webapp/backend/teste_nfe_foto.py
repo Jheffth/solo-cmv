@@ -522,5 +522,87 @@ if os.path.exists(FOTO):
     ok(_gasto < 20,
        f'a foto inteira é lida em {_gasto:.1f}s (orçamento: 20s; já foi 28s)')
 
+# ==============================================================================
+print('\n[12] O CÓDIGO DO FORNECEDOR — o ciclo que faz a segunda nota ser fácil')
+# ==============================================================================
+# A descrição o fornecedor reescreve; o código dele não muda. Na primeira
+# nota a pessoa escolhe o produto e o sistema aprende "cód. 1077 = Panceta";
+# da segunda em diante ele lê o código e já sabe.
+#
+# O QUE ESTA SEÇÃO PROTEGE: que o código NÃO seja aceito por ter sido lido.
+# A coluna sai suja — junto dos quatro códigos certos vieram "05", "0", "8",
+# "077". Confiar na leitura trocaria um erro visível (campo vazio) por um
+# invisível (produto errado com cara de conciliado).
+from models import SinonimoProduto                             # noqa: E402
+
+_db5 = SessionLocal()
+_forn = _db5.query(models.Fornecedor).filter(
+    models.Fornecedor.nome == 'SUINOAVES ALIMENTOS LTDA').first() \
+    if 'models' in dir() else None
+
+if os.path.exists(FOTO) and _forn:
+    _lido = danfe_itens.ler(open(FOTO, 'rb').read())
+    CODIGOS = ['1105', '44', '1077', '25']     # conferidos no papel
+    primeiros = [(l.codigos or [None])[0] for l in _lido.linhas]
+    ok(primeiros == CODIGOS,
+       f'os quatro códigos da nota são lidos e vêm em primeiro: {primeiros}')
+    ok(any(len(l.codigos) > 1 for l in _lido.linhas),
+       'com as leituras piores guardadas atrás, para a pessoa poder corrigir')
+
+    # O lixo da coluna não some — e não precisa sumir. Ele não bate com nada
+    # aprendido, então não custa nada.
+    _produtos = _db5.query(Produto).filter_by(
+        empresa_id=_forn.empresa_id).limit(2).all()
+    _guardar = _db5.query(SinonimoProduto).filter_by(
+        fornecedor_id=_forn.id).all()
+    for _s in _guardar:
+        _db5.delete(_s)
+    _db5.flush()
+    _db5.add(SinonimoProduto(produto_id=_produtos[0].id, termo='cod:1077',
+                             fornecedor_id=_forn.id, fator_conversao=1.0))
+    _db5.flush()
+
+    achado = nfe_importacao.candidatos_para_linha(
+        _db5, 'PANCETA FOOD -3VL', ['1077', '077'], _forn.id, _forn.empresa_id)
+    ok(achado['sugerido'] == _produtos[0].id,
+       'o código aprendido casa o item sozinho')
+    ok(achado['conciliado_por'] == '1077',
+       f"e a tela recebe QUAL código casou: {achado['conciliado_por']}")
+    ok(achado['candidatos'][0]['origem'] == 'codigo',
+       'o conciliado vem em primeiro')
+    ok(any(c['origem'] == 'nome' for c in achado['candidatos'][1:])
+       or len(achado['candidatos']) == 1,
+       'e os parecidos por nome continuam na lista, como segunda opção')
+
+    # Lixo de OCR não conhecido pelo de-para simplesmente não casa.
+    sem_nada = nfe_importacao.candidatos_para_linha(
+        _db5, 'PANCETA FOOD -3VL', ['077', '0', '8'], _forn.id,
+        _forn.empresa_id)
+    ok(sem_nada['conciliado_por'] is None,
+       'código mal lido não casa com nada, e a linha volta para o nome')
+
+    # DUAS leituras apontando produtos DIFERENTES é dúvida — e dúvida
+    # resolvida por sorteio é como se lança compra no produto errado sem
+    # ninguém notar, porque a soma da nota fecha do mesmo jeito.
+    _db5.add(SinonimoProduto(produto_id=_produtos[1].id, termo='cod:077',
+                             fornecedor_id=_forn.id, fator_conversao=1.0))
+    _db5.flush()
+    ambiguo = nfe_importacao.candidatos_para_linha(
+        _db5, 'PANCETA FOOD -3VL', ['1077', '077'], _forn.id,
+        _forn.empresa_id)
+    ok(ambiguo['sugerido'] is None,
+       'duas leituras apontando produtos diferentes NÃO escolhem sozinhas')
+    ok(len([c for c in ambiguo['candidatos'] if c['origem'] == 'codigo']) == 2,
+       'e as duas aparecem na lista, para a pessoa desempatar')
+
+    # O código só vale DENTRO de um fornecedor.
+    de_outro = nfe_importacao.candidatos_para_linha(
+        _db5, 'PANCETA FOOD -3VL', ['1077'], None, _forn.empresa_id)
+    ok(de_outro['conciliado_por'] is None,
+       'sem fornecedor definido, o código não significa nada')
+
+    _db5.rollback()
+_db5.close()
+
 print('\n' + ('FALHAS:\n  ' + '\n  '.join(falhas) if falhas else 'Tudo certo.'))
 sys.exit(1 if falhas else 0)

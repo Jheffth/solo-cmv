@@ -139,6 +139,44 @@ window.Paginas.nfe = (function () {
     return (ocr.linhas || []).reduce((t, l) => t + (Number(l.valor_total) || 0), 0);
   }
 
+  /* Trocou o fornecedor, todos os códigos passam a significar outra coisa.
+
+     Manter na tela a conciliação do fornecedor anterior seria pior que não
+     ter conciliado nada: ela continuaria com cara de confirmada, apontando
+     produtos aprendidos com OUTRO emitente.
+
+     Não relê a foto — manda as linhas já lidas e recebe outro casamento.
+     É consulta a banco, responde na hora. E o que a PESSOA já escolheu à
+     mão é preservado: a máquina mudou de opinião, ela não. */
+  async function reconciliar(container) {
+    if (!ocr || !(ocr.linhas || []).length) return;
+    const escolhidosAMao = new Map();
+    ocr.linhas.forEach((l, i) => {
+      const veioDaMaquina = (l.produtos || []).some(
+        (p) => p.produto_id === l.produto_id && p.origem);
+      if (l.produto_id && !veioDaMaquina) escolhidosAMao.set(i, l.produto_id);
+    });
+    try {
+      const r = await api.post('/nfe/conciliar', {
+        fornecedor_id: cabecalhoEscolhido.fornecedor_id || null,
+        linhas: ocr.linhas,
+      });
+      (r.linhas || []).forEach((nova, i) => {
+        if (!ocr.linhas[i]) return;
+        Object.assign(ocr.linhas[i], {
+          produtos: nova.produtos,
+          produto_id: escolhidosAMao.has(i)
+            ? escolhidosAMao.get(i) : nova.produto_id,
+          conciliado_por: nova.conciliado_por,
+        });
+      });
+    } catch (erro) {
+      // Falhar aqui não pode travar a conferência: o casamento por nome que
+      // já está na tela continua servindo, e a pessoa escolhe à mão.
+      console.warn('reconciliação não pôde ser refeita', erro);
+    }
+  }
+
   /* O NOME LIDO NÃO É PARA SER LIDO POR NINGUÉM.
 
      "eee) COSTELA SALGADA - 2VL" e "ere PE SALGADO « BVL 0" <5 EPSON" é o
@@ -150,31 +188,73 @@ window.Paginas.nfe = (function () {
      "Costela bovina" e "Costelinha salgada" — a lista fica aberta e quem
      está com a nota na mão decide. O texto lido continua embaixo, pequeno,
      como pista para conferir contra o papel. */
+  /* O CÓDIGO DO FORNECEDOR — o que faz a segunda nota ser fácil.
+
+     Na primeira nota daquele fornecedor a pessoa escolhe o produto e, ao
+     aprovar, o sistema aprende "cód. 1077 = Panceta kg". Da segunda em
+     diante o motor lê o código e já sabe.
+
+     Os códigos aparecem como botões pelo mesmo motivo que os valores: a
+     coluna sai suja do OCR (junto de 1105 vieram "05" e "0"), e o que o
+     sistema propõe é palpite até alguém olhar. O primeiro vem escolhido
+     porque é o mais provável — nunca porque foi confirmado.
+
+     Quando a linha já veio conciliada, não há o que escolher: o código foi
+     confirmado numa nota anterior, e trocá-lo aqui seria desfazer o
+     aprendizado sem querer. */
+  function codigosDaLinha(linha, indice) {
+    const lista = linha.codigos || [];
+    if (linha.conciliado_por) {
+      return `<small class="nfe-conciliado" title="casamento aprendido numa nota anterior deste fornecedor">
+                conciliado pelo código ${escapar(linha.conciliado_por)}</small>`;
+    }
+    if (!lista.length) return '';
+    const escolhido = linha.codigo_escolhido || lista[0];
+    return `
+      <div class="nfe-chips nfe-chips--codigo" title="código deste item na nota do fornecedor">
+        <span class="nfe-rotulo-chip">cód.</span>
+        ${lista.map((c) => `<button type="button" class="nfe-chip nfe-chip-cod${
+          c === escolhido ? ' escolhido' : ''}" data-i="${indice}"
+          data-codigo="${escapar(c)}">${escapar(c)}</button>`).join('')}
+      </div>`;
+  }
+
   function seletorDeProduto(linha, indice) {
     const lista = linha.produtos || [];
     if (!lista.length) {
       return `<select class="nfe-prod" data-i="${indice}">
                 <option value="">— nenhum parecido; escolha —</option>
                 ${produtos.map((p) => `<option value="${p.id}">${escapar(p.nome)}</option>`).join('')}
-              </select>`;
+              </select>
+              ${codigosDaLinha(linha, indice)}`;
     }
     // Os parecidos primeiro, o catálogo inteiro depois: quem não achou o
     // dele entre as sugestões não pode ficar sem saída.
     const ids = new Set(lista.map((p) => p.produto_id));
+    const conciliados = lista.filter((p) => p.origem === 'codigo');
+    const porNome = lista.filter((p) => p.origem !== 'codigo');
     return `
       <select class="nfe-prod" data-i="${indice}">
         <option value="">— escolha o produto —</option>
-        <optgroup label="parecidos com o que foi lido">
-          ${lista.map((p) => `<option value="${p.produto_id}"${
+        ${conciliados.length ? `
+        <optgroup label="conciliado pelo código do fornecedor">
+          ${conciliados.map((p) => `<option value="${p.produto_id}"${
             p.produto_id === linha.produto_id ? ' selected' : ''}>${
             escapar(p.nome)}${p.unidade_medida ? ' (' + escapar(p.unidade_medida) + ')' : ''}</option>`).join('')}
-        </optgroup>
+        </optgroup>` : ''}
+        ${porNome.length ? `
+        <optgroup label="parecidos com o que foi lido">
+          ${porNome.map((p) => `<option value="${p.produto_id}"${
+            p.produto_id === linha.produto_id ? ' selected' : ''}>${
+            escapar(p.nome)}${p.unidade_medida ? ' (' + escapar(p.unidade_medida) + ')' : ''}</option>`).join('')}
+        </optgroup>` : ''}
         <optgroup label="todos os produtos">
           ${produtos.filter((p) => !ids.has(p.id)).map((p) =>
             `<option value="${p.id}">${escapar(p.nome)}</option>`).join('')}
         </optgroup>
       </select>
-      ${lista.length > 1 && !linha.produto_id
+      ${codigosDaLinha(linha, indice)}
+      ${porNome.length > 1 && !linha.produto_id
         ? '<small class="nfe-selo-conf">mais de um parecido — escolha qual é</small>'
         : ''}`;
   }
@@ -394,15 +474,22 @@ window.Paginas.nfe = (function () {
         desenharOcr(container);
       });
     });
+    container.querySelectorAll('.nfe-chip-cod').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        ocr.linhas[chip.dataset.i].codigo_escolhido = chip.dataset.codigo;
+        desenharOcr(container);
+      });
+    });
 
     // ------------------------------------------------------ cabeçalho
     const forn = container.querySelector('#nfe-cab-fornecedor');
-    if (forn) forn.addEventListener('change', () => {
+    if (forn) forn.addEventListener('change', async () => {
       cabecalhoEscolhido.fornecedor_id = forn.value ? Number(forn.value) : null;
       // Escolher um do cadastro e pedir para criar outro são decisões que se
       // excluem — deixar as duas ligadas criaria um fornecedor duplicado a
       // cada nota.
       if (cabecalhoEscolhido.fornecedor_id) cabecalhoEscolhido.criar_fornecedor = false;
+      await reconciliar(container);
       desenharOcr(container);
     });
     const criar = container.querySelector('#nfe-cab-criar');
@@ -459,6 +546,11 @@ window.Paginas.nfe = (function () {
                 valor_unitario: Number(l.valor_unitario),
                 valor_total: Number(l.valor_total),
                 produto_id: l.produto_id || null,
+                // O código que vai virar o de-para deste fornecedor. Já
+                // conciliado, é o que casou; senão, o que está escolhido
+                // nos botões. É esta linha que faz a PRÓXIMA nota ser fácil.
+                codigo_fornecedor: l.conciliado_por
+                  || l.codigo_escolhido || (l.codigos || [])[0] || null,
               };
             }),
         });

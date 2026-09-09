@@ -169,6 +169,68 @@ def _conferir_a_loja(db: Session, destinatario: str, unidade_id: Optional[int],
             f"duas sai errado — confira antes de aprovar.")
 
 
+def _conciliar_linhas(db: Session, rascunho: dict,
+                      fornecedor_id: Optional[int],
+                      empresa_id: Optional[int]) -> dict:
+    """Casa cada linha lida com um produto do cadastro, no lugar.
+
+    Fica numa função só porque acontece em dois momentos: quando a foto é
+    lida, e de novo se a pessoa trocar o fornecedor na tela. O código só vale
+    dentro de um fornecedor — trocar o fornecedor e manter a conciliação
+    seria manter uma resposta a uma pergunta que mudou.
+    """
+    conciliadas = 0
+    for linha in rascunho.get("linhas", []):
+        achado = nfe_importacao.candidatos_para_linha(
+            db, linha.get("descricao") or "", linha.get("codigos") or [],
+            fornecedor_id, empresa_id)
+        linha["produtos"] = achado["candidatos"]
+        linha["produto_id"] = achado["sugerido"]
+        linha["conciliado_por"] = achado.get("conciliado_por")
+        if linha["conciliado_por"]:
+            conciliadas += 1
+
+    avisos = rascunho.setdefault("avisos", [])
+    if conciliadas:
+        avisos.append(
+            f"{conciliadas} item(ns) vieram conciliados pelo código do "
+            f"fornecedor — casamento aprendido numa nota anterior, não "
+            f"palpite por nome.")
+    sem_palpite = sum(1 for l in rascunho.get("linhas", [])
+                      if not l.get("produtos"))
+    if sem_palpite:
+        avisos.append(
+            f"{sem_palpite} linha(s) não bateram com nenhum produto do "
+            f"cadastro. Escolha na lista ou deixe de fora.")
+    return rascunho
+
+
+class Reconciliacao(BaseModel):
+    fornecedor_id: Optional[int] = None
+    linhas: List[dict]
+
+
+@router.post("/conciliar")
+def reconciliar(dados: Reconciliacao, db: Session = Depends(get_db),
+                usuario: Usuario = Depends(requer(Capacidade.LANCAR_COMPRA))):
+    """Refaz o casamento dos itens para OUTRO fornecedor, sem reler a foto.
+
+    Existe porque o fornecedor da leitura é um palpite, e a pessoa pode
+    corrigi-lo. Corrigido, todos os códigos passam a significar outra coisa —
+    e manter na tela a conciliação do fornecedor anterior seria pior que não
+    ter conciliado nada, porque ela continuaria parecendo confirmada.
+
+    Não relê a foto: recebe as linhas já lidas e devolve as mesmas com outro
+    casamento. É consulta a banco, não OCR — responde na hora.
+    """
+    if len(dados.linhas) > 200:
+        raise HTTPException(400, "Nota grande demais para reconciliar de uma "
+                                 "vez.")
+    rascunho = {"linhas": [dict(l) for l in dados.linhas], "avisos": []}
+    _conciliar_linhas(db, rascunho, dados.fornecedor_id, usuario.empresa_id)
+    return rascunho
+
+
 @router.post("/foto/itens")
 async def itens_da_foto(arquivo: UploadFile = File(...),
                         chave: Optional[str] = Form(None),
@@ -230,19 +292,12 @@ async def itens_da_foto(arquivo: UploadFile = File(...),
         raise HTTPException(400, "Não consegui ler nada nessa foto. Tente "
                                  "outra, com a nota esticada e sem sombra.")
 
-    for linha in rascunho.get("linhas", []):
-        achado = nfe_importacao.candidatos_para_texto(
-            db, linha.get("descricao") or "", usuario.empresa_id)
-        linha["produtos"] = achado["candidatos"]
-        linha["produto_id"] = achado["sugerido"]
-    sem_palpite = sum(1 for l in rascunho.get("linhas", [])
-                      if not l.get("produtos"))
-    if sem_palpite:
-        rascunho.setdefault("avisos", []).append(
-            f"{sem_palpite} linha(s) não bateram com nenhum produto do "
-            f"cadastro. Escolha na lista ou deixe de fora.")
-
     # ------------------------------------------------------------ cabeçalho
+    # O CABEÇALHO VEM ANTES DOS PRODUTOS, e a ordem aqui é uma dependência de
+    # verdade: o código do fornecedor só significa alguma coisa DENTRO de um
+    # fornecedor. Casar os itens antes de saber de quem é a nota seria jogar
+    # fora a conciliação inteira.
+    #
     # Agora sim, com o total dos produtos em mãos: é ele que serve de piso
     # para o valor da nota, e sem ele um número qualquer da página passaria.
     try:
@@ -261,6 +316,10 @@ async def itens_da_foto(arquivo: UploadFile = File(...),
         usuario.empresa_id)
     rascunho["cabecalho"] = dados_cabecalho
 
+    # ------------------------------------------------------------- produtos
+    _conciliar_linhas(db, rascunho, dados_cabecalho["fornecedor"]["sugerido"],
+                      usuario.empresa_id)
+
     rascunho.setdefault("avisos", []).extend(cabecalho.avisos)
     alerta = _conferir_a_loja(db, cabecalho.destinatario_texto, unidade_id,
                               usuario.empresa_id)
@@ -276,6 +335,10 @@ class ItemDigitado(BaseModel):
     valor_unitario: float
     valor_total: Optional[float] = None
     produto_id: Optional[int] = None
+    # O código que o fornecedor imprime para este item. É o que fecha o
+    # ciclo: sem ele gravado, aprovar não tem o que aprender, e a próxima
+    # nota do mesmo fornecedor volta a depender de nome parecido.
+    codigo_fornecedor: Optional[str] = None
 
 
 class NotaDigitada(BaseModel):
@@ -338,7 +401,9 @@ def nota_conferida(dados: NotaDigitada, db: Session = Depends(get_db),
                                                          usuario)
 
     itens = [nfe_xml.ItemNota(
-        numero=i + 1, codigo_fornecedor="", descricao=item.descricao[:255],
+        numero=i + 1,
+        codigo_fornecedor=re.sub(r"\D", "", item.codigo_fornecedor or "")[:40],
+        descricao=item.descricao[:255],
         ncm="", cfop="", ean=None,
         unidade_comercial="UN",
         quantidade_comercial=item.quantidade,

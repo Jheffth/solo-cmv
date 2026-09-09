@@ -254,6 +254,7 @@ def candidatos_para_texto(db: Session, texto: str, empresa_id: Optional[int],
         "nome": c.nome,
         "unidade_medida": c.unidade_medida,
         "pontos": round(c.pontos, 1),
+        "origem": "nome",
     } for c in achados[:limite]]
 
     sugerido = None
@@ -267,6 +268,95 @@ def candidatos_para_texto(db: Session, texto: str, empresa_id: Optional[int],
             sugerido = candidatos[0]["produto_id"]
 
     return {"candidatos": candidatos, "sugerido": sugerido}
+
+
+# ==============================================================================
+# A CONCILIAÇÃO PELO CÓDIGO DO FORNECEDOR
+# ==============================================================================
+# O código que o fornecedor imprime na nota é o casamento mais forte que
+# existe com o nosso cadastro. A descrição ele reescreve — "COSTELA SALGADA
+# 2VL" hoje, "COSTELA SALG. 2 VOLUMES" na semana que vem — e a cada
+# reescrita a busca por nome volta à estaca zero. O código não muda.
+#
+# O ciclo é: na primeira nota daquele fornecedor a pessoa escolhe o produto;
+# ao aprovar, o sistema grava "cód. 1077 deste fornecedor = Panceta kg". Da
+# segunda nota em diante o motor lê 1077 e já sabe.
+#
+# E AQUI ELE NÃO É ACEITO POR TER SIDO LIDO
+# A coluna do código sai suja do OCR: na nota de referência, junto dos
+# quatro códigos certos vieram "16", "0", "8", "077". Confiar na leitura
+# seria trocar um erro visível (campo vazio) por um invisível (produto
+# errado com cara de conciliado) — que é o único jeito desta via causar
+# dano grande.
+#
+# Então cada leitura é uma CANDIDATA, e quem decide é o de-para: código que
+# não bate com nada aprendido não custa nada, e some. Só quando exatamente
+# UM produto aparece é que há conciliação. Duas leituras apontando produtos
+# diferentes é dúvida, e dúvida não vira escolha automática.
+def _produtos_por_codigo(db: Session, codigos, fornecedor_id: Optional[int]):
+    """Os produtos que o de-para deste fornecedor conhece por estes códigos."""
+    if not fornecedor_id or not codigos:
+        return {}
+    termos = {servico_busca.normalizar(f"cod:{c}"): str(c)
+              for c in codigos if str(c).strip()}
+    if not termos:
+        return {}
+    achados = db.query(SinonimoProduto).filter(
+        SinonimoProduto.fornecedor_id == fornecedor_id,
+        SinonimoProduto.termo.in_(list(termos))).all()
+    return {a.produto_id: termos[a.termo] for a in achados
+            if a.termo in termos}
+
+
+def candidatos_para_linha(db: Session, texto: str, codigos,
+                          fornecedor_id: Optional[int],
+                          empresa_id: Optional[int], limite: int = 5) -> dict:
+    """O produto desta linha: pelo código primeiro, pelo nome depois.
+
+    A lista devolvida NÃO é substituída pelo acerto do código — ela ganha o
+    conciliado no topo e mantém os parecidos por nome embaixo. Quem está com
+    a nota na mão precisa poder discordar sem digitar do zero, e o de-para
+    aprende de um jeito só: alguém confirmando.
+    """
+    por_nome = candidatos_para_texto(db, texto, empresa_id, limite=limite)
+    conciliados = _produtos_por_codigo(db, codigos or [], fornecedor_id)
+
+    if not conciliados:
+        por_nome["conciliado_por"] = None
+        return por_nome
+
+    conhecidos = {c["produto_id"]: c for c in por_nome["candidatos"]}
+    do_codigo = []
+    for produto_id, codigo in conciliados.items():
+        produto = db.query(Produto).filter(Produto.id == produto_id).first()
+        if not produto or (empresa_id and produto.empresa_id != empresa_id):
+            continue
+        do_codigo.append({
+            "produto_id": produto.id,
+            "nome": produto.nome,
+            "unidade_medida": produto.unidade_medida,
+            # Pontuação acima de qualquer nota da busca por nome: o código
+            # não concorre com o nome, ele encerra a discussão.
+            "pontos": 200.0,
+            "origem": "codigo",
+            "codigo": codigo,
+        })
+        conhecidos.pop(produto.id, None)
+
+    if not do_codigo:
+        por_nome["conciliado_por"] = None
+        return por_nome
+
+    resto = [c for c in por_nome["candidatos"] if c["produto_id"] in conhecidos]
+    # Um só produto conciliado é resposta. Dois é dúvida — e dúvida resolvida
+    # por sorteio é como se lança compra no produto errado sem ninguém notar,
+    # porque a soma da nota fecha do mesmo jeito.
+    sugerido = do_codigo[0]["produto_id"] if len(do_codigo) == 1 else None
+    return {
+        "candidatos": (do_codigo + resto)[:max(limite, len(do_codigo) + 2)],
+        "sugerido": sugerido,
+        "conciliado_por": do_codigo[0]["codigo"] if sugerido else None,
+    }
 
 
 def _fator_sugerido(item: nfe_xml.ItemNota, produto: Optional[Produto]) -> float:

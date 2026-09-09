@@ -90,6 +90,36 @@ PASSADAS = ((0.45, 0.64, 4), (0.47, 0.62, 3), (0.49, 0.61, 5))
 # ~0,055 uma da outra; 0,028 encosta na vizinha sem invadi-la.
 RAIO_COLUNA = 0.028
 
+# ==============================================================================
+# A COLUNA DO CÓDIGO DO FORNECEDOR
+# ==============================================================================
+# A primeira coluna da tabela ("CÓDIGO PRODUTO") é o casamento mais forte que
+# existe com o nosso cadastro: o fornecedor pode reescrever a descrição do
+# produto a cada nota, mas o código dele não muda.
+#
+# Lida junto com o resto, ela sai errada: na largura cheia o OCR devolveu
+# "AOS:" no lugar de 1105 e "35" no lugar de 25 — o miolo da tabela puxa a
+# atenção do reconhecedor. Recortada sozinha e com whitelist de dígitos, as
+# duas escalas juntas entregaram os quatro códigos da nota de referência:
+#
+#     y 0,286 -> 05 / 1105      y 0,482 -> 1077 / 10777 / 077
+#     y 0,415 -> 44             y 0,546 -> 25
+#
+# Note que sai lixo junto ("16", "0", "8"). Não faz mal, e é o ponto: nada
+# aqui é aceito por ter sido lido. Cada leitura vira CANDIDATA, e quem
+# escolhe é o de-para do fornecedor — código que não bate com nada aprendido
+# simplesmente não custa nada.
+COLUNA_CODIGO = (0.09, 0.19)      # faixa horizontal, em fração da página
+ESCALAS_CODIGO = (4, 6)
+
+# Quão longe da primeira e da última linha de item um número ainda pode
+# estar e ser código. Folgado de propósito: o que sobra de ruído é curto e
+# cai para o fim da lista, mas um código legítimo que ficasse de fora não
+# tem como voltar.
+FORA_DA_TABELA = 0.10
+
+_CODIGO = re.compile(r"^\d{1,8}$")
+
 _NUMERO = re.compile(r"\d{1,3}(?:\.\d{3})*,\d{2,4}|\d+,\d{2,4}")
 
 
@@ -206,6 +236,11 @@ class LinhaLida:
     quantidade: Optional[float] = None
     valor_unitario: Optional[float] = None
 
+    # Tudo que a coluna do código devolveu para esta linha, lixo incluído.
+    # É lista, e não um valor, porque nenhuma leitura sozinha é confiável —
+    # quem escolhe entre elas é o de-para do fornecedor, adiante.
+    codigos: List[str] = field(default_factory=list)
+
     # Só é `True` quando a aritmética fechou. Leitura sozinha nunca confirma.
     total_confirmado: bool = False
     quantidade_confirmada: bool = False
@@ -217,6 +252,7 @@ class LinhaLida:
     def como_dicionario(self) -> dict:
         return {
             "descricao": self.descricao,
+            "codigos": self.codigos,
             "quantidade": self.quantidade,
             "valor_unitario": self.valor_unitario,
             "valor_total": self.valor_total,
@@ -346,6 +382,106 @@ def _tarefas_de_itens(imagem):
             for topo, base, escala in PASSADAS]
 
 
+def _tarefas_de_codigos(imagem):
+    """As leituras da coluna do código, ainda por fazer.
+
+    Recorte estreito e whitelist de dígitos: sem o miolo da tabela por perto,
+    e sem poder devolver letra, o reconhecedor acerta o que errava. Duas
+    escalas porque cada uma acerta um código diferente — na nota de
+    referência a 4x leu 44 e 1077, a 6x leu 1105, e só juntas leram os
+    quatro.
+    """
+    altura, largura = imagem.shape[0], imagem.shape[1]
+    topo, base = FAIXA_ITENS
+    esquerda, direita = COLUNA_CODIGO
+
+    def uma_escala(escala):
+        def ler():
+            recorte = imagem[int(altura * topo):int(altura * base),
+                             int(largura * esquerda):int(largura * direita)]
+            if recorte.size == 0:
+                return []
+            preparada = _preparar(recorte, escala)
+            pt = _pytesseract()
+            dados = pt.image_to_data(
+                preparada,
+                config=danfe.CONFIG_OCR + " -c tessedit_char_whitelist=0123456789",
+                output_type=pt.Output.DICT)
+            alto = max(1, preparada.shape[0])
+            achados = []
+            for i, bruto in enumerate(dados["text"]):
+                texto = (bruto or "").strip()
+                if _CODIGO.match(texto):
+                    achados.append((dados["top"][i] / alto, texto))
+            return achados
+        return ler
+
+    return [uma_escala(escala) for escala in ESCALAS_CODIGO]
+
+
+def _atribuir_codigos(linhas: List[LinhaLida], fisicas_por_linha,
+                      leituras) -> None:
+    """Põe cada código lido na linha de item mais próxima em altura.
+
+    Cada leitura vai para UMA linha, a mais próxima — e não para todas as que
+    estiverem por perto. Espalhar seria conveniente e perigoso: o código
+    certo de um item, oferecido também ao item de baixo, casaria com o
+    produto errado com toda a confiança do mundo, que é o único jeito de
+    esta via produzir um erro grave.
+
+    Sobre a altura da linha do item: usamos a do TEXTO da descrição, que é a
+    mesma faixa e a mesma normalização da coluna do código. Na nota de
+    referência as quatro atribuições saem certas com folga.
+    """
+    alturas = []
+    for linha, fisica in zip(linhas, fisicas_por_linha):
+        alturas.append(fisica.y if fisica is not None else None)
+    if not any(a is not None for a in alturas):
+        return
+
+    # O recorte da coluna pega um pedaço do que está ACIMA da tabela — o
+    # rótulo "CÓDIGO PRODUTO", a caixa de QUANTIDADE do transporte. Aqueles
+    # números são lidos com folga pelas duas escalas, e sem esta trava
+    # entravam como candidatos bem votados de um item que fica logo abaixo.
+    conhecidas = [a for a in alturas if a is not None]
+    primeira, ultima = min(conhecidas), max(conhecidas)
+
+    brutos = [[] for _ in linhas]
+    for y, codigo in leituras:
+        if y < primeira - FORA_DA_TABELA or y > ultima + FORA_DA_TABELA:
+            continue
+        melhor, distancia = None, 1.0
+        for indice, altura in enumerate(alturas):
+            if altura is None:
+                continue
+            if abs(altura - y) < distancia:
+                melhor, distancia = indice, abs(altura - y)
+        if melhor is not None:
+            brutos[melhor].append(codigo)
+
+    # A ORDEM DA LISTA É UM PALPITE, E VALE DIZER QUAL.
+    #
+    # A tela precisa de um código para propor quando ainda não há de-para —
+    # na PRIMEIRA nota do fornecedor, que é justamente quando o aprendizado
+    # acontece e quando um erro se eterniza. Duas evidências, nesta ordem:
+    #
+    #   1. quantas escalas leram o mesmo. Duas leituras iguais em imagens
+    #      preparadas de formas diferentes raramente são o mesmo engano;
+    #   2. quantas escalas leram o mesmo. Duas leituras iguais em imagens
+    #      preparadas de formas diferentes raramente são o mesmo engano.
+    #
+    # O comprimento vem primeiro, e não a repetição, porque o ruído se repete
+    # com facilidade: "16" e "0", do rótulo acima da tabela, apareciam nas
+    # duas escalas e ganhavam de "1105", lido numa só.
+    #
+    # Medido na nota de referência, os quatro primeiros da lista são os
+    # quatro códigos certos. Ainda assim a tela mostra a lista inteira e
+    # deixa escolher: proposto não é confirmado.
+    for linha, lidos in zip(linhas, brutos):
+        linha.codigos = sorted(set(lidos),
+                               key=lambda c: (-len(c), -lidos.count(c), c))
+
+
 def _juntar_passadas(resultados):
     """Une o que as passadas viram, com a mais completa servindo de esqueleto."""
     passadas = []
@@ -358,12 +494,15 @@ def _juntar_passadas(resultados):
             passadas.append((itens, fisicas))
 
     if not passadas:
-        return [], []
+        return [], [], []
 
     # A passada com MAIS linhas vira o esqueleto: perder um item é pior que
     # ler um número a mais, porque item que não aparece não é conferido.
     itens_base, _ = max(passadas, key=lambda p: len(p[0]))
     base = [l for l, _ in itens_base]
+    # A linha física de cada item do esqueleto, para saber a ALTURA dele —
+    # é por ela que o código da primeira coluna acha o seu dono.
+    fisicas_base = [f for _, f in itens_base]
     for itens, _ in passadas:
         if itens is itens_base or len(itens) != len(base):
             continue
@@ -372,7 +511,7 @@ def _juntar_passadas(resultados):
     for linha in base:
         linha.candidatos = sorted({round(v, 2) for v in linha.candidatos},
                                   reverse=True)
-    return base, [fisicas for _, fisicas in passadas]
+    return base, fisicas_base, [fisicas for _, fisicas in passadas]
 
 
 # ==============================================================================
@@ -694,13 +833,27 @@ def ler(dados: bytes) -> RascunhoDaFoto:
         return _ocr(_preparar(
             imagem[int(altura * topo):int(altura * base), :], escala=3))
 
-    # Uma fila só, com o rodapé e as três passadas da tabela. Nenhuma delas
-    # depende do resultado das outras, e a ordem em que estavam no código não
-    # era uma dependência — era só a ordem em que foram escritas.
-    texto_totais, *lidas = danfe.em_paralelo(
-        [ler_rodape] + _tarefas_de_itens(imagem))
+    # Uma fila só: o rodapé, as três passadas da tabela e as duas da coluna
+    # do código. Nenhuma depende do resultado das outras, e a ordem em que
+    # estavam no código não era uma dependência — era só a ordem em que
+    # foram escritas.
+    tarefas_itens = _tarefas_de_itens(imagem)
+    tarefas_codigos = _tarefas_de_codigos(imagem)
+    resposta = danfe.em_paralelo(
+        [ler_rodape] + tarefas_itens + tarefas_codigos)
+    texto_totais = resposta[0]
+    lidas = resposta[1:1 + len(tarefas_itens)]
+    lidos_codigos = resposta[1 + len(tarefas_itens):]
+
     numeros_do_rodape = _numeros_do_bloco(texto_totais or "")
-    rascunho.linhas, passadas = _juntar_passadas(lidas)
+    rascunho.linhas, fisicas_base, passadas = _juntar_passadas(lidas)
+
+    # O código do fornecedor vai para a linha antes de qualquer conta: ele
+    # não participa da aritmética, e quem vai julgá-lo é o de-para, não este
+    # arquivo.
+    _atribuir_codigos(rascunho.linhas, fisicas_base,
+                      [par for lista in lidos_codigos if lista
+                       for par in lista])
 
     if not rascunho.linhas:
         rascunho.avisos.append(

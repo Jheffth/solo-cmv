@@ -264,6 +264,35 @@ tr.nfe-ignorado td:first-child { text-decoration: line-through; }
 }
 .nfe-chip:hover { border-color: var(--navy); color: var(--navy); }
 
+/* ------------------------------------------- o código do fornecedor
+   Fica pequeno e discreto porque é infraestrutura, não conferência: quem
+   está com a nota na mão confere quantidade e preço, não código. Mas
+   precisa estar VISÍVEL, porque é ele que o sistema vai aprender — e o
+   que se aprende calado se corrige tarde. */
+.nfe-chips--codigo { justify-content: flex-start; margin-top: .25rem; }
+.nfe-rotulo-chip {
+  font-size: .66rem;
+  color: var(--muted);
+  align-self: center;
+}
+.nfe-chip-cod { font-size: .66rem; padding: 0 5px; }
+.nfe-chip-cod.escolhido {
+  border-color: var(--navy);
+  color: var(--navy);
+  font-weight: 600;
+}
+
+/* Já conciliado é outra coisa: não é palpite, é conhecimento de uma nota
+   anterior. Verde, e sem botão para trocar — mexer aqui desfaria um
+   aprendizado sem querer. */
+.nfe-conciliado {
+  display: block;
+  margin-top: .25rem;
+  font-size: .68rem;
+  color: var(--verde, #1C7A3C);
+  font-weight: 600;
+}
+
 .nfe-n { width: 110px; text-align: right; font-size: .85rem; }
 
 /* Sugerido é diferente de conferido. O número veio da coluna certa da nota,

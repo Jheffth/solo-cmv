@@ -280,19 +280,23 @@ function montar(respostas = {}) {
       },
     },
     linhas: [
+      // Linha JÁ CONCILIADA: o código 1105 deste fornecedor foi confirmado
+      // numa nota anterior, e por isso não há o que escolher aqui.
       { descricao: 'AOS: EMBUTIDO DE FRANGO FINA', lidos: [129.9, 12.99, 10],
         quantidade: 10, valor_unitario: 12.99, valor_total: 129.9,
         quantidade_confirmada: true, total_confirmado: true,
-        produto_id: 8,
-        produtos: [{ produto_id: 8, nome: 'Linguiça de Frango Fina', unidade_medida: 'und', pontos: 5 }] },
+        produto_id: 8, codigos: ['1105', '05'], conciliado_por: '1105',
+        produtos: [{ produto_id: 8, nome: 'Linguiça de Frango Fina', unidade_medida: 'und', pontos: 200, origem: 'codigo', codigo: '1105' }] },
       // Preenchida pela coluna da nota, mas sem multiplicação que feche:
       // é o caso que a tela precisa mostrar como sugestão, não como dado.
+      // Linha AINDA NÃO conciliada: os códigos lidos viram botões, e é a
+      // escolha da pessoa que o sistema vai aprender ao aprovar.
       { descricao: 'eee) COSTELA SALGADA - 2VL', lidos: [296.9, 29.99],
         quantidade: 9.9, valor_unitario: 29.99, valor_total: 296.9,
         quantidade_confirmada: false, total_confirmado: true,
-        produto_id: null,
-        produtos: [{ produto_id: 7, nome: 'Costela bovina', unidade_medida: 'Kg', pontos: 2 },
-                   { produto_id: 9, nome: 'Costelinha salgada', unidade_medida: 'kg', pontos: 2 }] },
+        produto_id: null, codigos: ['44', '4'], conciliado_por: null,
+        produtos: [{ produto_id: 7, nome: 'Costela bovina', unidade_medida: 'Kg', pontos: 2, origem: 'nome' },
+                   { produto_id: 9, nome: 'Costelinha salgada', unidade_medida: 'kg', pontos: 2, origem: 'nome' }] },
     ],
   };
   const t6 = montar({ arquivo: OCR, lista: [] });
@@ -438,6 +442,105 @@ function montar(respostas = {}) {
     ok(corpo.emitente_cnpj === '03425088000181',
        'e com o CNPJ, que é o que vai identificar o fornecedor da próxima vez');
   }
+
+  // ==========================================================================
+  console.log('\n[9] O CÓDIGO DO FORNECEDOR — o que faz a segunda nota ser fácil');
+  // ==========================================================================
+  const t9 = montar({ arquivo: OCR, lista: [] });
+  await t9.w.Paginas.nfe.render(t9.alvo);
+  await new Promise((r) => setTimeout(r, 30));
+  t9.alvo.querySelector('#nfe-ler-itens').checked = true;
+  const f9 = t9.alvo.querySelector('#nfe-foto');
+  Object.defineProperty(f9, 'files', { value: [{ name: 'n.jpg' }], configurable: true });
+  t9.w.api.postArquivo = async (url) => (url.includes('/itens')
+    ? JSON.parse(JSON.stringify(OCR))
+    : { encontrada: true, chave: CHAVE, origem: 'CODIGO_BARRAS' });
+  f9.dispatchEvent(new t9.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 90));
+
+  const corpoOcr = t9.alvo.querySelector('#nfe-ocr');
+  const linhasT = corpoOcr.querySelectorAll('tbody tr');
+
+  // Já conciliada: o casamento é conhecimento, não palpite. Não vira botão.
+  ok(/conciliado pelo código 1105/.test(linhasT[0].textContent),
+     'a linha conciliada diz por qual código foi casada');
+  ok(linhasT[0].querySelectorAll('.nfe-chip-cod').length === 0,
+     'e não oferece trocar — trocar aqui desfaria o aprendizado sem querer');
+  ok(/conciliado pelo código do fornecedor/.test(linhasT[0].innerHTML),
+     'o produto casado aparece separado dos parecidos por nome');
+
+  // Ainda não conciliada: os códigos lidos viram escolha, com o mais
+  // provável já marcado — proposto, não confirmado.
+  const chipsCod = linhasT[1].querySelectorAll('.nfe-chip-cod');
+  ok(chipsCod.length === 2, `a linha sem de-para mostra os códigos lidos (${chipsCod.length})`);
+  ok(chipsCod[0].classList.contains('escolhido')
+     && !chipsCod[1].classList.contains('escolhido'),
+     'com o primeiro já escolhido, que é o mais provável');
+
+  // O que vai para o servidor é o que faz a PRÓXIMA nota ser fácil.
+  t9.alvo.querySelector('#nfe-cab-fornecedor').value = '3';
+  chipsCod[1].click();                       // a pessoa corrige para "4"
+  await new Promise((r) => setTimeout(r, 20));
+  linhasT[1] = corpoOcr.querySelectorAll('tbody tr')[1];
+  const sel9 = corpoOcr.querySelectorAll('.nfe-prod')[1];
+  sel9.value = '9';
+  sel9.dispatchEvent(new t9.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 20));
+  corpoOcr.querySelector('#nfe-ocr-seguir').click();
+  await new Promise((r) => setTimeout(r, 40));
+
+  const envio = t9.pedidos.filter((p) => p[1] === '/nfe/manual').pop();
+  ok(!!envio, 'a nota é enviada');
+  if (envio) {
+    ok(envio[2].itens[0].codigo_fornecedor === '1105',
+       `a linha conciliada manda o código que casou (${envio[2].itens[0].codigo_fornecedor})`);
+    ok(envio[2].itens[1].codigo_fornecedor === '4',
+       `e a outra manda o que a PESSOA escolheu, não o proposto `
+       + `(${envio[2].itens[1].codigo_fornecedor})`);
+  }
+
+  // ==========================================================================
+  console.log('\n[10] TROCOU O FORNECEDOR, OS CÓDIGOS MUDAM DE SIGNIFICADO');
+  // ==========================================================================
+  const t10 = montar({ arquivo: OCR, lista: [] });
+  await t10.w.Paginas.nfe.render(t10.alvo);
+  await new Promise((r) => setTimeout(r, 30));
+  t10.alvo.querySelector('#nfe-ler-itens').checked = true;
+  const f10 = t10.alvo.querySelector('#nfe-foto');
+  Object.defineProperty(f10, 'files', { value: [{ name: 'n.jpg' }], configurable: true });
+  t10.w.api.postArquivo = async (url) => (url.includes('/itens')
+    ? JSON.parse(JSON.stringify(OCR))
+    : { encontrada: true, chave: CHAVE, origem: 'CODIGO_BARRAS' });
+  f10.dispatchEvent(new t10.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 90));
+
+  // O outro fornecedor não conhece o código 1105 — a conciliação some.
+  t10.w.api.post = (function (original) {
+    return async function (url, corpo) {
+      if (url === '/nfe/conciliar') {
+        t10.pedidos.push(['POST', url, corpo]);
+        return { linhas: corpo.linhas.map((l) => ({
+          produtos: [{ produto_id: 7, nome: 'Costela bovina', pontos: 2, origem: 'nome' }],
+          produto_id: null, conciliado_por: null })) };
+      }
+      return original.call(this, url, corpo);
+    };
+  }(t10.w.api.post));
+
+  const sel10 = t10.alvo.querySelector('#nfe-cab-fornecedor');
+  sel10.value = '4';
+  sel10.dispatchEvent(new t10.w.Event('change'));
+  await new Promise((r) => setTimeout(r, 60));
+
+  const pedidoConc = t10.pedidos.find((p) => p[1] === '/nfe/conciliar');
+  ok(!!pedidoConc, 'trocar o fornecedor refaz o casamento');
+  ok(pedidoConc && pedidoConc[2].fornecedor_id === 4,
+     'para o fornecedor novo');
+  ok(!t10.pedidos.some((p) => String(p[1]).includes('/foto')
+     && p[0] === 'POST' && p !== pedidoConc && t10.pedidos.indexOf(p) > t10.pedidos.indexOf(pedidoConc)),
+     'sem reler a foto — é consulta a banco, não OCR');
+  ok(!/conciliado pelo código/.test(t10.alvo.querySelector('#nfe-ocr').textContent),
+     'e a conciliação do fornecedor anterior SOME, em vez de continuar com cara de confirmada');
 
   console.log('\n' + (falhas.length
     ? 'FALHAS:\n  ' + falhas.join('\n  ') : 'Tudo certo.'));
