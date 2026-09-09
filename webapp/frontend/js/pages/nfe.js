@@ -720,6 +720,9 @@ window.Paginas.nfe = (function () {
             <td><span class="status-badge">${escapar(n.status)}</span></td>
             <td class="num">
               <button class="btn-acao nfe-abrir" data-nota="${n.id}" type="button">Abrir</button>
+              ${typeof window.pode === 'function' && window.pode('ANULAR_NOTA')
+                ? `<button class="btn-acao nfe-excluir-lista" data-nota="${n.id}" data-numero="${escapar(n.numero || '')}" type="button" style="margin-left: 8px; color: var(--cor-perigo);">Excluir</button>`
+                : ''}
             </td>
           </tr>`).join('')}</tbody>
       </table>`;
@@ -728,6 +731,30 @@ window.Paginas.nfe = (function () {
       b.addEventListener('click', async () => {
         desenharNota(container, await api.get('/nfe/' + b.dataset.nota));
         container.querySelector('#nfe-conferencia').scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    alvo.querySelectorAll('.nfe-excluir-lista').forEach((b) => {
+      b.addEventListener('click', async () => {
+        if (!confirm(
+          `Excluir PERMANENTEMENTE a nota ${b.dataset.numero || ''}?\n\n`
+          + `Esta ação vai APAGAR O REGISTRO DESTA NOTA do sistema.\n\nTem certeza absoluta?`)) return;
+
+        b.disabled = true;
+        b.textContent = '...';
+        try {
+          const r = await api.del('/nfe/' + b.dataset.nota);
+          alert(r.mensagem || 'Nota excluída permanentemente.');
+          if (notaAtual && notaAtual.id === Number(b.dataset.nota)) {
+            notaAtual = null;
+            container.querySelector('#nfe-conferencia').innerHTML = '';
+          }
+          await carregarLista(container);
+        } catch (erro) {
+          alert(erro.message || 'Não foi possível excluir a nota.');
+          b.disabled = false;
+          b.textContent = 'Excluir';
+        }
       });
     });
   }
