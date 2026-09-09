@@ -200,7 +200,7 @@ window.Paginas.perfil = (function () {
     const cortar = container.querySelector('#wpp-desvincular');
     if (cortar) {
       cortar.addEventListener('click', async () => {
-        if (!confirm('Desvincular o WhatsApp? O bot para de responder agora.')) return;
+        if (!await window.Dialogo.confirm('Desvincular o WhatsApp? O bot para de responder agora.')) return;
         await api.del('/whatsapp/vinculo');
         await window.Paginas.perfil.render(container);
       });
@@ -209,7 +209,7 @@ window.Paginas.perfil = (function () {
     const desconectarCentral = container.querySelector('#wpp-desconectar-central');
     if (desconectarCentral) {
       desconectarCentral.addEventListener('click', async () => {
-        if (!confirm('Tem certeza que deseja desconectar o WhatsApp central da empresa no servidor? O bot deixará de responder até que um novo aparelho seja conectado.')) return;
+        if (!await window.Dialogo.confirm('Tem certeza que deseja desconectar o WhatsApp central da empresa no servidor? O bot deixará de responder até que um novo aparelho seja conectado.')) return;
         desconectarCentral.disabled = true;
         desconectarCentral.textContent = 'Desconectando...';
         try {
@@ -429,7 +429,7 @@ window.Paginas.perfil = (function () {
       cortar.addEventListener('click', async () => {
         // Confirmação porque é destrutivo e silencioso: sem ela, um toque
         // errado tira o acesso e a pessoa só descobre na câmara fria.
-        if (!confirm('Desvincular o Telegram? O bot para de responder agora.')) return;
+        if (!await window.Dialogo.confirm('Desvincular o Telegram? O bot para de responder agora.')) return;
         await api.del('/telegram/vinculo');
         await window.Paginas.perfil.render(container);
       });
@@ -552,7 +552,7 @@ window.Paginas.perfil = (function () {
           render(container);
           return;
         }
-        if (!confirm('Remover sua foto?')) return;
+        if (!await window.Dialogo.confirm('Remover sua foto?')) return;
         dados = await api.del('/perfil/foto');
         atualizarBarraLateral();
         render(container);
@@ -600,7 +600,7 @@ window.Paginas.perfil = (function () {
         // Derrubar a própria sessão é o sinal honesto de que a troca valeu:
         // quem trocou por desconfiar de acesso indevido espera exatamente
         // que as sessões abertas caiam.
-        alert(r.mensagem || 'Senha alterada. Entre de novo.');
+        await window.Dialogo.alert(r.mensagem || 'Senha alterada. Entre de novo.');
         if (typeof fazerLogout === 'function') fazerLogout();
         else location.href = '/';
       } catch (erro) {

@@ -154,9 +154,9 @@ window.Paginas.movimentos = (function () {
   async function excluirMarcados(container, produtos, fornecedores) {
     const marcados = ultimaLista.filter((m) => selecionados.has(m.id));
     if (!marcados.length) return;
-    if (!confirm(textoDaConfirmacao(marcados, produtos))) return;
+    if (!await window.Dialogo.confirm(textoDaConfirmacao(marcados, produtos))) return;
 
-    const motivo = prompt(
+    const motivo = await window.Dialogo.prompt(
       'Por que estes lançamentos estão sendo excluídos?\n'
       + '(fica no registro, para quem olhar isto depois entender)', '') ;
     if (motivo === null) return;   // desistiu no meio: nada é excluído
@@ -167,10 +167,10 @@ window.Paginas.movimentos = (function () {
       });
       selecionados = new Set();
       await carregar(container, produtos, fornecedores);
-      alert(`${r.excluidos} lançamento(s) saíram do estoque.`
+      await window.Dialogo.alert(`${r.excluidos} lançamento(s) saíram do estoque.`
         + (r.avisos && r.avisos.length ? '\n\n' + r.avisos.join('\n') : ''));
     } catch (erro) {
-      alert(erro.message || 'Não foi possível excluir.');
+      await window.Dialogo.alert(erro.message || 'Não foi possível excluir.');
     }
   }
 

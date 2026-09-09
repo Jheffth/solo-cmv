@@ -559,7 +559,7 @@ window.Paginas.nfe = (function () {
         desenharNota(container, nota);
         await carregarLista(container);
       } catch (erro) {
-        alert(erro.message || 'Não foi possível criar a nota.');
+        await window.Dialogo.alert(erro.message || 'Não foi possível criar a nota.');
         seguir.disabled = false;
       }
     });
@@ -679,7 +679,7 @@ window.Paginas.nfe = (function () {
       const nova = await api.put(`/nfe/${notaAtual.id}/item/${itemId}`, corpo);
       desenharNota(container, nova);
     } catch (erro) {
-      alert(erro.message || 'Não foi possível ajustar o item.');
+      await window.Dialogo.alert(erro.message || 'Não foi possível ajustar o item.');
     }
   }
 
@@ -708,12 +708,12 @@ window.Paginas.nfe = (function () {
         aprovar.textContent = 'Lançando…';
         try {
           const r = await api.post(`/nfe/${notaAtual.id}/aprovar`);
-          alert(r.mensagem || 'Nota lançada.');
+          await window.Dialogo.alert(r.mensagem || 'Nota lançada.');
           notaAtual = null;
           container.querySelector('#nfe-conferencia').innerHTML = '';
           await carregarLista(container);
         } catch (erro) {
-          alert(erro.message || 'Não foi possível lançar.');
+          await window.Dialogo.alert(erro.message || 'Não foi possível lançar.');
           aprovar.disabled = false;
           aprovar.textContent = 'Lançar no estoque';
         }
@@ -723,7 +723,7 @@ window.Paginas.nfe = (function () {
     const descartar = container.querySelector('#nfe-descartar');
     if (descartar) {
       descartar.addEventListener('click', async () => {
-        if (!confirm('Descartar esta nota? Ela fica no histórico, sem virar compra.')) return;
+        if (!await window.Dialogo.confirm('Descartar esta nota? Ela fica no histórico, sem virar compra.')) return;
         await api.post(`/nfe/${notaAtual.id}/descartar`);
         notaAtual = null;
         container.querySelector('#nfe-conferencia').innerHTML = '';
@@ -739,13 +739,13 @@ window.Paginas.nfe = (function () {
         // sobre o negócio, que é a que a pessoa precisa responder.
         const itens = (notaAtual.itens || []).filter((i) => !i.ignorar);
         const total = itens.reduce((t, i) => t + (Number(i.custo_final) || 0), 0);
-        if (!confirm(
+        if (!await window.Dialogo.confirm(
           `Anular a nota ${notaAtual.numero || ''}?\n\n`
           + `${itens.length} item(ns), ${brl(total)}, saem do estoque e do CMV `
           + `do período — o número do mês vai mudar.\n\n`
           + `Fica o registro de quem anulou e quando, e a nota pode ser `
           + `lançada de novo com a mesma chave.`)) return;
-        const motivo = prompt('Por que esta nota está sendo anulada?\n'
+        const motivo = await window.Dialogo.prompt('Por que esta nota está sendo anulada?\n'
           + '(fica no registro da nota)', '');
         if (motivo === null) return;
 
@@ -753,11 +753,11 @@ window.Paginas.nfe = (function () {
         anular.textContent = 'Anulando…';
         try {
           const r = await api.post(`/nfe/${notaAtual.id}/anular`, { motivo });
-          alert((r.avisos || ['Nota anulada.']).join('\n'));
+          await window.Dialogo.alert((r.avisos || ['Nota anulada.']).join('\n'));
           desenharNota(container, await api.get('/nfe/' + notaAtual.id));
           await carregarLista(container);
         } catch (erro) {
-          alert(erro.message || 'Não foi possível anular.');
+          await window.Dialogo.alert(erro.message || 'Não foi possível anular.');
           anular.disabled = false;
           anular.textContent = 'Anular esta nota';
         }
@@ -767,7 +767,7 @@ window.Paginas.nfe = (function () {
     const excluirPerm = container.querySelector('#nfe-excluir-perm');
     if (excluirPerm) {
       excluirPerm.addEventListener('click', async () => {
-        if (!confirm(
+        if (!await window.Dialogo.confirm(
           `Excluir PERMANENTEMENTE a nota ${notaAtual.numero || ''}?\n\n`
           + `Esta ação vai APAGAR O REGISTRO DESTA NOTA do sistema, liberando a chave e a foto `
           + `para serem enviadas novamente se desejar.\n\n`
@@ -778,12 +778,12 @@ window.Paginas.nfe = (function () {
         excluirPerm.textContent = 'Excluindo…';
         try {
           const r = await api.del('/nfe/' + notaAtual.id);
-          alert(r.mensagem || 'Nota excluída permanentemente.');
+          await window.Dialogo.alert(r.mensagem || 'Nota excluída permanentemente.');
           notaAtual = null;
           container.querySelector('#nfe-conferencia').innerHTML = '';
           await carregarLista(container);
         } catch (erro) {
-          alert(erro.message || 'Não foi possível excluir a nota.');
+          await window.Dialogo.alert(erro.message || 'Não foi possível excluir a nota.');
           excluirPerm.disabled = false;
           excluirPerm.textContent = 'Excluir Permanente';
         }
@@ -828,7 +828,7 @@ window.Paginas.nfe = (function () {
 
     alvo.querySelectorAll('.nfe-excluir-lista').forEach((b) => {
       b.addEventListener('click', async () => {
-        if (!confirm(
+        if (!await window.Dialogo.confirm(
           `Excluir PERMANENTEMENTE a nota ${b.dataset.numero || ''}?\n\n`
           + `Esta ação vai APAGAR O REGISTRO DESTA NOTA do sistema.\n\nTem certeza absoluta?`)) return;
 
@@ -836,14 +836,14 @@ window.Paginas.nfe = (function () {
         b.textContent = '...';
         try {
           const r = await api.del('/nfe/' + b.dataset.nota);
-          alert(r.mensagem || 'Nota excluída permanentemente.');
+          await window.Dialogo.alert(r.mensagem || 'Nota excluída permanentemente.');
           if (notaAtual && notaAtual.id === Number(b.dataset.nota)) {
             notaAtual = null;
             container.querySelector('#nfe-conferencia').innerHTML = '';
           }
           await carregarLista(container);
         } catch (erro) {
-          alert(erro.message || 'Não foi possível excluir a nota.');
+          await window.Dialogo.alert(erro.message || 'Não foi possível excluir a nota.');
           b.disabled = false;
           b.textContent = 'Excluir';
         }
@@ -899,7 +899,7 @@ window.Paginas.nfe = (function () {
         desenharNota(container, nota);
       } catch (erro) {
         // A recusa da SEFAZ é longa e explicativa de propósito — ela diz o
-        // que falta e qual caminho funciona hoje. Cortar em alert() jogaria
+        // que falta e qual caminho funciona hoje. Cortar em await window.Dialogo.alert() jogaria
         // fora justamente a parte útil.
         retorno.innerHTML = `<div class="nfe-erro nfe-erro--bloco">${
           escapar(erro.message || 'Não foi possível consultar.')

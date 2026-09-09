@@ -258,7 +258,7 @@ window.Paginas.equipe = (function () {
     try {
       await navigator.clipboard.writeText(texto);
     } catch (e) {
-      window.prompt('Copie o link do convite:', texto);
+      await window.Dialogo.prompt('Copie o link do convite:', texto);
     }
     if (botao) {
       const antes = botao.textContent;
@@ -305,7 +305,7 @@ window.Paginas.equipe = (function () {
         const novo = sel.value;
         const subindo = pessoa && novo !== original;
         if (!subindo) return;
-        if (!confirm(`Alterar ${pessoa.nome} para ${ROTULO_PAPEL[novo] || novo}?`)) {
+        if (!await window.Dialogo.confirm(`Alterar ${pessoa.nome} para ${ROTULO_PAPEL[novo] || novo}?`)) {
           sel.value = original;
           return;
         }
@@ -318,7 +318,7 @@ window.Paginas.equipe = (function () {
     container.querySelectorAll('[data-ativo]').forEach((b) => {
       b.addEventListener('click', async () => {
         const ativar = b.dataset.valor === 'true';
-        if (!ativar && !confirm('Suspender este acesso? A pessoa perde a entrada '
+        if (!ativar && !await window.Dialogo.confirm('Suspender este acesso? A pessoa perde a entrada '
                                 + 'agora, e você pode devolver quando quiser.')) return;
         await comAviso(container,
           () => api.put(`/usuarios/${b.dataset.ativo}/ativo`, { ativo: ativar }),
@@ -328,7 +328,7 @@ window.Paginas.equipe = (function () {
 
     container.querySelectorAll('[data-excluir]').forEach((b) => {
       b.addEventListener('click', async () => {
-        if (!confirm('Excluir este acesso?\n\nA pessoa não entra mais e sai da '
+        if (!await window.Dialogo.confirm('Excluir este acesso?\n\nA pessoa não entra mais e sai da '
                      + 'lista. O que ela lançou continua no histórico, com o '
                      + 'nome dela — isso não se apaga.')) return;
         await comAviso(container, () => api.del(`/usuarios/${b.dataset.excluir}`),
@@ -356,7 +356,7 @@ window.Paginas.equipe = (function () {
     });
     container.querySelectorAll('[data-revogar]').forEach((b) => {
       b.addEventListener('click', async () => {
-        if (!confirm('Cancelar este convite? Quem tiver o link não poderá usá-lo.')) return;
+        if (!await window.Dialogo.confirm('Cancelar este convite? Quem tiver o link não poderá usá-lo.')) return;
         await comAviso(container, () => api.del('/convites/' + b.dataset.revogar),
                        'Convite cancelado.');
       });

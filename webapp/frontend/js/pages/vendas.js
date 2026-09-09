@@ -77,7 +77,7 @@ window.Paginas.vendas = {
 
     container.querySelectorAll('[data-excluir]').forEach((botao) => {
       botao.addEventListener('click', async () => {
-        if (!confirm('Excluir este lançamento de faturamento?')) return;
+        if (!await window.Dialogo.confirm('Excluir este lançamento de faturamento?')) return;
         try {
           await api.del(`/vendas/${botao.dataset.excluir}`);
           window.roteador.rerenderizar();

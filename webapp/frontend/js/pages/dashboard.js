@@ -21,9 +21,25 @@ window.Paginas.dashboard = (function () {
   let referencia = null;          // "2026-08"
   const graficos = {};            // instâncias do Chart.js, para destruir ao redesenhar
 
+  /* O Chart.js desenha em canvas, e canvas não resolve variável CSS. Então
+     em vez de repetir os literais aqui — que era como o gráfico acabava
+     numa paleta e a tela em outra — lemos os tokens do documento uma vez.
+
+     O fallback existe para o caso de o CSS não ter carregado: um gráfico
+     sem cor é pior que um gráfico fora da paleta. */
+  function token(nome, reserva) {
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue(nome).trim();
+    return v || reserva;
+  }
   const CORES = {
-    navy: '#1F3B57', gold: '#B08D3E', vermelho: '#A6231F',
-    verde: '#1C7A3C', azul: '#4A7CA6', cinza: '#B0B4BB',
+    get navy()     { return token('--marca-fundo', '#64111C'); },
+    get gold()     { return token('--acento', '#EC6E45'); },
+    get vermelho() { return token('--perigo', '#B63421'); },
+    get verde()    { return token('--sucesso', '#3F6B4A'); },
+    get azul()     { return token('--info', '#466178'); },
+    get cinza()    { return token('--tinta-3', '#9A8C8E'); },
+    get creme()    { return token('--cj-creme', '#EED5B4'); },
   };
 
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -262,7 +278,7 @@ window.Paginas.dashboard = (function () {
           tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(1)}%` } },
         },
         scales: {
-          y: { ticks: { callback: (v) => v + '%', font: { size: 11 } }, grid: { color: '#EEF0F3' } },
+          y: { ticks: { callback: (v) => v + '%', font: { size: 11 } }, grid: { color: token('--linha', '#E6DCD2') } },
           x: { grid: { display: false }, ticks: { font: { size: 11 } } },
         },
       },
@@ -499,7 +515,8 @@ window.Paginas.dashboard = (function () {
     desenharRosca('grafico-perdas', 'perdas',
       d.perdas.por_motivo.map((m) => m.rotulo),
       d.perdas.por_motivo.map((m) => m.valor),
-      [CORES.vermelho, '#EF9F27', CORES.cinza, CORES.azul, CORES.verde, CORES.gold, CORES.navy]);
+      [CORES.vermelho, token('--atencao', '#8A5A12'), CORES.cinza, CORES.azul,
+         CORES.verde, CORES.gold, CORES.navy]);
   }
 
   /* A tela inicial de quem lança.
@@ -728,7 +745,8 @@ window.Paginas.dashboard = (function () {
       desenharRosca('grafico-perdas', 'perdas',
         d.perdas.por_motivo.map((m) => m.rotulo),
         d.perdas.por_motivo.map((m) => m.valor),
-        [CORES.vermelho, '#EF9F27', CORES.cinza, CORES.azul, CORES.verde, CORES.gold, CORES.navy]);
+        [CORES.vermelho, token('--atencao', '#8A5A12'), CORES.cinza, CORES.azul,
+         CORES.verde, CORES.gold, CORES.navy]);
 
       // Todo número é uma porta
       container.querySelectorAll('[data-ir]').forEach((el) => {

@@ -143,7 +143,7 @@ window.Paginas.inventario = (function () {
 
   // ---------- Ações ----------
   async function acaoCongelar(container, sessao) {
-    if (!confirm(
+    if (!await window.Dialogo.confirm(
       `Congelar o inventário nº ${sessao.numero_documento}?\n\n` +
       `O estoque atual dos itens do escopo será fotografado, e só a partir daí ` +
       `o inventário passa a aceitar contagens.`)) return;
@@ -155,7 +155,7 @@ window.Paginas.inventario = (function () {
   }
 
   async function acaoFinalizar(container, sessao) {
-    if (!confirm(
+    if (!await window.Dialogo.confirm(
       `Finalizar o inventário nº ${sessao.numero_documento}?\n\n` +
       `As quantidades contadas passarão a valer como estoque real dos itens. ` +
       `Itens sem contagem não são alterados. Esta ação não pode ser desfeita.`)) return;
@@ -169,7 +169,7 @@ window.Paginas.inventario = (function () {
   }
 
   async function acaoCancelar(container, sessao) {
-    if (!confirm(
+    if (!await window.Dialogo.confirm(
       `Cancelar o inventário nº ${sessao.numero_documento}?\n\n` +
       `Ele deixa de valer, mas continua consultável para análise. ` +
       `O número não é reaproveitado.`)) return;

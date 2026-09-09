@@ -14,6 +14,13 @@
 window.Paginas = window.Paginas || {};
 
 window.Paginas.relatorios = (function () {
+  /* Canvas não resolve variável CSS — daí ler o token uma vez, em vez de
+     repetir o literal e deixar o gráfico numa paleta e a tela em outra. */
+  function token(nome, reserva) {
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue(nome).trim();
+    return v || reserva;
+  }
   let aba = 'fechamento';
   let referencia = null;
   let catalogo = [];
@@ -372,13 +379,14 @@ window.Paginas.relatorios = (function () {
           {
             type: 'bar', label: 'CMV do item',
             data: topo.map((l) => l.cmv),
-            backgroundColor: topo.map((l) => ({ A: '#A6231F', B: '#B08D3E', C: '#B0B4BB' }[l.faixa])),
+            backgroundColor: topo.map((l) => ({ A: token('--perigo', '#B63421'), B: token('--acento', '#EC6E45'),
+               C: token('--tinta-3', '#9A8C8E') }[l.faixa])),
             yAxisID: 'y', order: 2,
           },
           {
             type: 'line', label: 'Acumulado',
             data: topo.map((l) => l.acumulado * 100),
-            borderColor: '#1F3B57', borderWidth: 2, pointRadius: 0,
+            borderColor: token('--marca-fundo', '#64111C'), borderWidth: 2, pointRadius: 0,
             yAxisID: 'y2', order: 1, tension: .2,
           },
         ],
@@ -397,7 +405,7 @@ window.Paginas.relatorios = (function () {
         },
         scales: {
           y: { ticks: { callback: (v) => brlCurto(v), font: { size: 10 } },
-               grid: { color: '#EEF0F3' } },
+               grid: { color: token('--linha', '#E6DCD2') } },
           y2: { position: 'right', min: 0, max: 100, grid: { display: false },
                 ticks: { callback: (v) => v + '%', font: { size: 10 } } },
           x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 },
@@ -472,8 +480,15 @@ window.Paginas.relatorios = (function () {
   function desenharFamilias(d) {
     const canvas = document.getElementById('grafico-familias');
     if (!canvas || typeof Chart === 'undefined') return;
-    const cores = ['#1F3B57', '#B08D3E', '#A6231F', '#4A7CA6', '#1C7A3C',
-                   '#8A6A1F', '#6B7280', '#9B2C2C'];
+    /* Série categórica: as oito precisam ser DISTINGUÍVEIS entre si, e não
+       bonitas juntas — é o único lugar do sistema onde a marca cede lugar à
+       função. Começa pelas cores dela e completa com o que sobra do
+       espectro, mantendo a ordem fixa para a mesma família não trocar de
+       cor quando alguém filtra. */
+    const cores = [token('--marca-fundo', '#64111C'), token('--acento', '#EC6E45'),
+                   token('--info', '#466178'), token('--sucesso', '#3F6B4A'),
+                   token('--perigo', '#B63421'), token('--atencao', '#8A5A12'),
+                   token('--info-claro', '#83ABC1'), token('--tinta-3', '#9A8C8E')];
     const rotulos = [...d.evolucao.map((e) => e.rotulo.split('/')[0].slice(0, 3)),
                      d.cabecalho.rotulo.split('/')[0].slice(0, 3)];
     const series = d.linhas.slice(0, 6).map((l, i) => ({
@@ -496,7 +511,7 @@ window.Paginas.relatorios = (function () {
           tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(2).replace('.', ',')}%` } },
         },
         scales: {
-          y: { ticks: { callback: (v) => v + '%', font: { size: 10 } }, grid: { color: '#EEF0F3' } },
+          y: { ticks: { callback: (v) => v + '%', font: { size: 10 } }, grid: { color: token('--linha', '#E6DCD2') } },
           x: { grid: { display: false } },
         },
       },
@@ -593,7 +608,7 @@ window.Paginas.relatorios = (function () {
         try {
           await abrirArquivo(`/relatorios/${aba}?${params}&formato=pdf`);
         } catch (erro) {
-          alert('Não foi possível gerar o PDF: ' + (erro.message || erro));
+          await window.Dialogo.alert('Não foi possível gerar o PDF: ' + (erro.message || erro));
         } finally {
           botao.disabled = false;
           botao.innerHTML = original;

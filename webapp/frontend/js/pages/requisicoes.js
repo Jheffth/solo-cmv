@@ -134,7 +134,7 @@ window.Paginas.requisicoes = (function () {
   }
 
   async function acaoAtender(container, req) {
-    if (!confirm(
+    if (!await window.Dialogo.confirm(
       `Atender a requisição nº ${req.numero}?\n\n` +
       `Os itens lançados sairão do estoque e serão enviados para a produção. ` +
       `Esta ação não pode ser desfeita.`)) return;
@@ -147,7 +147,7 @@ window.Paginas.requisicoes = (function () {
   }
 
   async function acaoCancelar(container, req) {
-    if (!confirm(`Cancelar a requisição nº ${req.numero}?\n\nEla continua consultável, e o número não é reaproveitado.`)) return;
+    if (!await window.Dialogo.confirm(`Cancelar a requisição nº ${req.numero}?\n\nEla continua consultável, e o número não é reaproveitado.`)) return;
     try {
       await api.post(`/requisicoes/${req.id}/cancelar`, {});
       aviso(container, `Requisição nº ${req.numero} cancelada.`, 'sucesso');
